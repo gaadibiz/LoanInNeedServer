@@ -8,7 +8,6 @@ on:
 
 env:
   NODE_VERSION: '18'
-  POSTGRES_VERSION: '15'
   JWT_SECRET: "test-jwt-secret-key-for-ci"
 
 jobs:
@@ -18,23 +17,16 @@ jobs:
     name: 🧹 Code Quality & Formatting
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Check Code Formatting
-        run: npm run format:check
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
 
 
   # 2️⃣ Unit Tests
@@ -44,25 +36,20 @@ jobs:
     needs: [code-quality]
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Generate Prisma Client
-        run: npx prisma generate
+      - run: npx prisma generate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Run Unit Tests
-        run: npm run test:unit
+      - run: npm run test:unit
         env:
           NODE_ENV: test
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -74,7 +61,7 @@ jobs:
           TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
 
 
-  # 3️⃣ Integration Tests (with PostgreSQL Service)
+  # 3️⃣ Integration Tests
   integration-tests:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
@@ -82,7 +69,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -96,30 +83,24 @@ jobs:
           --health-retries=10
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Generate Prisma Client
-        run: npx prisma generate
+      - run: npx prisma generate
         env:
           DATABASE_URL: "postgresql://test:test@localhost:5432/test_db"
 
-      - name: Run Prisma Migrations
-        run: npx prisma migrate deploy
+      - run: npx prisma migrate deploy
         env:
           DATABASE_URL: "postgresql://test:test@localhost:5432/test_db"
 
-      - name: Run Integration Tests
-        run: npm run test:integration
+      - run: npm run test:integration
         env:
           NODE_ENV: test
           DATABASE_URL: "postgresql://test:test@localhost:5432/test_db"
@@ -132,26 +113,21 @@ jobs:
     needs: [unit-tests, integration-tests]
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Run All Tests with Coverage
-        run: npm run test:coverage
+      - run: npm run test:coverage
         env:
           NODE_ENV: test
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
@@ -162,14 +138,14 @@ jobs:
     name: 🐳 Docker Build
     runs-on: ubuntu-latest
     needs: test-coverage
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Docker Build
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
@@ -184,9 +160,6 @@ jobs:
     needs: [code-quality]
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Run npm Audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+      - run: npm audit --audit-level=moderate || true
