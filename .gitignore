@@ -1,0 +1,43 @@
+# Node.js dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# Build output
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore database files if using local SQLite or similar
+*.sqlite
+*.sqlite3
+
+# Optional: Ignore coverage reports if running tests
+coverage/
+
+# Ignore temporary files
+*.tmp
+*.temp
+*.bak
+
+# Ignore npm package lock file if using yarn (optional)
+package-lock.json
+
+/generated/prisma

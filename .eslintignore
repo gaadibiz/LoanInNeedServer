@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Generated files
+*.min.js
+*.min.css
+generated/
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Package locks
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Prisma generated
+generated/prisma/
+
+# Reports
+reports/
+jest_html_reporters.html
+
+# Uploads
+uploads/
+
+# Test files (optional - you may want to lint these)
+# __tests__/
+
