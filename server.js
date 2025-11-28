@@ -42,7 +42,11 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/', (req, res) => {
   logger.info('Health check endpoint called');
-  res.json({ message: 'LoanInNeed Backend is up and running!' });
+  res.status(200).json({ 
+    status: 'healthy',
+    message: 'LoanInNeed Backend is up and running!',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // ✅ Route handlers
