@@ -7,7 +7,7 @@ FROM node:18-alpine AS dependencies
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY Backend/package*.json ./        # ← corrected
 RUN npm install
 
 
@@ -19,7 +19,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY . .
+COPY Backend .                          # ← corrected
 
 RUN npx prisma generate
 
@@ -32,7 +32,7 @@ FROM node:18-alpine AS production
 WORKDIR /app
 
 # Install only production dependencies
-COPY package*.json ./
+COPY Backend/package*.json ./          # ← corrected
 RUN npm install --omit=dev && npm cache clean --force
 
 # Prisma generated client + schema
@@ -41,7 +41,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # -------------------------
-# FIXED: Copy only real project folders
+# Copy actual Backend folder structure
 # -------------------------
 COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/utils ./utils
