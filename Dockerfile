@@ -8,7 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (production and dev for Prisma)
-RUN npm ci
+# Using `npm install` instead of `npm ci` so we don't depend on lockfile presence in the image
+RUN npm install
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
@@ -31,7 +32,8 @@ WORKDIR /app
 
 # Install only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+# Use npm install with dev dependencies omitted for production image
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy Prisma files and generated client
 COPY --from=builder /app/prisma ./prisma
