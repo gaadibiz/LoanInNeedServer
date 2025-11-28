@@ -1,61 +1,58 @@
-# Multi-stage Dockerfile for LoanInNeed Backend
-# Stage 1: Dependencies
-FROM node:18-alpine AS dependencies
+# ---------------------------
+# Stage 1 — Install dependencies
+# ---------------------------
+FROM node:18-alpine AS deps
 
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies (production and dev for Prisma)
-# Using `npm install` instead of `npm ci` so we don't depend on lockfile presence in the image
 RUN npm install
 
-# Stage 2: Builder
+
+# ---------------------------
+# Stage 2 — Builder (Prisma client, TS build)
+# ---------------------------
 FROM node:18-alpine AS builder
 
 WORKDIR /app
-
-# Copy dependencies from previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
-
-# Copy application files
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Generate Prisma Client
 RUN npx prisma generate
 
-# Stage 3: Production
-FROM node:18-alpine AS production
+
+# ---------------------------
+# Stage 3 — Production Image
+# ---------------------------
+FROM node:18-alpine AS prod
 
 WORKDIR /app
 
-# Install only production dependencies
+# Copy only package files and reinstall for production
 COPY package*.json ./
-# Use npm install with dev dependencies omitted for production image
 RUN npm install --omit=dev && npm cache clean --force
 
-# Copy Prisma files and generated client
+# Copy only necessary application code
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/routes ./routes
+COPY --from=builder /app/utils ./utils
+COPY --from=builder /app/GlobalExceptionHandler ./GlobalExceptionHandler
+COPY --from=builder /app/middleware ./middleware
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/server.js ./server.js
 
-# Copy application files
-COPY . .
+# Create logs and uploads
+RUN mkdir -p logs uploads/temp logs/temp
 
-# Create directories for logs and uploads
-RUN mkdir -p logs/uploads logs/temp uploads/temp
+# Start script permission
+RUN chmod +x /app/scripts/start.sh
 
-# Set environment to production
 ENV NODE_ENV=production
 
-# Expose port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:${PORT:-5000}/ || exit 1
 
-# Start the application
-CMD ["node", "server.js"]
-
+CMD ["/app/scripts/start.sh"]

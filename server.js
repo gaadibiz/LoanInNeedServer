@@ -61,10 +61,11 @@ app.use(errorHandler);
 
 // Define the port
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Start the server and log startup
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  logger.info(`Server is running on ${HOST}:${PORT}`);
 });
 
 // Handle unexpected errors gracefully
