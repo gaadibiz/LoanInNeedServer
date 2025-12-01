@@ -1,3 +1,5 @@
+# Multi-stage Dockerfile for LoanInNeed Backend
+
 # -------------------------
 # Stage 1: Dependencies
 # -------------------------
@@ -5,7 +7,8 @@ FROM node:18-alpine AS dependencies
 
 WORKDIR /app
 
-COPY package*.json ./
+# Copy ONLY package files from Backend folder
+COPY Backend/package*.json ./
 RUN npm install
 
 
@@ -16,9 +19,13 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Copy dependencies from previous stage
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY . .                                  # Copy everything from Backend/
 
+# Copy full Backend source code
+COPY Backend .    
+
+# Generate Prisma Client
 RUN npx prisma generate
 
 
@@ -30,7 +37,7 @@ FROM node:18-alpine AS production
 WORKDIR /app
 
 # Install only production deps
-COPY package*.json ./
+COPY Backend/package*.json ./
 RUN npm install --omit=dev && npm cache clean --force
 
 # Copy prisma generated client
