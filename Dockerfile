@@ -1,5 +1,3 @@
-# Multi-stage Dockerfile for LoanInNeed Backend
-
 # -------------------------
 # Stage 1: Dependencies
 # -------------------------
@@ -7,7 +5,7 @@ FROM node:18-alpine AS dependencies
 
 WORKDIR /app
 
-COPY Backend/package*.json ./        # ← corrected
+COPY package*.json ./
 RUN npm install
 
 
@@ -19,7 +17,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY Backend .                          # ← corrected
+COPY . .                                  # Copy everything from Backend/
 
 RUN npx prisma generate
 
@@ -31,18 +29,16 @@ FROM node:18-alpine AS production
 
 WORKDIR /app
 
-# Install only production dependencies
-COPY Backend/package*.json ./          # ← corrected
+# Install only production deps
+COPY package*.json ./
 RUN npm install --omit=dev && npm cache clean --force
 
-# Prisma generated client + schema
+# Copy prisma generated client
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# -------------------------
-# Copy actual Backend folder structure
-# -------------------------
+# Copy application files
 COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/utils ./utils
 COPY --from=builder /app/scripts ./scripts
@@ -57,7 +53,6 @@ RUN mkdir -p logs uploads/temp logs/temp
 RUN chmod +x /app/scripts/start.sh
 
 ENV NODE_ENV=production
-
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
