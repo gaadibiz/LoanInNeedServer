@@ -1,68 +1,58 @@
-# Multi-stage Dockerfile for LoanInNeed Backend
-
-# -------------------------
-# Stage 1: Dependencies
-# -------------------------
-FROM node:18-alpine AS dependencies
+# ---------------------------
+# Stage 1 — Install dependencies
+# ---------------------------
+FROM node:18-alpine AS deps
 
 WORKDIR /app
-
-# Copy ONLY package files from Backend folder
-COPY Backend/package*.json ./
+COPY package*.json ./
 RUN npm install
 
 
-# -------------------------
-# Stage 2: Builder
-# -------------------------
+# ---------------------------
+# Stage 2 — Builder (Prisma client, TS build)
+# ---------------------------
 FROM node:18-alpine AS builder
 
 WORKDIR /app
-
-# Copy dependencies from previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
-
-# Copy full Backend source code
-COPY Backend .    
-
-# Generate Prisma Client
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 RUN npx prisma generate
 
 
-# -------------------------
-# Stage 3: Production
-# -------------------------
-FROM node:18-alpine AS production
+# ---------------------------
+# Stage 3 — Production Image
+# ---------------------------
+FROM node:18-alpine AS prod
 
 WORKDIR /app
 
-# Install only production deps
-COPY Backend/package*.json ./
+# Copy only package files and reinstall for production
+COPY package*.json ./
 RUN npm install --omit=dev && npm cache clean --force
 
-# Copy prisma generated client
+# Copy only necessary application code
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-
-# Copy application files
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/utils ./utils
-COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/GlobalExceptionHandler ./GlobalExceptionHandler
 COPY --from=builder /app/middleware ./middleware
+COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/server.js ./server.js
 
-# Create directories for logs and uploads
+# Create logs and uploads
 RUN mkdir -p logs uploads/temp logs/temp
 
-# Make startup script executable
+# Start script permission
 RUN chmod +x /app/scripts/start.sh
 
 ENV NODE_ENV=production
+
 EXPOSE 5000
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 5000) + '/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:${PORT:-5000}/ || exit 1
 
 CMD ["/app/scripts/start.sh"]
