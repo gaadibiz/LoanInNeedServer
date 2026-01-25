@@ -16,26 +16,29 @@ module.exports = {
   rules: {
     // Prettier integration
     'prettier/prettier': 'error', // Show prettier errors as ESLint errors
-    
+
     // Error prevention
     'no-console': ['warn', { allow: ['warn', 'error'] }],
     'no-debugger': 'error',
-    'no-unused-vars': ['error', { 
-      argsIgnorePattern: '^_',
-      varsIgnorePattern: '^_',
-    }],
+    'no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      },
+    ],
     'no-undef': 'error',
     'no-unreachable': 'error',
-    
+
     // Code quality
-    'eqeqeq': ['error', 'always'],
-    'curly': ['error', 'all'],
+    eqeqeq: ['error', 'always'],
+    curly: ['error', 'all'],
     'no-eval': 'error',
     'no-implied-eval': 'error',
     'no-new-func': 'error',
     'no-script-url': 'error',
     'no-sequences': 'error',
-    
+
     // Best practices
     'array-callback-return': 'error',
     'consistent-return': 'warn',
@@ -47,11 +50,11 @@ module.exports = {
     'no-return-assign': 'error',
     'no-return-await': 'error',
     'require-await': 'warn',
-    'yoda': 'error',
-    
+    yoda: 'error',
+
     // Note: Style rules (formatting) are handled by Prettier
     // eslint-config-prettier automatically disables conflicting rules
-    
+
     // ES6+ (non-formatting rules)
     'no-var': 'error',
     'prefer-const': 'error',
@@ -59,4 +62,3 @@ module.exports = {
     'prefer-template': 'error',
   },
 };
-

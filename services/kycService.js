@@ -1,6 +1,5 @@
 // services/kycService.js
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 
@@ -10,12 +9,13 @@ const AddressModel = require('../models/adressModel');
 const UserModel = require('../models/userModel');
 
 async function saveFullKYC(userId, data) {
-  if (!userId) throw new BadRequestError('User ID is required ❌');
+  if (!userId) {
+    throw new BadRequestError('User ID is required ❌');
+  }
 
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
-  return await prisma.$transaction(
-    async (tx) => {
-
+  return prisma.$transaction(
+    async tx => {
       // ---------- Employment ----------
       if (!data.companyName || !data.companyAddress || !data.monthlyIncome || !data.stability) {
         throw new BadRequestError('Employment data incomplete ❌');
@@ -31,25 +31,31 @@ async function saveFullKYC(userId, data) {
         'Very unstable': 'VERY_UNSTABLE',
         'Somewhat unstable': 'SOMEWHAT_UNSTABLE',
         'Neutral / moderate': 'NEUTRAL',
-        'Neutral': 'NEUTRAL',
-        'Stable': 'STABLE',
+        Neutral: 'NEUTRAL',
+        Stable: 'STABLE',
         'Very Stable': 'VERY_STABLE',
         // Also handle if already in enum format
-        'VERY_UNSTABLE': 'VERY_UNSTABLE',
-        'SOMEWHAT_UNSTABLE': 'SOMEWHAT_UNSTABLE',
-        'NEUTRAL': 'NEUTRAL',
-        'STABLE': 'STABLE',
-        'VERY_STABLE': 'VERY_STABLE'
+        VERY_UNSTABLE: 'VERY_UNSTABLE',
+        SOMEWHAT_UNSTABLE: 'SOMEWHAT_UNSTABLE',
+        NEUTRAL: 'NEUTRAL',
+        STABLE: 'STABLE',
+        VERY_STABLE: 'VERY_STABLE',
       };
-      
-      const stabilityValue = stabilityMap[data.stability] || String(data.stability).toUpperCase().replace(/\s+/g, '_').replace(/\/\s*MODERATE/gi, '').trim();
+
+      const stabilityValue =
+        stabilityMap[data.stability] ||
+        String(data.stability)
+          .toUpperCase()
+          .replace(/\s+/g, '_')
+          .replace(/\/\s*MODERATE/gi, '')
+          .trim();
 
       const employmentPayload = {
         employmentType: data.employmentType || 'OTHER',
         employerName: data.companyName,
         companyAddress: data.companyAddress,
         monthlyIncome,
-        stability: stabilityValue
+        stability: stabilityValue,
       };
 
       let employment = await EmploymentModel.findByUserId(userId, tx);
@@ -67,14 +73,15 @@ async function saveFullKYC(userId, data) {
       // Map frontend address type values to enum values
       const addressTypeMap = {
         'Owner(Self or Family)': 'OWNER_SELF_OR_FAMILY',
-        'Rented': 'RENTED',
+        Rented: 'RENTED',
         // Also handle if already in enum format
-        'OWNER_SELF_OR_FAMILY': 'OWNER_SELF_OR_FAMILY',
-        'OWNER': 'OWNER_SELF_OR_FAMILY', // Backward compatibility
-        'RENTED': 'RENTED'
+        OWNER_SELF_OR_FAMILY: 'OWNER_SELF_OR_FAMILY',
+        OWNER: 'OWNER_SELF_OR_FAMILY', // Backward compatibility
+        RENTED: 'RENTED',
       };
-      
-      const addressTypeValue = addressTypeMap[data.currentAddressType] || 
+
+      const addressTypeValue =
+        addressTypeMap[data.currentAddressType] ||
         String(data.currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '');
 
       const addrPayload = {
@@ -83,7 +90,7 @@ async function saveFullKYC(userId, data) {
         city: data.currentCity || null,
         state: data.currentState || null,
         postalCode: data.currentPostalCode || null,
-        currentAddressType: addressTypeValue
+        currentAddressType: addressTypeValue,
       };
 
       let addressDetail = await AddressModel.findByUserId(userId, tx);
@@ -109,7 +116,7 @@ async function saveFullKYC(userId, data) {
         status: data.status || 'PENDING',
         startDate: data.startDate ? new Date(data.startDate) : new Date(),
         interestRate: Number(data.interestRate) || 0,
-        termMonths: Number(data.termMonths) || null
+        termMonths: Number(data.termMonths) || null,
       };
 
       const loan = await LoanModel.createLoan(userId, loanPayload, tx);

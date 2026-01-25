@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prismaClient');
 const PanModel = require('../models/panModel');
 const { BadRequestError, NotFoundError } = require('../GlobalExceptionHandler/exception');
 

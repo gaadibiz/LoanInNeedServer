@@ -1,14 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-const { UnauthorizedError } = require('../GlobalExceptionHandler/exception');
+const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
+const { UnauthorizedError } = require('../GlobalExceptionHandler/exception');
 
-const prisma = new PrismaClient();
-
-/**
- * Auth Middleware
- * Logs headers, verifies JWT, attaches req.user
- */
 const authenticate = async (req, res, next) => {
   try {
     logger.info(`[AUTH] Incoming Headers: ${JSON.stringify(req.headers)}`);
@@ -16,24 +10,18 @@ const authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.error('❌ [AUTH] Missing or malformed Authorization header');
       throw new UnauthorizedError('Authentication token missing or malformed.');
     }
 
     const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      logger.error(`❌ [AUTH] JWT verification failed: ${err.message}`, { stack: err.stack });
-      throw new UnauthorizedError('Invalid or expired token.');
-    }
 
-    logger.debug(`🔑 [AUTH] JWT decoded: ${JSON.stringify(decoded)}`);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    });
+
     if (!user) {
-      logger.error('❌ [AUTH] User not found in DB');
       throw new UnauthorizedError('User not found.');
     }
 
@@ -42,15 +30,33 @@ const authenticate = async (req, res, next) => {
       customUserId: user.customUserId,
       email: user.email,
       phone: user.phone,
+      role: user.role,
     };
-
-    logger.info(`✅ [AUTH] req.user set: ${JSON.stringify(req.user)}`);
+    logger.info(`[AUTH] Authenticated User: ID=${user.id}, Role=${user.role}, Phone=${user.phone}`);
 
     next();
   } catch (err) {
-    logger.error(`❌ [AUTH] Middleware error: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
 
-module.exports = { authenticate };
+const admin = (req, res, next) => {
+  if (req.user && ['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
+    return next();
+  }
+  throw new UnauthorizedError('Not authorized as admin');
+};
+
+const superAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'SUPER_ADMIN') {
+    return next();
+  }
+  throw new UnauthorizedError('Not authorized as Super Admin');
+};
+
+module.exports = {
+  authenticate,
+  protect: authenticate,
+  admin,
+  superAdmin,
+};

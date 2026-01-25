@@ -14,6 +14,7 @@ router.get('/me', authenticate, userController.getProfile);
 
 // Complete profile with all KYC details
 router.get('/profile/complete', authenticate, userController.getCompleteProfile);
+router.get('/dashboard', authenticate, userController.getCompleteProfile);
 
 // Location routes
 router.post('/location', authenticate, userController.submitLocation);

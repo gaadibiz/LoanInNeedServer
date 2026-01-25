@@ -1,6 +1,5 @@
 // services/userService.js
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { hashPassword } = require('../utils/hash');
 const { BadRequestError, NotFoundError, UnauthorizedError } = require('../GlobalExceptionHandler/exception');
@@ -143,7 +142,7 @@ async function getProfile(userId) {
 async function getCompleteProfile(userId) {
   logger.info(`📌 [USER SERVICE] Fetching complete profile for userId: ${userId}`);
 
-  const user = await prisma.user.findUnique({ 
+  const user = await prisma.user.findUnique({
     where: { id: Number(userId) },
     include: {
       aadhaarVerification: true,
@@ -179,8 +178,8 @@ async function getCompleteProfile(userId) {
   const { password, ...userWithoutPassword } = user;
 
   // Get latest location separately (for backward compatibility)
-  const latestLocation = user.locations && user.locations.length > 0 
-    ? user.locations[0] 
+  const latestLocation = user.locations && user.locations.length > 0
+    ? user.locations[0]
     : null;
 
   // Calculate KYC completion status

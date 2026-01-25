@@ -1,111 +1,138 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const UserDocumentModel = require("../models/documentModel");
-const { supabase } = require("../config/supabase");
-const { BadRequestError } = require("../GlobalExceptionHandler/exception");
+const prisma = require('../utils/prismaClient');
+const UserDocumentModel = require('../models/documentModel');
+const { supabase } = require('../config/supabase');
+const { BadRequestError } = require('../GlobalExceptionHandler/exception');
+const fs = require('fs').promises;
+const crypto = require('crypto');
+const path = require('path');
+const OtpService = require('./otpService');
 
-const fs = require("fs").promises;
-const crypto = require("crypto");
-const OtpService = require("./otpService");
+const SUPABASE_BUCKET = 'Documents';
 
 class DocumentVerificationService {
 
   /**
-   * Upload Bank Statements + Salary Slips
-   * ✅ Selfie NOT uploaded here anymore
-   * ✅ After upload → OTP sent for Selfie verification
-   * ✅ NO MULTIPLE DOCUMENT LIMIT CHECKS ANYMORE
+   * ✅ Generic Document Upload
+   * Supports: PAN, AADHAAR, PAY_SLIP, BANK_STATEMENT, PHOTO, SIGNATURE, GST, LICENSE, COMPANY_PAN
+   */
+  async uploadDocument(userId, file, docType, tx = prisma) {
+    if (!file) throw new BadRequestError('No file provided');
+
+    // Validate Document Type
+    const validTypes = [
+      'AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT', 'PHOTO',
+      'SIGNATURE', 'GST_CERTIFICATE', 'TRADE_LICENSE', 'COMPANY_PAN'
+    ];
+    if (!validTypes.includes(docType)) {
+      throw new BadRequestError(`Invalid document type: ${docType}`);
+    }
+
+    // 1. Construct Path: Documents/{DOC_TYPE}/{userId}/{timestamp}_{filename}
+    // Note: 'Documents' is the bucket name, so we start with docType
+    const timestamp = Date.now();
+    const sanitizedFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `${docType}/${userId}/${timestamp}_${sanitizedFilename}`;
+
+    // 2. Read File
+    const fileBuffer = await fs.readFile(file.path);
+
+    // 3. Upload to Supabase
+    const { error: uploadError } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .upload(filePath, fileBuffer, {
+        contentType: file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw new BadRequestError(`Upload failed: ${uploadError.message}`);
+    }
+
+    // 4. Get Public URL (or Signed URL if we were strictly private, but per existing pattern using Public)
+    const { data: urlData } = supabase.storage
+      .from(SUPABASE_BUCKET)
+      .getPublicUrl(filePath);
+
+    // 5. Calculate Checksum
+    const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+    // 6. DB Persistence
+    const document = await tx.userDocument.create({
+      data: {
+        userId: parseInt(userId),
+        docType: docType,
+        fileName: file.originalname,
+        filePath: filePath,
+        fileUrl: urlData.publicUrl,
+        mimeType: file.mimetype,
+        size: file.size,
+        checksum: checksum,
+        status: 'SUBMITTED'
+      }
+    });
+
+    // 7. Cleanup Temp File
+    try {
+      await fs.unlink(file.path);
+    } catch (e) {
+      console.warn('Failed to delete temp file:', file.path);
+    }
+
+    return document;
+  }
+
+  /**
+   * Legacy Support: Bulk upload for Bank Statements & Salary Slips
    */
   async submitDocuments(userId, files) {
     const bankStatements = files?.bankStatements || [];
     const salarySlips = files?.salarySlips || [];
 
-    if (bankStatements.length === 0) {
-      throw new BadRequestError("At least one bank statement is required");
+    if (bankStatements.length === 0 && salarySlips.length === 0) {
+      throw new BadRequestError('At least one document is required');
     }
 
-    if (salarySlips.length === 0) {
-      throw new BadRequestError("At least one salary slip is required");
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async tx => {
       const uploadedDocs = [];
 
-      // ✅ Upload Bank Statements
+      // Upload Bank Statements
       for (const file of bankStatements) {
-        const filePath = `KycDocs/bank-statements/${userId}/${Date.now()}_${file.originalname}`;
-        const doc = await this.storeFile(file, userId, filePath, "BANK_STATEMENT", tx);
-        uploadedDocs.push(doc);
+        uploadedDocs.push(await this.uploadDocument(userId, file, 'BANK_STATEMENT', tx));
       }
 
-      // ✅ Upload Salary Slips
+      // Upload Salary Slips
       for (const file of salarySlips) {
-        const filePath = `KycDocs/salary-slips/${userId}/${Date.now()}_${file.originalname}`;
-        const doc = await this.storeFile(file, userId, filePath, "PAY_SLIP", tx);
-        uploadedDocs.push(doc);
+        uploadedDocs.push(await this.uploadDocument(userId, file, 'PAY_SLIP', tx));
       }
 
       return uploadedDocs;
     });
 
-    // ✅ Send OTP for selfie verification
+    // Trigger Selfie OTP if needed (Legacy Flow)
     await OtpService.sendOtp(userId);
 
     return {
-      message: "Documents uploaded successfully. OTP sent for selfie verification ✅",
+      message: 'Documents uploaded successfully. OTP sent for selfie verification ✅',
       isSelfiePending: true,
       uploadedDocs: result,
     };
   }
 
   /**
-   * Store file in Supabase + Save metadata in DB
-   */
-  async storeFile(file, userId, filePath, type, tx) {
-    const fileBuffer = await fs.readFile(file.path);
-
-    const { error: uploadError } = await supabase.storage
-      .from(process.env.SUPABASE_BUCKET)
-      .upload(filePath, fileBuffer);
-
-    if (uploadError) throw new BadRequestError(uploadError.message);
-
-    const { data: urlData } = supabase.storage
-      .from(process.env.SUPABASE_BUCKET)
-      .getPublicUrl(filePath);
-
-    const checksum = crypto.createHash("sha256").update(fileBuffer).digest("hex");
-
-    const document = await UserDocumentModel.createDocument(
-      userId,
-      {
-        fileName: file.originalname,
-        filePath,
-        fileUrl: urlData.publicUrl,
-        type,
-        mimeType: file.mimetype,
-        size: file.size,
-        checksum,
-        status: "SUBMITTED",
-      },
-      tx
-    );
-
-    await fs.unlink(file.path); // ✅ delete temp file
-    return document;
-  }
-
-  /**
    * Get Document Status
    */
   async getDocumentStatus(userId) {
-    const docs = await UserDocumentModel.getDocumentsByUserId(userId);
-    const isSelfieUploaded = docs.some((d) => d.type === "PHOTO");
+    const docs = await prisma.userDocument.findMany({
+      where: { userId: parseInt(userId) },
+      orderBy: { uploadedAt: 'desc' }
+    });
+
+    const isSelfieUploaded = docs.some(d => d.docType === 'PHOTO');
 
     return {
       docs,
       isSelfieUploaded,
-      status: isSelfieUploaded ? "Selfie Completed" : "Pending Selfie Upload",
+      status: isSelfieUploaded ? 'Selfie Completed' : 'Pending Selfie Upload',
     };
   }
 }

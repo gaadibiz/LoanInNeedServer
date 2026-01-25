@@ -10,7 +10,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const result = await userService.registerUser(userId, req.body);
 
   res.status(200).json({
-    message: "Registration completed successfully.",
+    message: 'Registration completed successfully.',
     user: result.user,
   });
 });

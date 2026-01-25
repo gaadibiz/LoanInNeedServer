@@ -24,7 +24,25 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(helmet()); // Secure HTTP headers
-app.use(cors());   // Enable CORS
+// Enable CORS with specific options
+const allowedOrigins = [
+  'http://localhost:3000', // Local Frontend (Next.js default)
+  'http://localhost:5173', // Local Frontend (Vite default)
+  'https://loaninneed.vercel.app' // Production Frontend
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 
 // Use morgan with winston for HTTP request logging
 app.use(morgan('combined', {
@@ -42,7 +60,7 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/', (req, res) => {
   logger.info('Health check endpoint called');
-  res.status(200).json({ 
+  res.status(200).json({
     status: 'healthy',
     message: 'LoanInNeed Backend is up and running!',
     timestamp: new Date().toISOString()
@@ -55,6 +73,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/kyc', kycRoutes); // ✅ Mounted KYC
 app.use('/api/document', documentVerificationRoutes); // ✅ Mounted Document Verification
 app.use('/api/selfie', selfieRoutes); // ✅ Mounted Selfie routes
+app.use('/api/partners', require('./routes/partnerRoutes')); // ✅ Mounted Partner routes
+app.use('/api/loans', require('./routes/loanRoutes')); // ✅ Mounted Loan routes
 
 // ✅ Global error handler should be last
 app.use(errorHandler);

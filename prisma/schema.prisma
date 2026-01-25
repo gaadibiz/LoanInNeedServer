@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -12,20 +13,20 @@ datasource db {
 // ==============================
 
 model User {
-  id                  Int                   @id @default(autoincrement())
-  customUserId        String?               @unique
-  name                String?
-  email               String?               @unique
-  phone               String                @unique
-  password            String?
-  phoneVerified       Boolean               @default(false)
-  phoneVerifiedAt     DateTime?
-  dob                 DateTime?
-  gender              Gender?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  role                UserRole              @default(CUSTOMER)
-  verificationStatus  VerificationStatus    @default(PENDING)
+  id                 Int                @id @default(autoincrement())
+  customUserId       String?            @unique
+  name               String?
+  email              String?            @unique
+  phone              String             @unique
+  password           String?
+  phoneVerified      Boolean            @default(false)
+  phoneVerifiedAt    DateTime?
+  dob                DateTime?
+  gender             Gender?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  role               UserRole           @default(CUSTOMER)
+  verificationStatus VerificationStatus @default(PENDING)
 
   // One-to-One Relations
   aadhaarVerification AadhaarVerification?
@@ -34,79 +35,172 @@ model User {
   address             AddressDetail?
 
   // OTP History
-  otps                OtpVerification[]
+  otps OtpVerification[]
 
   // Loan History
-  loans               Loan[]
+  loans Loan[]
 
   // Loan Applications
-  loanApplications    LoanApplication[]
+  loanApplications LoanApplication[]
 
   // ✅ KYC Relations
-  documents           UserDocument[]
-  locations           UserLocation[]
-  status              UserDocumentStatus?
+  documents UserDocument[]
+  locations UserLocation[]
+  status    UserDocumentStatus?
+
+  // ✅ Partner/Business Relations
+  profileType   ProfileType?
+  business      BusinessDetail?
+  partnerStatus PartnerStatus?
+
+  // ✅ Attribution (Locked First-Touch)
+  attributedPartnerId Int?
+  attributionDate     DateTime?
+  attributionType     AttributionType? // ONLINE_LINK | ASSISTED | ORGANIC | ADMIN_OVERRIDE
+  attributionLogs     AttributionLog[]
+
+  // ✅ New Partner Relation
+  attributedPartner Partner? @relation(fields: [attributedPartnerId], references: [id])
+}
+
+model BusinessDetail {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  firmName     String
+  gstNumber    String?
+  tradeLicense String?
+  companyPan   String?
+
+  address String?
+  city    String?
+  state   String?
+  pincode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ✅ Partner Status (Approval Workflow & Secrets) - DEPRECATED/LEGACY (To be migrated)
+model PartnerStatus {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  status     String  @default("PENDING") // PENDING | APPROVED | REJECTED
+  remarks    String?
+  approvedBy Int?
+
+  // 🔐 Secure Attribution
+  secretKey String? // Encrypted AES key for link signing
+
+  updatedAt DateTime @updatedAt
+}
+
+// ✅ NEW Independent Partner Model
+model Partner {
+  id       Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  phone    String @unique
+  password String // Hashed
+
+  partnerType PartnerType
+  status      PartnerStatusType @default(PENDING)
+
+  // Attributes specific to partner type (stored as JSON for flexibility or specific columns)
+  gstNumber String?
+  panNumber String?
+  address   String?
+  city      String?
+  state     String?
+  pincode   String?
+
+  secretKey String? // Encrypted key for HMAC signing
+
+  // Relations
+  users           User[] // Users attributed to this partner
+  attributionLogs AttributionLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ✅ Attribution Audit Log
+model AttributionLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  partnerId Int
+  action    String // CLICK, CONVERSION, REJECTED, OVERRIDE
+  metadata  String? // JSON string of details
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id])
+  partner Partner? @relation(fields: [partnerId], references: [id])
 }
 
 model AadhaarVerification {
-  id            Int      @id @default(autoincrement())
-  aadhaarNumber String   @unique
-  verified      Boolean  @default(false)
+  id            Int       @id @default(autoincrement())
+  aadhaarNumber String    @unique
+  verified      Boolean   @default(false)
   verifiedAt    DateTime?
-  userId        Int      @unique
-  user          User     @relation(fields: [userId], references: [id])
+  userId        Int       @unique
+  user          User      @relation(fields: [userId], references: [id])
 }
 
 model PanVerification {
-  id          Int      @id @default(autoincrement())
-  panNumber   String   @unique
-  verified    Boolean  @default(false)
-  verifiedAt  DateTime?
-  userId      Int      @unique
-  user        User     @relation(fields: [userId], references: [id])
+  id         Int       @id @default(autoincrement())
+  panNumber  String    @unique
+  verified   Boolean   @default(false)
+  verifiedAt DateTime?
+  userId     Int       @unique
+  user       User      @relation(fields: [userId], references: [id])
 }
 
 model EmploymentDetail {
-  id             Int                @id @default(autoincrement())
-  userId         Int                @unique
-  user           User               @relation(fields: [userId], references: [id])
-  
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
   employmentType EmploymentType
   employerName   String?
   companyAddress String?
   monthlyIncome  Float?
   stability      JobStability?
 
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   loanApplications LoanApplication[] @relation("EmploymentLoanApplications")
 }
 
 model AddressDetail {
-  id                   Int         @id @default(autoincrement())
-  currentAddress       String?
-  permanentAddress     String?
-  city                 String?
-  state                String?
-  postalCode           String?
-  currentAddressType   AddressType?
-  currentAddressProof  String?
-  userId               Int         @unique
-  user                 User        @relation(fields: [userId], references: [id])
+  id                  Int          @id @default(autoincrement())
+  currentAddress      String?
+  permanentAddress    String?
+  city                String?
+  state               String?
+  postalCode          String?
+  currentAddressType  AddressType?
+  currentAddressProof String?
+  userId              Int          @unique
+  user                User         @relation(fields: [userId], references: [id])
 }
 
 model OtpVerification {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   otpCode   String
   expiresAt DateTime
-  verified  Boolean   @default(false)
+  verified  Boolean  @default(false)
   userId    Int
-  user      User      @relation(fields: [userId], references: [id])
-  createdAt DateTime  @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 model Loan {
-  id            Int       @id @default(autoincrement())
+  id            Int        @id @default(autoincrement())
   loanAmount    Float
   purposeOfLoan String?
   interestRate  Float?
@@ -114,82 +208,86 @@ model Loan {
   startDate     DateTime?
   status        LoanStatus @default(PENDING)
   userId        Int
-  user          User      @relation(fields: [userId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  user          User       @relation(fields: [userId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model LoanApplication {
-  id                 Int                  @id @default(autoincrement())
-  userId             Int
-  user               User                 @relation(fields: [userId], references: [id])
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 
   employmentDetailId Int?
-  employmentDetail   EmploymentDetail?    @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
+  employmentDetail   EmploymentDetail? @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
 
-  loanType           LoanType
-  loanAmount         Float?
-  otpVerified        Boolean   @default(false)
-  status             LoanStatus @default(PENDING)
+  loanType    LoanType
+  loanAmount  Float?
+  otpVerified Boolean    @default(false)
+  status      LoanStatus @default(PENDING)
 
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  // ✅ Application-Level Attribution Snapshot
+  attributedPartnerId Int?
+  attributionSource   String? // e.g., "LINK_CLICK", "ASSISTED_SESSION"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ✅ New Model - Supabase Document Storage
 model UserDocument {
-  id          Int            @id @default(autoincrement())
-  userId      Int
-  user        User           @relation(fields: [userId], references: [id])
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 
-  docType     DocumentType
-  filePath    String         // Supabase storage path (not full URL)
-  fileUrl     String?
-  fileName    String?
-  mimeType    String?
-  size        Int?
-  checksum    String?        // sha256 checksum
-  status      DocumentUploadStatus @default(SUBMITTED)
-  verified    Boolean        @default(false)
-  verifiedBy  Int?
-  verifiedAt  DateTime?
-  notes       String?
-  uploadedAt  DateTime       @default(now())
+  docType    DocumentType
+  filePath   String // Supabase storage path (not full URL)
+  fileUrl    String?
+  fileName   String?
+  mimeType   String?
+  size       Int?
+  checksum   String? // sha256 checksum
+  status     DocumentUploadStatus @default(SUBMITTED)
+  verified   Boolean              @default(false)
+  verifiedBy Int?
+  verifiedAt DateTime?
+  notes      String?
+  uploadedAt DateTime             @default(now())
 
   @@index([userId, docType])
 }
 
 // ✅ New Model - Location Capture
 model UserLocation {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  user        User      @relation(fields: [userId], references: [id])
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 
-  latitude    Float
-  longitude   Float
-  accuracy    Float?
+  latitude  Float
+  longitude Float
+  accuracy  Float?
 
-  locality    String?
-  city        String?
-  state       String?
-  country     String?
-  postalCode  String?
-  placeName   String?
+  locality   String?
+  city       String?
+  state      String?
+  country    String?
+  postalCode String?
+  placeName  String?
 
-  capturedAt  DateTime @default(now())
+  capturedAt DateTime @default(now())
 }
+
 // ✅ New Model - Document Submission Status
 model UserDocumentStatus {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @unique
-  status      String   @default("PENDING_UPLOAD") // PENDING_UPLOAD | SUBMITTED | VERIFIED | REJECTED
-  latitude    Float?
-  longitude   Float?
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  status    String   @default("PENDING_UPLOAD") // PENDING_UPLOAD | SUBMITTED | VERIFIED | REJECTED
+  latitude  Float?
+  longitude Float?
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
-
 
 // ==============================
 // ENUMS
@@ -204,9 +302,30 @@ enum VerificationStatus {
 enum UserRole {
   CUSTOMER
   DSA
+  BC
   AFFILIATE
   ADMIN
   SUPER_ADMIN
+  Employees
+}
+
+enum PartnerType {
+  DSA
+  BC
+  AFFILIATE
+  API_PARTNER
+}
+
+enum PartnerStatusType {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum ProfileType {
+  INDIVIDUAL
+  FIRM
 }
 
 enum Gender {
@@ -262,7 +381,11 @@ enum DocumentType {
   BANK_STATEMENT
   PHOTO
   SIGNATURE
+  GST_CERTIFICATE
+  TRADE_LICENSE
+  COMPANY_PAN
 }
+
 // New Enum 
 enum DocumentUploadStatus {
   PENDING_UPLOAD
@@ -271,4 +394,9 @@ enum DocumentUploadStatus {
   REJECTED
 }
 
-
+enum AttributionType {
+  ONLINE_LINK
+  ASSISTED
+  ORGANIC
+  ADMIN_OVERRIDE
+}

@@ -12,10 +12,15 @@ const requestPhoneOtp = asyncHandler(async (req, res) => {
 // Verify OTP
 const verifyPhoneOtp = asyncHandler(async (req, res) => {
   const { phone, code } = req.body;
-  const result = await authService.verifyPhoneOtp(phone, code);
+  // Pass attribution if available (from middleware)
+  const attribution = req.attribution || null;
+  console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
+  const result = await authService.verifyPhoneOtp(phone, code, attribution);
   res.json(result);
 });
 
-module.exports = 
-{ requestPhoneOtp, 
-  verifyPhoneOtp };
+module.exports =
+{
+  requestPhoneOtp,
+  verifyPhoneOtp
+};

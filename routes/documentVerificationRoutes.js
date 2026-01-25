@@ -6,7 +6,7 @@ const {
   getVerificationStatus,
 } = require("../controllers/documentVerificationController");
 
-const {authenticate} = require("../middleware/authMiddleware");
+const { authenticate } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
 
 /**
@@ -27,6 +27,20 @@ router.post(
     { name: "selfie", maxCount: 1 },
   ]),
   submitDocumentVerification
+);
+
+const { uploadDocument } = require("../controllers/documentVerificationController");
+
+/**
+ * @route POST /api/document/upload/:type
+ * @desc Upload a single document by type (e.g., AADHAAR, PAN)
+ * @access Private
+ */
+router.post(
+  "/upload/:type",
+  authenticate,
+  upload.single("file"),
+  uploadDocument
 );
 
 /**
