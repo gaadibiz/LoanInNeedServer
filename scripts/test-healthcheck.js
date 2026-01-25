@@ -7,7 +7,7 @@
 
 const http = require('http');
 
-const PORT = process.argv[2] || 5000;
+const PORT = process.env.PORT || process.argv[2] || 5000;
 const HOST = 'localhost';
 
 const options = {
@@ -39,7 +39,7 @@ const req = http.request(options, (res) => {
       console.log('Response Body:');
       console.log(JSON.stringify(json, null, 2));
       console.log('─'.repeat(50));
-      
+
       if (res.statusCode === 200 && json.status === 'healthy') {
         console.log('✅ Healthcheck PASSED - Server is healthy!');
         process.exit(0);

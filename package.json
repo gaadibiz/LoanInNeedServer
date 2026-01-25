@@ -2,6 +2,9 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Backend API for LoanInNeed digital lending platform, providing secure and scalable services including credit score evaluation, EMI calculations, content management, and visitor analytics using Node.js, Express, and PostgreSQL.",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "main": "server.js",
   "scripts": {
     "test": "jest --runInBand",
