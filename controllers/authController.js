@@ -19,8 +19,25 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+// Verify Aadhaar OTP (Bypass)
+const verifyAadhaarOtp = asyncHandler(async (req, res) => {
+  const { otp } = req.body;
+  // Bypass logic: Accept any OTP or specifically Master OTP
+  // Since we disabled sending, we just return success
+  console.log('[AUTH] Aadhaar OTP Verified (Bypass)');
+  res.json({ success: true, message: "Aadhaar verified successfully" });
+});
+
+// Request Aadhaar OTP (Stub/Bypass)
+const requestAadhaarOtp = asyncHandler(async (req, res) => {
+  // We do nothing, just return success so frontend proceeds
+  res.json({ success: true, message: "OTP sent successfully" });
+});
+
 module.exports =
 {
   requestPhoneOtp,
-  verifyPhoneOtp
+  verifyPhoneOtp,
+  verifyAadhaarOtp,
+  requestAadhaarOtp
 };

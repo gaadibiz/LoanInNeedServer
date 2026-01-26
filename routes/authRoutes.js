@@ -9,4 +9,8 @@ const attributionMiddleware = require('../middleware/attributionMiddleware');
 router.post('/phone/request-otp', authController.requestPhoneOtp);
 router.post('/phone/verify-otp', attributionMiddleware, authController.verifyPhoneOtp);
 
+// Aadhaar OTP routes
+router.post('/aadhaar/request-otp', authController.requestAadhaarOtp);
+router.post('/aadhaar/verify-otp', authController.verifyAadhaarOtp);
+
 module.exports = router;
