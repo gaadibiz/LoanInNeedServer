@@ -29,9 +29,10 @@ async function registerUser(userId, data) {
   const { name, dob, gender, email, password } = data;
 
   // 2️⃣ Validate required fields
-  if (!name || !dob || !gender || !password) {
+  // Email and Password are now OPTIONAL. Only Name, DOB, Gender required.
+  if (!name || !dob || !gender) {
     logger.error('❌ [USER SERVICE] Missing required fields for registration');
-    throw new BadRequestError('name, dob, gender & password are required.');
+    throw new BadRequestError('name, dob, & gender are required.');
   }
 
   // 3️⃣ Validate email uniqueness if updated
@@ -43,13 +44,12 @@ async function registerUser(userId, data) {
     }
   }
 
-  // 4️⃣ Prepare update object
   const updateData = {
     name,
     dob: new Date(dob),
     gender: gender.toUpperCase(),
-    email,
-    password: await hashPassword(password),
+    email: email || null,
+    password: password ? await hashPassword(password) : null,
   };
 
   // 5️⃣ Update user in DB

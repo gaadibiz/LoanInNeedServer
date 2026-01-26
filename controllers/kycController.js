@@ -3,6 +3,10 @@ const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { saveFullKYC } = require('../services/kycService');
 const documentVerificationService = require('../services/documentService'); // Import Document Service
 const PanModel = require('../models/panModel'); // Import PanModel for direct access
+const EmploymentModel = require('../models/employmentModel');
+const AddressModel = require('../models/adressModel');
+const LoanModel = require('../models/loanModel');
+const kycService = require('../services/kycService'); // Import generic service for access if needed
 
 
 
@@ -113,3 +117,82 @@ exports.verifyPAN = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Update Employment Details (PUT)
+ */
+exports.updateEmployment = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const data = req.body;
+    logger.info('📝 [KYC] Update Employment request for userId=%s', userId);
+
+    // Basic mapping
+    const employmentPayload = {
+      employmentType: data.employmentType, // Optional in update
+      employerName: data.companyName,
+      companyAddress: data.companyAddress,
+      monthlyIncome: data.monthlyIncome ? Number(data.monthlyIncome) : undefined,
+      stability: data.stability,
+    };
+
+    // Filter undefined values to avoid overwriting with null/undefined if model supports partial updates
+    // But our models might expect full payload or we trust partial update logic in model.
+    // Let's assume model update handles partials or we pass what we have.
+    // Ideally we should sanitize payload to remove undefined keys.
+    Object.keys(employmentPayload).forEach(key => employmentPayload[key] === undefined && delete employmentPayload[key]);
+
+    let employment = await EmploymentModel.findByUserId(userId);
+    if (employment) {
+      employment = await EmploymentModel.updateEmploymentDetails(userId, employmentPayload);
+    } else {
+      // If not exists, create
+      if (!employmentPayload.employerName || !employmentPayload.monthlyIncome) {
+        throw new BadRequestError("Employment record not found and payload incomplete for creation.");
+      }
+      employment = await EmploymentModel.createEmploymentDetails(userId, employmentPayload);
+    }
+
+    return res.status(200).json({ success: true, message: 'Employment details updated', data: employment });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update Address Details (PUT)
+ */
+exports.updateAddress = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const data = req.body;
+    logger.info('📝 [KYC] Update Address request for userId=%s', userId);
+
+    const addrPayload = {
+      currentAddress: data.currentAddress,
+      permanentAddress: data.permanentAddress,
+      city: data.city || data.currentCity,
+      state: data.state || data.currentState,
+      postalCode: data.postalCode || data.pinCode || data.currentPostalCode,
+      currentAddressType: data.currentAddressType,
+    };
+
+    // Cleanup undefined
+    Object.keys(addrPayload).forEach(key => addrPayload[key] === undefined && delete addrPayload[key]);
+
+    let address = await AddressModel.findByUserId(userId);
+    if (address) {
+      address = await AddressModel.updateAddress(userId, addrPayload);
+    } else {
+      if (!addrPayload.currentAddress) {
+        throw new BadRequestError("Address record not found and payload incomplete for creation.");
+      }
+      address = await AddressModel.createAddress(userId, addrPayload);
+    }
+
+    return res.status(200).json({ success: true, message: 'Address details updated', data: address });
+  } catch (error) {
+    next(error);
+  }
+};
+

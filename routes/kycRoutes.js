@@ -19,4 +19,9 @@ router.get('/', protect, kycController.getKYC);
 // PAN Verification with image upload
 router.post('/verify-pan', protect, upload.single('panImage'), kycController.verifyPAN);
 
+// Granular Updates (PUT)
+router.put('/employment', protect, kycController.updateEmployment);
+router.put('/address', protect, kycController.updateAddress);
+
+
 module.exports = router;

@@ -100,11 +100,11 @@ model PartnerStatus {
 
 // ✅ NEW Independent Partner Model
 model Partner {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   name     String
-  email    String @unique
-  phone    String @unique
-  password String // Hashed
+  email    String? @unique
+  phone    String  @unique
+  password String? // Hashed
 
   partnerType PartnerType
   status      PartnerStatusType @default(PENDING)

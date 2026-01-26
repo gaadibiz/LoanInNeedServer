@@ -5,6 +5,7 @@ const { authenticate } = require('../middleware/authMiddleware');
 
 // Registration now requires JWT authentication
 router.post('/register', authenticate, userController.registerUser);
+router.put('/profile', authenticate, userController.registerUser); // Alias for update
 
 // Login (OTP-based)
 router.post('/login', userController.loginUser);

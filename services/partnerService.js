@@ -53,9 +53,9 @@ const registerPartner = async (data) => {
     throw new BadRequestError('Partner already exists with this email or phone.');
   }
 
-  // Hash password
+  // Hash password (if provided)
   const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
+  const hashedPassword = password ? await bcrypt.hash(password, salt) : null;
 
   // Generate Secret Key for HMAC
   const rawSecret = crypto.randomBytes(32).toString('hex');
@@ -86,30 +86,53 @@ const registerPartner = async (data) => {
   };
 };
 
+
 /**
- * Login Partner
+ * Login Partner (Supports Phone or Email login)
  */
-const loginPartner = async (email, password) => {
-  const partner = await prisma.partner.findUnique({
-    where: { email }
+const loginPartner = async (identifier, password) => {
+  // Check if identifier is email or phone
+  const isEmail = identifier.includes('@');
+
+  const partner = await prisma.partner.findFirst({
+    where: isEmail ? { email: identifier } : { phone: identifier }
   });
 
-  if (partner && (await bcrypt.compare(password, partner.password))) {
-    if (partner.status === 'REJECTED' || partner.status === 'SUSPENDED') {
-      throw new UnauthorizedError('Account is suspended or rejected. Contact support.');
-    }
+  // If password exists, verify it. 
+  // If partner has no password (OTP flow, future), we need a different mechanism.
+  // For now, assume password is provided during login IF it was set.
+  // The user requirement says "no need of email or password... everything via mobile number".
+  // So we might need an OTP login for Partner too.
+  // But for this specific function (login based on password), we keep password check strict if password exists.
 
-    return {
-      id: partner.id,
-      name: partner.name,
-      email: partner.email,
-      partnerType: partner.partnerType,
-      status: partner.status,
-      token: generateToken(partner.id)
-    };
-  } else {
-    throw new BadRequestError('Invalid email or password');
+  if (!partner) {
+    throw new BadRequestError('Invalid credentials');
   }
+
+  // If partner has a password set, verify it
+  if (partner.password) {
+    if (!password || !(await bcrypt.compare(password, partner.password))) {
+      throw new BadRequestError('Invalid credentials');
+    }
+  } else {
+    // Partner has no password set. 
+    // If they are trying to login via this "password" route, it should fail or we strictly require OTP login.
+    // Since this is `loginPartner` handling password flow:
+    throw new BadRequestError('This account is configured for OTP login only.');
+  }
+
+  if (partner.status === 'REJECTED' || partner.status === 'SUSPENDED') {
+    throw new UnauthorizedError('Account is suspended or rejected. Contact support.');
+  }
+
+  return {
+    id: partner.id,
+    name: partner.name,
+    email: partner.email,
+    partnerType: partner.partnerType,
+    status: partner.status,
+    token: generateToken(partner.id)
+  };
 };
 
 /**
@@ -177,7 +200,7 @@ const generateReferralLink = async (partnerId) => {
  * Update Partner Profile
  */
 const updatePartnerProfile = async (id, data) => {
-  const { name, phone, gstNumber, panNumber, address, city, state, pincode } = data;
+  const { name, email, phone, gstNumber, panNumber, address, city, state, pincode } = data;
 
   // Check if partner exists
   const partner = await prisma.partner.findUnique({ where: { id } });
@@ -188,6 +211,7 @@ const updatePartnerProfile = async (id, data) => {
     where: { id },
     data: {
       name,
+      email,
       phone,
       gstNumber,
       panNumber,
