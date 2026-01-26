@@ -28,18 +28,26 @@ app.use(helmet()); // Secure HTTP headers
 const allowedOrigins = [
   'http://localhost:3000', // Local Frontend (Next.js default)
   'http://localhost:5173', // Local Frontend (Vite default)
-  'https://loaninneed.vercel.app' // Production Frontend
+  'https://loaninneed.vercel.app', // Production Frontend
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
     }
-    return callback(null, true);
+
+    // Allow all Vercel preview deployments (*.vercel.app)
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    return callback(new Error(msg), false);
   },
   credentials: true
 }));
