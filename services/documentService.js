@@ -120,7 +120,7 @@ class DocumentVerificationService {
     });
 
     // Trigger Selfie OTP if needed (Legacy Flow)
-    await OtpService.sendOtp(userId);
+    // await OtpService.sendOtp(userId); // Bypassed as per user request (Master OTP flow)
 
     return {
       message: 'Documents uploaded successfully. OTP sent for selfie verification ✅',
