@@ -8,6 +8,15 @@ const documentVerificationService = require('../services/documentService'); // I
  * Controller to handle full KYC submission (Employment + Address + Loan)
  * Expects a single form submission with all details.
  */
+exports.getKYC = async (req, res, next) => {
+  // Stub implementation to prevent crash
+  res.status(200).json({ message: "KYC details not implemented yet" });
+};
+
+/**
+ * Controller to handle full KYC submission (Employment + Address + Loan)
+ * Expects a single form submission with all details.
+ */
 exports.submitKYC = async (req, res, next) => {
   try {
     const userId = req.user?.id || req.params.userId;
