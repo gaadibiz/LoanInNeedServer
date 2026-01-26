@@ -2,6 +2,8 @@ const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { saveFullKYC } = require('../services/kycService');
 const documentVerificationService = require('../services/documentService'); // Import Document Service
+const PanModel = require('../models/panModel'); // Import PanModel for direct access
+
 
 
 /**
@@ -70,7 +72,31 @@ exports.verifyPAN = async (req, res, next) => {
 
     logger.info('✅ [KYC] PAN image uploaded successfully for userId=%s', userId);
 
-    // 2. Mock Success Response
+    // 2. Persist PAN in DB (Bypass Mode)
+    // Check if record exists
+    const existingPan = await PanModel.findByUserId(userId);
+
+    let panRecord;
+    if (existingPan) {
+      // Update existing
+      panRecord = await PanModel.updatePanRecord(userId, {
+        panNumber: panNumber.toUpperCase(),
+        verified: true,
+        verifiedAt: new Date()
+      });
+    } else {
+      // Create new (directly verified)
+      panRecord = await PanModel.createPanRecord(userId, panNumber.toUpperCase());
+      // createPanRecord defaults verified to false, so we must update it immediately or custom create
+      // Actually, createPanRecord implementation: verified: false. 
+      // So we need to update it to true right after, or just use updatePanRecord if we could upsert.
+      // Let's just update it immediately.
+      panRecord = await PanModel.verifyPan(userId);
+    }
+
+    logger.info('✅ [KYC] PAN verified and saved in DB for userId=%s', userId);
+
+    // 3. Mock Success Response
     // We return success but NO specific user details, so the frontend stays empty/editable.
     return res.status(200).json({
       success: true,
