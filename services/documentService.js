@@ -34,7 +34,16 @@ class DocumentVerificationService {
     const filePath = `${docType}/${userId}/${timestamp}_${sanitizedFilename}`;
 
     // 2. Read File
-    const fileBuffer = await fs.readFile(file.path);
+    let fileBuffer;
+    if (file.buffer) {
+      // Memory Storage
+      fileBuffer = file.buffer;
+    } else if (file.path) {
+      // Disk Storage
+      fileBuffer = await fs.readFile(file.path);
+    } else {
+      throw new BadRequestError('File content missing');
+    }
 
     // 3. Upload to Supabase
     const { error: uploadError } = await supabase.storage
@@ -71,11 +80,13 @@ class DocumentVerificationService {
       }
     });
 
-    // 7. Cleanup Temp File
-    try {
-      await fs.unlink(file.path);
-    } catch (e) {
-      console.warn('Failed to delete temp file:', file.path);
+    // 7. Cleanup Temp File (only if disk storage was used)
+    if (file.path) {
+      try {
+        await fs.unlink(file.path);
+      } catch (e) {
+        console.warn('Failed to delete temp file:', file.path);
+      }
     }
 
     return document;
