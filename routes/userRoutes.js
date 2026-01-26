@@ -9,6 +9,7 @@ router.put('/profile', authenticate, userController.registerUser); // Alias for 
 
 // Login (OTP-based)
 router.post('/login', userController.loginUser);
+router.post('/admin-login', userController.loginAdmin); // ✅ New Admin Login
 
 // Protected route
 router.get('/me', authenticate, userController.getProfile);

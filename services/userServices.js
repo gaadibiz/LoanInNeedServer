@@ -4,6 +4,8 @@ const logger = require('../utils/logger');
 const { hashPassword } = require('../utils/hash');
 const { BadRequestError, NotFoundError, UnauthorizedError } = require('../GlobalExceptionHandler/exception');
 const twilioOtp = require('../utils/twilioOtp');
+const { comparePassword } = require('../utils/hash');
+const jwt = require('jsonwebtoken');
 
 /**
  * =====================================
@@ -217,9 +219,64 @@ async function getCompleteProfile(userId) {
   return completeProfile;
 }
 
+/**
+ * ==============================
+ * Admin Login (Email + Password)
+ * ==============================
+ */
+async function loginAdmin(email, password) {
+  logger.info(`📌 [USER SERVICE] Admin login attempt: ${email}`);
+
+  if (!email || !password) {
+    throw new BadRequestError('Email and Password are required.');
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user) {
+    throw new UnauthorizedError('Invalid credentials.');
+  }
+
+  // Check Role
+  if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+    throw new UnauthorizedError('Access Denied: Not an Admin.');
+  }
+
+  // Verify Password
+  if (!user.password) {
+    throw new UnauthorizedError('Account does not have a password set.');
+  }
+
+  const isMatch = await comparePassword(password, user.password);
+  if (!isMatch) {
+    throw new UnauthorizedError('Invalid credentials.');
+  }
+
+  // Generate Token
+  const token = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '1d' }
+  );
+
+  logger.info(`✅ [USER SERVICE] Admin logged in: ${email}`);
+
+  return {
+    message: 'Admin logged in successfully',
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    }
+  };
+}
+
 module.exports = {
   registerUser,
   getProfile,
   getCompleteProfile,
-  loginViaPhoneAndDob
+  loginViaPhoneAndDob,
+  loginAdmin
 };

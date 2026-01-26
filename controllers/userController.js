@@ -24,9 +24,9 @@ const getProfile = asyncHandler(async (req, res) => {
 // ✅ Get Complete Profile with all KYC details
 const getCompleteProfile = asyncHandler(async (req, res) => {
   const completeProfile = await userService.getCompleteProfile(req.user.id);
-  res.json({ 
-    message: 'Complete profile fetched successfully.', 
-    profile: completeProfile 
+  res.json({
+    message: 'Complete profile fetched successfully.',
+    profile: completeProfile
   });
 });
 
@@ -42,6 +42,13 @@ const loginUser = asyncHandler(async (req, res) => {
     message: result.message, // "OTP sent for login. Please verify to continue."
     phone: result.phone
   });
+});
+
+// ✅ Admin Login (Email + Password)
+const loginAdmin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const result = await userService.loginAdmin(email, password);
+  res.status(200).json(result);
 });
 
 // ✅ Submit Location
@@ -82,5 +89,6 @@ module.exports = {
   getCompleteProfile,
   loginUser,
   submitLocation,
-  getLocation
+  getLocation,
+  loginAdmin
 };
