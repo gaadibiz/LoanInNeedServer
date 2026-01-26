@@ -8,7 +8,7 @@ const { BadRequestError, NotFoundError, UnauthorizedError } = require('../Global
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
 
 const PARTNER_REQUIREMENTS = {
-  DSA: ['gstNumber', 'panNumber', 'address', 'city', 'state', 'pincode'],
+  DSA: ['panNumber', 'address', 'city', 'state', 'pincode'],
   BC: ['panNumber', 'address', 'city', 'state', 'pincode'],
   AFFILIATE: ['panNumber'],
   API_PARTNER: ['gstNumber', 'panNumber']
