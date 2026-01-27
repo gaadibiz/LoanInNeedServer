@@ -26,7 +26,7 @@ const generateToken = (id) => {
  */
 const registerPartner = async (data) => {
   const {
-    name, email, phone, password, partnerType,
+    name, email, phone, partnerType,
     gstNumber, panNumber, address, city, state, pincode
   } = data;
 
@@ -53,9 +53,15 @@ const registerPartner = async (data) => {
     throw new BadRequestError('Partner already exists with this email or phone.');
   }
 
-  // Hash password (if provided)
+  // Generate Automatic Password (Name + Random 4 digits)
+  // e.g. "John Doe" -> "John8392"
+  const cleanName = name.split(' ')[0].replace(/[^a-zA-Z]/g, '');
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  const rawPassword = `${cleanName}${randomSuffix}`;
+
+  // Hash password
   const salt = await bcrypt.genSalt(10);
-  const hashedPassword = password ? await bcrypt.hash(password, salt) : null;
+  const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
   // Generate Secret Key for HMAC
   const rawSecret = crypto.randomBytes(32).toString('hex');
@@ -81,8 +87,9 @@ const registerPartner = async (data) => {
     id: partner.id,
     name: partner.name,
     email: partner.email,
+    rawPassword: rawPassword, // Return raw password for Admin to download
     token: generateToken(partner.id),
-    message: 'Partner registered successfully. Pending approval.'
+    message: 'Partner registered successfully. Credentials generated.'
   };
 };
 
@@ -191,8 +198,12 @@ const generateReferralLink = async (partnerId) => {
   // Generate HMAC
   const signature = generateHmac(payload, secretKey);
 
+  // Link to production frontend
+  const FRONTEND_URL = 'https://loaninneed.vercel.app';
+
   return {
-    link: `${API_BASE_URL}/register?pid=${partner.id}&ts=${timestamp}&sig=${signature}`
+    // Ensuring it points to the frontend root (landing) or logic
+    link: `${FRONTEND_URL}/?pid=${partner.id}&ts=${timestamp}&sig=${signature}`
   };
 };
 
