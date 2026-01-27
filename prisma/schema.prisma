@@ -110,6 +110,7 @@ model Partner {
   status      PartnerStatusType @default(PENDING)
 
   // Attributes specific to partner type (stored as JSON for flexibility or specific columns)
+  firmName  String?
   gstNumber String?
   panNumber String?
   address   String?

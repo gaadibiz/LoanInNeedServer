@@ -27,7 +27,7 @@ const generateToken = (id) => {
 const registerPartner = async (data) => {
   const {
     name, email, phone, partnerType,
-    gstNumber, panNumber, address, city, state, pincode
+    gstNumber, panNumber, address, city, state, pincode, firmName
   } = data;
 
   // Validate Partner Type Requirements
@@ -86,7 +86,7 @@ const registerPartner = async (data) => {
       status: 'PENDING', // Default status
       secretKey: encryptedSecret,
       // Storing attributes
-      gstNumber, panNumber, address, city, state, pincode
+      gstNumber, panNumber, address, city, state, pincode, firmName
     }
   });
 
@@ -168,6 +168,7 @@ const getPartnerProfile = async (id) => {
       city: true,
       state: true,
       pincode: true,
+      firmName: true,
       createdAt: true
     }
   });
