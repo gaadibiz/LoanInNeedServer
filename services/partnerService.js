@@ -199,7 +199,7 @@ const generateReferralLink = async (partnerId) => {
   const signature = generateHmac(payload, secretKey);
 
   // Link to production frontend
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://loaninneed.vercel.app';
 
   return {
     // Ensuring it points to the signup page with attribution params
