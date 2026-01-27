@@ -3,11 +3,50 @@ const asyncHandler = require('express-async-handler');
 const userService = require('../services/userServices');
 const locationService = require('../services/locationService');
 const logger = require('../utils/logger');
+const prisma = require('../utils/prismaClient');
 
 // ✅ Basic Registration
 const registerUser = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  const { attribution } = req.body; // Extract attribution data
+
   const result = await userService.registerUser(userId, req.body);
+  const user = result.user;
+
+  // If attribution data exists, update user attribution
+  if (attribution && attribution.partnerId) {
+    try {
+      await prisma.user.update({
+        where: { id: parseInt(userId) }, // Using userId from token (which matches result.user logic usually, but let's be safe)
+        // Wait, result.user returns customUserId and other fields, not the DB ID usually. 
+        // req.user.id IS the DB ID from middleware. So we use that.
+        data: {
+          attributedPartnerId: parseInt(attribution.partnerId),
+          attributionDate: new Date(),
+          attributionType: 'ONLINE_LINK'
+        }
+      });
+
+      // Log the attribution conversion
+      await prisma.attributionLog.create({
+        data: {
+          userId: parseInt(userId),
+          partnerId: parseInt(attribution.partnerId),
+          action: 'CONVERSION',
+          metadata: JSON.stringify({
+            source: 'REGISTRATION',
+            timestamp: attribution.timestamp,
+            signature: attribution.signature
+          })
+        }
+      });
+
+      logger.info(`✅ User ${userId} attributed to Partner ${attribution.partnerId}`);
+    } catch (error) {
+      logger.error(`Failed to attribute user ${userId}:`, error);
+      // Don't fail registration if attribution fails
+    }
+  }
 
   res.status(200).json({
     message: 'Registration completed successfully.',

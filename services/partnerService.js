@@ -199,11 +199,11 @@ const generateReferralLink = async (partnerId) => {
   const signature = generateHmac(payload, secretKey);
 
   // Link to production frontend
-  const FRONTEND_URL = 'https://loaninneed.vercel.app';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
   return {
-    // Ensuring it points to the frontend root (landing) or logic
-    link: `${FRONTEND_URL}/?pid=${partner.id}&ts=${timestamp}&sig=${signature}`
+    // Ensuring it points to the signup page with attribution params
+    link: `${FRONTEND_URL}/signup?pid=${partner.id}&ts=${timestamp}&sig=${signature}`
   };
 };
 
@@ -297,23 +297,38 @@ const getPartnerDashboard = async (partnerId) => {
   // For loan applications, we need to find loan applications where user.attributedPartnerId == partnerId
   // OR if LoanApplication has attributedPartnerId (which we added in schema)
 
-  const totalLoanApplications = await prisma.loanApplication.count({
-    where: {
-      attributedPartnerId: partnerId
-    }
-  });
-
-  // Also count from users who are attributed to this partner, just in case they applied without direct link this time
-  // but are "owned" by the partner.
-  // For now, let's stick to the direct attribution on LoanApplication if populated, 
-  // or fallback to User attribution.
-
-  // Let's get a more comprehensive count: Loan Applications by Users attributed to this Partner
+  // Count total loan applications from attributed users
   const totalAttributedApplications = await prisma.loanApplication.count({
     where: {
       user: {
         attributedPartnerId: partnerId
       }
+    }
+  });
+
+  // Count approved loan applications
+  const approvedApplications = await prisma.loanApplication.count({
+    where: {
+      user: {
+        attributedPartnerId: partnerId
+      },
+      status: 'APPROVED'
+    }
+  });
+
+  // Count total clicks from attribution logs
+  const totalClicks = await prisma.attributionLog.count({
+    where: {
+      partnerId: partnerId,
+      action: 'CLICK'
+    }
+  });
+
+  // Count conversions (registrations)
+  const totalConversions = await prisma.attributionLog.count({
+    where: {
+      partnerId: partnerId,
+      action: 'CONVERSION'
     }
   });
 
@@ -329,7 +344,10 @@ const getPartnerDashboard = async (partnerId) => {
     stats: {
       totalUsers: partner._count.users,
       totalApplications: totalAttributedApplications,
-      // We can add more stats here later (e.g. approved loans, commission earned)
+      approvedApplications: approvedApplications,
+      totalClicks: totalClicks,
+      totalConversions: totalConversions,
+      conversionRate: totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(2) : 0
     }
   };
 };
