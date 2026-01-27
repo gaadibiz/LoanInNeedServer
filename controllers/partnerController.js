@@ -17,8 +17,9 @@ const registerPartner = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const loginPartner = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
-    const result = await partnerService.loginPartner(email, password);
+    const { identifier, email, password } = req.body;
+    // Support both 'identifier' (from new frontend) and 'email' (legacy/direct)
+    const result = await partnerService.loginPartner(identifier || email, password);
     res.json(result);
 });
 
