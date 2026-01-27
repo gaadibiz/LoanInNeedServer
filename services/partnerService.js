@@ -8,8 +8,8 @@ const { BadRequestError, NotFoundError, UnauthorizedError } = require('../Global
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
 
 const PARTNER_REQUIREMENTS = {
-  DSA: ['panNumber', 'address', 'city', 'state', 'pincode'],
-  BC: ['panNumber', 'address', 'city', 'state', 'pincode'],
+  DSA: ['address', 'city', 'state', 'pincode'],
+  BC: ['address', 'city', 'state', 'pincode'],
   AFFILIATE: ['panNumber'],
   API_PARTNER: ['gstNumber', 'panNumber']
 };
@@ -36,6 +36,13 @@ const registerPartner = async (data) => {
     const missing = requiredFields.filter(field => !data[field]);
     if (missing.length > 0) {
       throw new BadRequestError(`Missing required fields for ${partnerType}: ${missing.join(', ')}`);
+    }
+  }
+
+  // Custom Validation: DSA/BC must have either PAN or GST (to support Firms)
+  if (['DSA', 'BC'].includes(partnerType)) {
+    if (!panNumber && !gstNumber) {
+      throw new BadRequestError(`Missing required tax ID: Either PAN Number or GST Number is required for ${partnerType}`);
     }
   }
 
