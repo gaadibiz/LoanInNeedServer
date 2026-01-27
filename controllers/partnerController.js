@@ -78,6 +78,20 @@ const getPartnerDashboard = asyncHandler(async (req, res) => {
     res.json(result);
 });
 
+/**
+ * @desc    Get Partner Earnings
+ * @route   GET /api/partners/earnings
+ * @access  Private (Partner)
+ */
+const getPartnerEarnings = asyncHandler(async (req, res) => {
+    const result = await partnerService.getPartnerEarnings(req.partner.id);
+    res.json({
+        success: true,
+        message: "Earnings fetched successfully",
+        data: result
+    });
+});
+
 module.exports = {
     registerPartner,
     loginPartner,
@@ -86,6 +100,7 @@ module.exports = {
     updatePartnerProfile,
     updatePartnerProfile,
     changePartnerPassword,
-    getPartnerDashboard
+    getPartnerDashboard,
+    getPartnerEarnings
 };
 

@@ -25,6 +25,9 @@ router.route('/password')
 // Partner Dashboard
 router.get('/dashboard', protectPartner, partnerController.getPartnerDashboard);
 
+// Partner Earnings
+router.get('/earnings', protectPartner, partnerController.getPartnerEarnings);
+
 // For now, let's keep it minimal as per plan (Create, Login, Link Gen).
 router.get('/link', protectPartner, partnerController.generateReferralLink);
 

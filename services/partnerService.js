@@ -334,6 +334,52 @@ const getPartnerDashboard = async (partnerId) => {
   };
 };
 
+/**
+ * Get Partner Earnings
+ */
+const getPartnerEarnings = async (partnerId) => {
+  const users = await prisma.user.findMany({
+    where: { attributedPartnerId: partnerId },
+    include: {
+      loanApplications: {
+        orderBy: { createdAt: 'desc' },
+        take: 1
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  return users.map(user => {
+    const latestLoan = user.loanApplications[0];
+    const amount = latestLoan ? latestLoan.loanAmount : 0;
+
+    // Formatting helper
+    const formattedAmount = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+    const date = new Date(user.createdAt).toLocaleDateString('en-GB'); // DD/MM/YYYY
+
+    // Status mapping
+    let displayStatus = 'Registered';
+    let rawStatus = 'REGISTERED';
+
+    if (latestLoan) {
+      rawStatus = latestLoan.status;
+      if (latestLoan.status === 'APPROVED') displayStatus = 'Approved';
+      else if (latestLoan.status === 'REJECTED') displayStatus = 'Rejected';
+      else displayStatus = 'In process';
+    }
+
+    return {
+      id: user.id.toString(),
+      name: user.name || 'N/A',
+      amount: formattedAmount !== '₹0' ? formattedAmount : '-',
+      status: displayStatus,
+      rawStatus: rawStatus,
+      date: date,
+      earnings: '₹1,000'
+    };
+  });
+};
+
 module.exports = {
   registerPartner,
   loginPartner,
@@ -341,6 +387,7 @@ module.exports = {
   generateReferralLink,
   updatePartnerProfile,
   changePartnerPassword,
-  getPartnerDashboard
+  getPartnerDashboard,
+  getPartnerEarnings
 };
 
