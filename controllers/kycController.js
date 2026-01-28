@@ -127,19 +127,40 @@ exports.updateEmployment = async (req, res, next) => {
     const data = req.body;
     logger.info('📝 [KYC] Update Employment request for userId=%s', userId);
 
+    // Map frontend job stability values to enum values
+    const stabilityMap = {
+      'Very unstable': 'VERY_UNSTABLE',
+      'Somewhat unstable': 'SOMEWHAT_UNSTABLE',
+      'Neutral / moderate': 'NEUTRAL',
+      Neutral: 'NEUTRAL',
+      Stable: 'STABLE',
+      'Very Stable': 'VERY_STABLE',
+      // Also handle if already in enum format
+      VERY_UNSTABLE: 'VERY_UNSTABLE',
+      SOMEWHAT_UNSTABLE: 'SOMEWHAT_UNSTABLE',
+      NEUTRAL: 'NEUTRAL',
+      STABLE: 'STABLE',
+      VERY_STABLE: 'VERY_STABLE',
+    };
+
+    const stabilityValue = data.stability ?
+      (stabilityMap[data.stability] ||
+        String(data.stability)
+          .toUpperCase()
+          .replace(/\s+/g, '_')
+          .replace(/\/\s*MODERATE/gi, '')
+          .trim()) : undefined;
+
     // Basic mapping
     const employmentPayload = {
       employmentType: data.employmentType, // Optional in update
       employerName: data.companyName,
       companyAddress: data.companyAddress,
       monthlyIncome: data.monthlyIncome ? Number(data.monthlyIncome) : undefined,
-      stability: data.stability,
+      stability: stabilityValue,
     };
 
-    // Filter undefined values to avoid overwriting with null/undefined if model supports partial updates
-    // But our models might expect full payload or we trust partial update logic in model.
-    // Let's assume model update handles partials or we pass what we have.
-    // Ideally we should sanitize payload to remove undefined keys.
+    // Filter undefined values
     Object.keys(employmentPayload).forEach(key => employmentPayload[key] === undefined && delete employmentPayload[key]);
 
     let employment = await EmploymentModel.findByUserId(userId);
@@ -168,13 +189,27 @@ exports.updateAddress = async (req, res, next) => {
     const data = req.body;
     logger.info('📝 [KYC] Update Address request for userId=%s', userId);
 
+    // Map frontend address type values to enum values
+    const addressTypeMap = {
+      'Owner(Self or Family)': 'OWNER_SELF_OR_FAMILY',
+      Rented: 'RENTED',
+      // Also handle if already in enum format
+      OWNER_SELF_OR_FAMILY: 'OWNER_SELF_OR_FAMILY',
+      OWNER: 'OWNER_SELF_OR_FAMILY', // Backward compatibility
+      RENTED: 'RENTED',
+    };
+
+    const addressTypeValue = data.currentAddressType ?
+      (addressTypeMap[data.currentAddressType] ||
+        String(data.currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '')) : undefined;
+
     const addrPayload = {
       currentAddress: data.currentAddress,
       permanentAddress: data.permanentAddress,
       city: data.city || data.currentCity,
       state: data.state || data.currentState,
       postalCode: data.postalCode || data.pinCode || data.currentPostalCode,
-      currentAddressType: data.currentAddressType,
+      currentAddressType: addressTypeValue,
     };
 
     // Cleanup undefined
