@@ -1,16 +1,15 @@
 const prisma = require('../utils/prismaClient');
 const { generateToken } = require('../utils/jwt');
-const twilioOtp = require('../utils/twilioOtp');
+const smsOtpService = require('../utils/smsOtpService');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 
 const TEST_PHONE_NUMBER = process.env.TEST_PHONE_NUMBER || null;
 
 // ==============================
-// Send OTP to Phone (Twilio)
+// Send OTP to Phone (SMS API)
 // ==============================
 async function requestPhoneOtp(phone) {
-  // const targetPhone = TEST_PHONE_NUMBER || phone;
   const targetPhone = phone;
 
   logger.info('Request phone OTP for: %s', targetPhone);
@@ -22,21 +21,21 @@ async function requestPhoneOtp(phone) {
 
   // ✅ Mock OTP for Test Numbers (+9199...)
   if (targetPhone.startsWith('+9199')) {
-    logger.info('✅ Test number detected: bypassing Twilio sendOtp for %s', targetPhone);
+    logger.info('✅ Test number detected: bypassing SMS OTP for %s', targetPhone);
     return { message: 'OTP sent successfully (Mocked).' };
   }
 
-  await twilioOtp.sendOtp(targetPhone);
+  // Use new SMS OTP service
+  await smsOtpService.sendOtp(targetPhone);
   logger.info('OTP sent successfully to: %s', targetPhone);
 
   return { message: 'OTP sent successfully.' };
 }
 
 // ==============================
-// Verify OTP (Twilio) and Create or Update User
+// Verify OTP (SMS API) and Create or Update User
 // ==============================
 async function verifyPhoneOtp(phone, code, attribution = null) {
-  // const targetPhone = TEST_PHONE_NUMBER || phone;
   const targetPhone = phone;
   logger.info('Verifying OTP for phone: %s', targetPhone);
 
@@ -44,13 +43,14 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
     throw new BadRequestError('Phone and OTP code are required.');
   }
 
-  // ✅ Master OTP Bypass
+  // ✅ Master OTP Bypass (Emergency Access Only)
   let verificationCheck;
   if (code === "261102") {
-    logger.info("✅ Master OTP used: bypassing Twilio verification");
+    logger.info("✅ Master OTP used: bypassing SMS verification");
     verificationCheck = { status: 'approved' };
   } else {
-    verificationCheck = await twilioOtp.verifyOtp(targetPhone, code);
+    // Use new SMS OTP service
+    verificationCheck = await smsOtpService.verifyOtp(targetPhone, code);
   }
 
   if (!verificationCheck || verificationCheck.status !== 'approved') {

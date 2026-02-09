@@ -1,11 +1,5 @@
-const twilio = require("twilio");
+const smsOtpService = require("../utils/smsOtpService");
 const prisma = require("../utils/prismaClient");
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const serviceSid = process.env.TWILIO_SERVICE_SID;
-
-const client = twilio(accountSid, authToken);
 
 class OtpService {
   /**
@@ -25,12 +19,7 @@ class OtpService {
     const phone = user.phone;
 
     try {
-      const resp = await client.verify.v2.services(serviceSid)
-        .verifications.create({
-          to: phone,
-          channel: "sms",
-        });
-
+      const resp = await smsOtpService.sendOtp(phone);
       console.log("✅ OTP sent to:", phone);
       return resp;
     } catch (error) {
@@ -54,18 +43,14 @@ class OtpService {
 
     const phone = user.phone;
 
-    // ✅ Master OTP Bypass
+    // ✅ Master OTP Bypass (Emergency Access)
     if (code === "261102") {
-      console.log("✅ Master OTP used: bypassing Twilio verification");
+      console.log("✅ Master OTP used: bypassing SMS verification");
       return { verified: true };
     }
 
     try {
-      const resp = await client.verify.v2.services(serviceSid)
-        .verificationChecks.create({
-          to: phone,
-          code,
-        });
+      const resp = await smsOtpService.verifyOtp(phone, code);
 
       if (resp.status === "approved") {
         console.log("✅ OTP Verified Successfully");
@@ -81,3 +66,4 @@ class OtpService {
 }
 
 module.exports = new OtpService();
+
