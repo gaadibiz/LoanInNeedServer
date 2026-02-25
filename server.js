@@ -13,6 +13,7 @@ const documentVerificationRoutes = require('./routes/documentVerificationRoutes'
 const selfieRoutes = require('./routes/selfieRoutes'); // ✅ Added Selfie routes
 const logger = require('./utils/logger'); // Winston logger
 const errorHandler = require('./GlobalExceptionHandler/errorHandler'); // Central error handler
+const { startLosWorker } = require('./scripts/losWorker'); // ✅ LOS Integration Worker
 
 // Load environment variables from .env file
 dotenv.config();
@@ -90,6 +91,9 @@ app.use(errorHandler);
 // Define the port
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
+
+// ✅ Start Background Workers
+startLosWorker();
 
 // Start the server and log startup
 app.listen(PORT, HOST, () => {

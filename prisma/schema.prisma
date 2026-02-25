@@ -41,6 +41,7 @@ model User {
   documents           UserDocument[]
   status              UserDocumentStatus?
   locations           UserLocation[]
+  losIntegrationJobs  LosIntegrationJob[]
 }
 
 model BusinessDetail {
@@ -186,19 +187,20 @@ model Loan {
 }
 
 model LoanApplication {
-  id                  Int               @id @default(autoincrement())
+  id                  Int                @id @default(autoincrement())
   userId              Int
   employmentDetailId  Int?
   loanType            LoanType
   loanAmount          Float?
-  otpVerified         Boolean           @default(false)
-  status              LoanStatus        @default(PENDING)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  otpVerified         Boolean            @default(false)
+  status              LoanStatus         @default(PENDING)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   attributedPartnerId Int?
   attributionSource   String?
-  employmentDetail    EmploymentDetail? @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
-  user                User              @relation(fields: [userId], references: [id])
+  employmentDetail    EmploymentDetail?  @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
+  user                User               @relation(fields: [userId], references: [id])
+  losIntegrationJob   LosIntegrationJob?
 }
 
 model UserDocument {
@@ -352,4 +354,23 @@ enum AttributionType {
   ASSISTED
   ORGANIC
   ADMIN_OVERRIDE
+}
+
+model LosIntegrationJob {
+  id            Int    @id @default(autoincrement())
+  applicationId Int    @unique
+  userId        Int
+  status        String @default("PENDING") // PENDING, SUCCESS, FAILED
+  retryCount    Int    @default(0)
+
+  losApplicationId String?
+  losCaseNumber    String?
+  losKycId         String?
+
+  lastError String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id])
+  application LoanApplication @relation(fields: [applicationId], references: [id])
 }

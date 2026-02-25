@@ -54,6 +54,22 @@ const applyForLoan = asyncHandler(async (req, res) => {
         }
     });
 
+    // --- LOS INTEGRATION QUEUE ---
+    // Push a new pending job to completely decouple the external API from UI
+    try {
+        await prisma.losIntegrationJob.create({
+            data: {
+                userId,
+                applicationId: application.id,
+                status: 'PENDING'
+            }
+        });
+        logger.info(`[LOAN] Created LOS Integration Job for Application ${application.id}`);
+    } catch (error) {
+        // We log but DO NOT fail the loan creation since it's just an integration failure
+        logger.error(`[LOAN] Failed to queue LOS Integration Job for App ${application.id}: ${error.message}`);
+    }
+
     // 4. Log Event
     if (partnerId) {
         await prisma.attributionLog.create({
