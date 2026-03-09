@@ -6,6 +6,7 @@ const fs = require('fs').promises;
 const crypto = require('crypto');
 const path = require('path');
 const OtpService = require('./otpService');
+const { encodeBufferToBase64 } = require('../utils/base64Encoder');
 
 const SUPABASE_BUCKET = 'Documents';
 
@@ -45,6 +46,9 @@ class DocumentVerificationService {
       throw new BadRequestError('File content missing');
     }
 
+    // 2.5 Generate Base64 String
+    const base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
+
     // 3. Upload to Supabase
     const { error: uploadError } = await supabase.storage
       .from(SUPABASE_BUCKET)
@@ -79,6 +83,9 @@ class DocumentVerificationService {
         status: 'SUBMITTED'
       }
     });
+
+    // Attach Base64 text to the returned document object
+    document.base64Data = base64Data;
 
     // 7. Cleanup Temp File (only if disk storage was used)
     if (file.path) {

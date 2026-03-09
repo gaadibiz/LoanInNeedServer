@@ -4,9 +4,9 @@
 
 // 1. Gender Mapping
 const genderMap = {
-    MALE: 45,
-    FEMALE: 46,
-    PREFER_NOT_TO_SAY: 45 // Defaulting to Male if unknown per typical legacy system reqs, or can pass null if allowed
+    MALE: 1,
+    FEMALE: 2,
+    PREFER_NOT_TO_SAY: 1 // Default to Male per table
 };
 
 // 2. Employment Type Mapping
@@ -18,13 +18,39 @@ const employmentMap = {
     OTHER: 345
 };
 
-// 3. State Mapping (Approximation based on standard codes, adjust if a master list is provided by LOS)
+// 3. State Mapping (From table)
 const stateMap = {
-    "West Bengal": 1059,
-    "Maharashtra": 1060,
-    "Delhi": 1061,
-    "Karnataka": 1062,
-    // Add more states as needed... default 1059 for fallback if missing
+    "Maharashtra": 1109,
+    "West Bengal": 1110,
+    "Karnataka": 1111,
+    "Gujarat": 1112,
+    "Rajasthan": 1113,
+    "Uttar Pradesh": 1114,
+    "Bihar": 1115,
+    "Telangana": 1116,
+    "Andhra Pradesh": 1117,
+    "Tamil Nadu": 1118,
+    "Kerala": 1119,
+    "Chhattisgarh": 1120,
+    "Delhi": 1121,
+    "Odisha": 1122,
+    "Punjab": 1123,
+    "Madhya Pradesh": 1124,
+    "Jharkhand": 1125,
+    "Assam": 1126,
+    "Uttarakhand": 1127,
+    "Haryana": 1128,
+    "Jammu and Kashmir": 1129,
+    "Himachal Pradesh": 1130
+};
+
+// Helper to calculate age from DOB
+const calculateAge = (dobString) => {
+    if (!dobString) return 25; // Default age if missing
+    const dob = new Date(dobString);
+    const diffMs = Date.now() - dob.getTime();
+    const ageDt = new Date(diffMs);
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
 };
 
 /**
@@ -34,72 +60,77 @@ const buildLosPayload = (application, user, kycEmployment, kycAddress, kycPan) =
     // Basic null checks
     const firstName = user.name ? user.name.split(' ')[0] : 'Unknown';
     const lastName = user.name && user.name.includes(' ') ? user.name.split(' ').slice(1).join(' ') : 'Unknown';
-
-    // Default system fields
-    const OrganizationID = 1;
-    const LoanCategoryCode = "RLT";
-    const ProductCategoryCode = "UNSEC";
-    const ProductName = "PayDay Loan";
-    const LoanTypeID = 16;
-    const ProductID = 14;
-    const ProductSchemeID = 1006;
-
-    // Mapped Values
-    const Gender = genderMap[user.gender] || 45;
-    const EmploymentTypeID = kycEmployment ? (employmentMap[kycEmployment.employmentType] || 342) : 342;
-    const StateID = kycAddress && kycAddress.state ? (stateMap[kycAddress.state] || 1059) : 1059;
+    const age = calculateAge(user.dob);
 
     // Formatting Dates
-    const DateOfBirth = user.dob ? user.dob.toISOString() : new Date().toISOString();
+    const DateOfBirth = user.dob ? new Date(user.dob).toISOString() : new Date().toISOString();
+    // Dummy payday date
+    const paydayDate = new Date();
+    paydayDate.setDate(paydayDate.getDate() + 30);
+    const PaydayDateString = paydayDate.toISOString();
+
+    const StateCode = kycAddress && kycAddress.state ? (stateMap[kycAddress.state] || 1109) : 1109; // Default 1109 (MH)
+    const GenderCode = genderMap[user.gender] || 1;
+    const EmploymentTypeID = kycEmployment ? (employmentMap[kycEmployment.employmentType] || 342) : 342;
 
     return {
-        // System and Config Fields
-        OrganizationID,
-        LoanCategoryCode,
-        ProductCategoryCode,
-        ProductName,
-        LoanTypeID,
-        ProductID,
-        ProductSchemeID,
+        // 1-9 Organization & Product
+        OrganizationID: 1,
+        ProfileType: "I",
+        ProductCategoryCode: "Unsecured",
+        LoanTypeID: 16,
+        ProductID: 13, // 13 for PayDay Loan
+        ProductName: "PayDay Loan",
+        ProductSchemeID: 1006,
+        ProductSchemeName: "PayDay Loan Scheme",
+        LoanCategoryCode: "RLT",
 
-        // Personal Information
-        FirstName: firstName,
-        LastName: lastName,
-        MobileNo: user.phone,
+        // 10-13 Metrics & Options
+        Age: age,
         Email: user.email || `${user.phone}@noemail.com`,
+        QualificationID: null, // Select Qualification
+        EligibleLoanAmount: application.loanAmount || 0, // Fallback to required
+
+        // 14-16 Application Flags
+        IsFormerAddress: false,
+        IsJointApplication: false,
+        IsCoBorrower: false,
+
+        // 17-27 Personal & KYC
+        FirstName: firstName,
+        MiddleName: "",
+        LastName: lastName,
         DateOfBirth: DateOfBirth,
-        Gender: Gender,
-
-        // Identity
-        PanSSN: kycPan ? kycPan.panNumber : "",
-        AdharDrivingNo: "", // Extract from Aadhaar verification if available
-
-        // Employment
+        Gender: GenderCode,
+        MobileNo: user.phone || "",
         EmploymentTypeID: EmploymentTypeID,
-        PayCheckAmt: kycEmployment ? (kycEmployment.monthlyIncome || 0) : 0,
+        NationalityID: 104,
+        CitizenshipID: "India",
+        Pan: kycPan ? kycPan.panNumber : "",
+        AdharDrivingNo: "", // Extract or omit
 
-        // Loan Details
+        // 28-32 Loan specific
         LoanAmountRequired: application.loanAmount || 0,
-        PurposeOfLoanID: 1, // Defaulting if not strictly mapped in LIN yet
-        Tenure: 12, // Defaulting 
+        Tenure: 12, // Default
+        InterestRate: 0, // Default passing 0
+        PayCheckAmt: kycEmployment ? (kycEmployment.monthlyIncome || 0) : 0,
+        PaydayDate: PaydayDateString,
 
-        // Address Details 
-        Address: {
-            AddressLine1: kycAddress ? (kycAddress.currentAddress || "") : "",
-            CityName: kycAddress ? (kycAddress.city || "") : "",
-            StateID: StateID,
-            PinZipCode: kycAddress ? (kycAddress.postalCode || "") : ""
-        },
+        // 33-43 Address Block Let's keep it flat as decided
+        AddressTypeID: 335,
+        AddressLine1: kycAddress ? (kycAddress.currentAddress || "") : "",
+        AddressLine2: "",
+        DistrictName: kycAddress ? (kycAddress.city || "") : "",
+        TalukaName: "",
+        CityName: kycAddress ? (kycAddress.city || "") : "",
+        StateID: StateCode,
+        State: kycAddress ? (kycAddress.state || "Maharashtra") : "Maharashtra",
+        PinZipCode: kycAddress ? (kycAddress.postalCode || "") : "",
+        ResidentType: 319,
+        IsCorrespondenceAddress: true,
 
-        // KYC Individual Block (Often required redundantly by LOS)
-        KyCIndividual: {
-            FirstName: firstName,
-            LastName: lastName,
-            MobileNo: user.phone,
-            Email: user.email || `${user.phone}@noemail.com`,
-            PanSSN: kycPan ? kycPan.panNumber : "",
-            AdharDrivingNo: ""
-        }
+        // 44
+        CreatedBy: 1
     };
 };
 
