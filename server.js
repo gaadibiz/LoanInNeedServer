@@ -2,6 +2,7 @@
 
 // Import dependencies
 const express = require('express');
+const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -24,7 +25,8 @@ const app = express();
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(helmet()); // Secure HTTP headers
+app.use(helmet({ crossOriginResourcePolicy: false })); // Adjust helmet to allow local static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Enable CORS with specific options
 const allowedOrigins = [
   'http://localhost:3000', // Local Frontend (Next.js default)

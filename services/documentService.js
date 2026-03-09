@@ -1,6 +1,5 @@
 const prisma = require('../utils/prismaClient');
 const UserDocumentModel = require('../models/documentModel');
-const { supabase } = require('../config/supabase');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const fs = require('fs').promises;
 const crypto = require('crypto');
@@ -49,22 +48,17 @@ class DocumentVerificationService {
     // 2.5 Generate Base64 String
     const base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
 
-    // 3. Upload to Supabase
-    const { error: uploadError } = await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .upload(filePath, fileBuffer, {
-        contentType: file.mimetype,
-        upsert: false
-      });
+    // 3. Save to Local File System
+    const relativeFilePath = `uploads/${SUPABASE_BUCKET}/${filePath}`;
+    const absoluteDirPath = path.join(__dirname, '..', `uploads/${SUPABASE_BUCKET}/${docType}/${userId}`);
+    const absoluteFilePath = path.join(__dirname, '..', relativeFilePath);
 
-    if (uploadError) {
-      throw new BadRequestError(`Upload failed: ${uploadError.message}`);
-    }
+    await fs.mkdir(absoluteDirPath, { recursive: true });
+    await fs.writeFile(absoluteFilePath, fileBuffer);
 
-    // 4. Get Public URL (or Signed URL if we were strictly private, but per existing pattern using Public)
-    const { data: urlData } = supabase.storage
-      .from(SUPABASE_BUCKET)
-      .getPublicUrl(filePath);
+    // 4. Get Public URL
+    const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+    const publicUrl = `${appUrl}/${relativeFilePath}`;
 
     // 5. Calculate Checksum
     const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
@@ -75,8 +69,8 @@ class DocumentVerificationService {
         userId: parseInt(userId),
         docType: docType,
         fileName: file.originalname,
-        filePath: filePath,
-        fileUrl: urlData.publicUrl,
+        filePath: relativeFilePath,
+        fileUrl: publicUrl,
         mimeType: file.mimetype,
         size: file.size,
         checksum: checksum,
