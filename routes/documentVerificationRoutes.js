@@ -17,10 +17,6 @@ const upload = require("../middleware/uploadMiddleware");
 router.post(
   "/submit",
   authenticate,
-  (req, res, next) => {
-    console.log("✅ Upload middleware check:", typeof upload.fields);
-    next();
-  },
   upload.fields([
     { name: "salarySlips", maxCount: 5 },
     { name: "bankStatements", maxCount: 5 },

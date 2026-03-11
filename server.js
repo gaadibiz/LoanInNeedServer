@@ -32,6 +32,7 @@ const allowedOrigins = [
   'http://localhost:3000', // Local Frontend (Next.js default)
   'http://localhost:5173', // Local Frontend (Vite default)
   'https://loaninneed.vercel.app', // Production Frontend
+  'https://seahorse-app-92emo.ondigitalocean.app', // DigitalOcean Frontend
 ];
 
 app.use(cors({

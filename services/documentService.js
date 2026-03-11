@@ -1,4 +1,5 @@
 const prisma = require('../utils/prismaClient');
+const logger = require('../utils/logger');
 const UserDocumentModel = require('../models/documentModel');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const fs = require('fs').promises;
@@ -86,7 +87,7 @@ class DocumentVerificationService {
       try {
         await fs.unlink(file.path);
       } catch (e) {
-        console.warn('Failed to delete temp file:', file.path);
+        logger.warn('Failed to delete temp file: ' + file.path);
       }
     }
 

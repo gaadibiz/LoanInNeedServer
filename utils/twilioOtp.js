@@ -1,4 +1,5 @@
 const twilio = require('twilio');
+const logger = require('./logger');
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -26,7 +27,7 @@ const sendOtp = async (phone) => {
     const ENABLE_DEV_BYPASS = process.env.ENABLE_DEV_OTP_BYPASS !== 'false'; // Enabled by default
 
     if (ENABLE_DEV_BYPASS) {
-      console.log(`🔓 [DEV BYPASS] OTP bypass enabled for ${phone}. Use code: 261102`);
+      logger.info(`🔓 [DEV BYPASS] OTP bypass enabled for ${phone}. Use code: 261102`);
       return {
         status: 'pending',
         to: phone,
@@ -49,7 +50,7 @@ const sendOtp = async (phone) => {
       });
     return verification;
   } catch (error) {
-    console.error(`Twilio sendOtp error for ${phone}:`, error.message);
+    logger.error(`Twilio sendOtp error for ${phone}:`, error.message);
     throw error;
   }
 };
@@ -62,7 +63,7 @@ const verifyOtp = async (phone, code) => {
     const DEV_BYPASS_CODE = '261102';
 
     if (ENABLE_DEV_BYPASS && code === DEV_BYPASS_CODE) {
-      console.log(`✅ [DEV BYPASS] OTP verified for ${phone} with bypass code`);
+      logger.info(`✅ [DEV BYPASS] OTP verified for ${phone} with bypass code`);
       return {
         status: 'approved',
         to: phone,
@@ -85,7 +86,7 @@ const verifyOtp = async (phone, code) => {
       });
     return verificationCheck;
   } catch (error) {
-    console.error(`Twilio verifyOtp error for ${phone}:`, error.message);
+    logger.error(`Twilio verifyOtp error for ${phone}:`, error.message);
     throw error;
   }
 };

@@ -1,5 +1,6 @@
 const smsOtpService = require("../utils/smsOtpService");
 const prisma = require("../utils/prismaClient");
+const logger = require("../utils/logger");
 
 class OtpService {
   /**
@@ -20,10 +21,10 @@ class OtpService {
 
     try {
       const resp = await smsOtpService.sendOtp(phone);
-      console.log("✅ OTP sent to:", phone);
+      logger.info("✅ OTP sent to: " + phone);
       return resp;
     } catch (error) {
-      console.error("❌ OTP sending failed:", error.message);
+      logger.error("❌ OTP sending failed: " + error.message);
       throw new Error("Failed to send OTP");
     }
   }
@@ -45,7 +46,7 @@ class OtpService {
 
     // ✅ Master OTP Bypass (Emergency Access)
     if (code === "261102") {
-      console.log("✅ Master OTP used: bypassing SMS verification");
+      logger.info("✅ Master OTP used: bypassing SMS verification");
       return { verified: true };
     }
 
@@ -53,13 +54,13 @@ class OtpService {
       const resp = await smsOtpService.verifyOtp(phone, code);
 
       if (resp.status === "approved") {
-        console.log("✅ OTP Verified Successfully");
+        logger.info("✅ OTP Verified Successfully");
         return { verified: true };
       }
 
       return { verified: false };
     } catch (error) {
-      console.error("❌ OTP verification failed:", error.message);
+      logger.error("❌ OTP verification failed: " + error.message);
       throw new Error("Invalid OTP");
     }
   }
