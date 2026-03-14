@@ -126,14 +126,21 @@ async function saveFullKYC(userId, data) {
       const user = await UserModel.findUserById(userId, tx);
 
       // ---------- Sync with LoanApplication for LOS Fetching ----------
+      // Map purpose to LoanType enum, default to 'OTHER'
+      const purposeStr = data.purpose ? String(data.purpose).toUpperCase().replace(/\s+/g, '_') : 'OTHER';
+      const validLoanTypes = [
+        'MEDICAL_EMERGENCY', 'EDUCATION', 'HOME_RENOVATION', 
+        'DEBT_CONSOLIDATION', 'WEDDING', 'BUSINESS', 'TRAVEL', 'OTHER'
+      ];
+      const loanTypeEnum = validLoanTypes.includes(purposeStr) ? purposeStr : 'OTHER';
+
       // This ensures that the LOS system (which queries LoanApplication) sees all entries.
       const application = await tx.loanApplication.create({
         data: {
           userId,
           loanAmount: loanAmount,
-          loanType: 'OTHER', // Defaulting for KYC flow
+          loanType: loanTypeEnum,
           status: 'PENDING',
-          purpose: data.purpose || null,
           attributedPartnerId: user.attributedPartnerId,
           attributionSource: user.attributionType || 'ORGANIC'
         }
