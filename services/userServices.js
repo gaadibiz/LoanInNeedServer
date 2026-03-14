@@ -3,7 +3,7 @@ const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { hashPassword } = require('../utils/hash');
 const { BadRequestError, NotFoundError, UnauthorizedError } = require('../GlobalExceptionHandler/exception');
-const twilioOtp = require('../utils/twilioOtp');
+const smsOtpService = require('../utils/smsOtpService');
 const { comparePassword } = require('../utils/hash');
 const jwt = require('jsonwebtoken');
 
@@ -108,7 +108,7 @@ async function loginViaPhoneAndDob(phone, dob) {
   }
 
   // ✅ Send OTP for login
-  await twilioOtp.sendOtp(phone);
+  await smsOtpService.sendOtp(phone);
   logger.info(`✅ OTP sent for login to ${phone}`);
 
   return {

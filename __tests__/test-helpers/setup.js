@@ -1,10 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const DbHelper = require('./db.helper');
 const mockTwilio = require('./mockTwilio');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 // Suppress logger output during tests (optional - comment out for debugging)
-jest.mock('../utils/logger', () => ({
+jest.mock('../../utils/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),
@@ -12,10 +12,10 @@ jest.mock('../utils/logger', () => ({
 }));
 
 // Mock Twilio globally
-jest.mock('../utils/twilioOtp', () => mockTwilio);
+jest.mock('../../utils/twilioOtp', () => mockTwilio);
 
 // Mock Supabase
-jest.mock('../config/supabase', () => ({
+jest.mock('../../config/supabase', () => ({
   supabase: {
     storage: {
       from: jest.fn(() => ({

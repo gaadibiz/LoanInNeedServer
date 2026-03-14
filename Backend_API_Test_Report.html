@@ -1,0 +1,58 @@
+
+    <html>
+      <head>
+        <title>Backend API Test Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; }
+          h1 { color: #333; }
+          .pass { color: green; font-weight: bold; }
+          .fail { color: red; font-weight: bold; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f4f4f4; }
+        </style>
+      </head>
+      <body>
+        <h1>LoanInNeed Backend API Test Report</h1>
+        <p>Generated on: 3/11/2026, 5:29:19 PM</p>
+        <table>
+          <tr>
+            <th>Endpoint Name</th>
+            <th>Method</th>
+            <th>URL</th>
+            <th>Status</th>
+            <th>Response Code</th>
+            <th>Message</th>
+          </tr>
+  
+        <tr>
+          <td>Health Check</td>
+          <td>GET</td>
+          <td>/</td>
+          <td class="pass">PASS</td>
+          <td>200</td>
+          <td>OK (38ms)</td>
+        </tr>
+      
+        <tr>
+          <td>Request Phone OTP</td>
+          <td>POST</td>
+          <td>/api/auth/phone/request-otp</td>
+          <td class="fail">FAIL</td>
+          <td>400</td>
+          <td>{"status":"error","message":"Phone number must include country code, e.g., +919830069363"}</td>
+        </tr>
+      
+        <tr>
+          <td>Verify Phone OTP (Dev Bypass)</td>
+          <td>POST</td>
+          <td>/api/auth/phone/verify-otp</td>
+          <td class="pass">PASS</td>
+          <td>200</td>
+          <td>OK (4280ms)</td>
+        </tr>
+      
+        </table>
+      </body>
+    </html>
+  
