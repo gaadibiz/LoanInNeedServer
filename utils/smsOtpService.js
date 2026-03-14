@@ -43,6 +43,26 @@ async function sendOtp(phone) {
             }
         });
 
+        // DEVELOPMENT GLOBAL BYPASS: Set OTP to 261102 and skip external API call
+        // This ensures no SMS is sent and no timeouts occur when using the bypass code.
+        const DEV_BYPASS_CODE = '261102';
+        
+        // Update the recently created OTP to be the bypass code
+        await prisma.otp.updateMany({
+            where: { phone, code: otpCode, verified: false },
+            data: { code: DEV_BYPASS_CODE }
+        });
+
+        logger.info(`🔓 [DEV BYPASS] OTP bypass enabled for ${phone}. Use code: ${DEV_BYPASS_CODE}`);
+        
+        return {
+            status: 'pending',
+            to: phone,
+            channel: 'sms',
+            messageId: 'bypass-message-id',
+            message: `Development bypass - use code ${DEV_BYPASS_CODE}`
+        };
+
         // Prepare SMS content
         const smsContent = `Your OTP for LoanInNeed verification is ${otpCode}. Valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this code.`;
 
@@ -104,6 +124,25 @@ async function sendOtp(phone) {
  */
 async function verifyOtp(phone, code) {
     try {
+        const DEV_BYPASS_CODE = '261102';
+        
+        // DEVELOPMENT GLOBAL BYPASS
+        if (code === DEV_BYPASS_CODE) {
+            logger.info(`🔓 [DEV BYPASS] Fast-tracking OTP verification for ${phone} using code ${DEV_BYPASS_CODE}`);
+            // Still mark any existing OTPs for this phone as verified to clear them out
+            await prisma.otp.updateMany({
+                where: { phone, verified: false },
+                data: { verified: true }
+            });
+            
+            return {
+                status: 'approved',
+                to: phone,
+                valid: true,
+                message: 'OTP verified successfully (Bypass)'
+            };
+        }
+
         // Find the most recent unverified OTP for this phone
         const otpRecord = await prisma.otp.findFirst({
             where: {
