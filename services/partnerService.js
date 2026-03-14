@@ -323,7 +323,7 @@ const generateReferralLink = async (partnerId) => {
   const signature = generateHmac(payload, secretKey);
 
   // Link to production frontend
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://loaninneed.vercel.app';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://seahorse-app-92emo.ondigitalocean.app';
 
   return {
     // Ensuring it points to the signup page with attribution params
