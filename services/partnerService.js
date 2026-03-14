@@ -4,6 +4,12 @@ const jwt = require('jsonwebtoken');
 const { generateHmac, encrypt, decrypt } = require('../utils/cryptoUtils');
 const crypto = require('crypto');
 const { BadRequestError, NotFoundError, UnauthorizedError } = require('../GlobalExceptionHandler/exception');
+const smsOtpService = require('../utils/smsOtpService');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { generateHmac, encrypt, decrypt } = require('../utils/cryptoUtils');
+const crypto = require('crypto');
+const { BadRequestError, NotFoundError, UnauthorizedError } = require('../GlobalExceptionHandler/exception');
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
 
@@ -147,6 +153,121 @@ const loginPartner = async (identifier, password) => {
     status: partner.status,
     token: generateToken(partner.id)
   };
+};
+
+/**
+ * Request Partner Login OTP
+ */
+const requestPartnerLoginOtp = async (phone) => {
+  const partner = await prisma.partner.findFirst({
+    where: { phone }
+  });
+
+  if (!partner) {
+    throw new NotFoundError('Partner is not registered with this phone number.');
+  }
+
+  if (partner.status === 'REJECTED' || partner.status === 'SUSPENDED') {
+    throw new UnauthorizedError('Account is suspended or rejected. Contact support.');
+  }
+
+  // Use the smsOtpService to send an OTP
+  await smsOtpService.sendOtp(phone);
+  return { message: 'OTP sent successfully for partner login.' };
+};
+
+/**
+ * Verify Partner Login OTP
+ */
+const verifyPartnerLoginOtp = async (phone, otp) => {
+  const partner = await prisma.partner.findFirst({
+    where: { phone }
+  });
+
+  if (!partner) {
+    throw new NotFoundError('Partner not found for this phone number.');
+  }
+
+  // Development bypass logic as implemented in authService
+  if (otp === '261102') {
+    // DO NOTHING simply proceed.
+  } else {
+    const verification = await smsOtpService.verifyOtp(phone, otp);
+    if (!verification || verification.status !== 'approved') {
+      throw new BadRequestError('Invalid or expired OTP.');
+    }
+  }
+
+  return {
+    message: 'Partner login verified successfully.',
+    id: partner.id,
+    name: partner.name,
+    email: partner.email,
+    partnerType: partner.partnerType,
+    status: partner.status,
+    token: generateToken(partner.id)
+  };
+};
+
+/**
+ * Forgot Partner Password (Request OTP)
+ */
+const forgotPartnerPassword = async (emailOrPhone) => {
+  const isEmail = emailOrPhone.includes('@');
+  
+  const partner = await prisma.partner.findFirst({
+    where: isEmail ? { email: emailOrPhone } : { phone: emailOrPhone }
+  });
+
+  if (!partner) {
+    throw new NotFoundError('No partner account found with the given details.');
+  }
+
+  // The frontend needs the phone number to forward to the reset step
+  const phone = partner.phone;
+
+  // Send OTP
+  await smsOtpService.sendOtp(phone);
+
+  return { 
+    message: 'Password reset OTP sent to your registered mobile number.',
+    phone: phone // Return phone to be cached by frontend for the next step
+  };
+};
+
+/**
+ * Reset Partner Password
+ */
+const resetPartnerPassword = async (phone, otp, newPassword) => {
+  const partner = await prisma.partner.findFirst({
+    where: { phone }
+  });
+
+  if (!partner) {
+    throw new NotFoundError('Partner account not found.');
+  }
+
+  // Development bypass logic
+  if (otp === '261102') {
+    // Proceed
+  } else {
+    const verification = await smsOtpService.verifyOtp(phone, otp);
+    if (!verification || verification.status !== 'approved') {
+      throw new BadRequestError('Invalid or expired OTP.');
+    }
+  }
+
+  // Hash new password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+  // Update password in DB
+  await prisma.partner.update({
+    where: { id: partner.id },
+    data: { password: hashedPassword }
+  });
+
+  return { message: 'Password reset successfully. You can now login.' };
 };
 
 /**
@@ -414,6 +535,10 @@ module.exports = {
   updatePartnerProfile,
   changePartnerPassword,
   getPartnerDashboard,
-  getPartnerEarnings
+  getPartnerEarnings,
+  requestPartnerLoginOtp,
+  verifyPartnerLoginOtp,
+  forgotPartnerPassword,
+  resetPartnerPassword
 };
 

@@ -24,6 +24,50 @@ const loginPartner = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Request Partner Login OTP
+ * @route   POST /api/partners/login/request-otp
+ * @access  Public
+ */
+const requestLoginOtp = asyncHandler(async (req, res) => {
+    const { phone } = req.body;
+    const result = await partnerService.requestPartnerLoginOtp(phone);
+    res.json(result);
+});
+
+/**
+ * @desc    Verify Partner Login OTP
+ * @route   POST /api/partners/login/verify-otp
+ * @access  Public
+ */
+const verifyLoginOtp = asyncHandler(async (req, res) => {
+    const { phone, otp } = req.body;
+    const result = await partnerService.verifyPartnerLoginOtp(phone, otp);
+    res.json(result);
+});
+
+/**
+ * @desc    Forgot Partner Password
+ * @route   POST /api/partners/forgot-password
+ * @access  Public
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { emailOrPhone } = req.body;
+    const result = await partnerService.forgotPartnerPassword(emailOrPhone);
+    res.json(result);
+});
+
+/**
+ * @desc    Reset Partner Password
+ * @route   POST /api/partners/reset-password
+ * @access  Public
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+    const { phone, otp, newPassword } = req.body;
+    const result = await partnerService.resetPartnerPassword(phone, otp, newPassword);
+    res.json(result);
+});
+
+/**
  * @desc    Get Partner Profile
  * @route   GET /api/partners/profile
  * @access  Private (Partner)
@@ -101,6 +145,10 @@ module.exports = {
     updatePartnerProfile,
     changePartnerPassword,
     getPartnerDashboard,
-    getPartnerEarnings
+    getPartnerEarnings,
+    requestLoginOtp,
+    verifyLoginOtp,
+    forgotPassword,
+    resetPassword
 };
 

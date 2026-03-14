@@ -7,8 +7,16 @@ const { authenticate, superAdmin } = require('../middleware/authMiddleware');
 // Restricted Partner Registration (Super Admin Only)
 router.post('/register', authenticate, superAdmin, partnerController.registerPartner);
 
-// Partner Login
+// Partner Login (Legacy Email/Password)
 router.post('/login', partnerController.loginPartner);
+
+// Partner Login (OTP Flow)
+router.post('/login/request-otp', partnerController.requestLoginOtp);
+router.post('/login/verify-otp', partnerController.verifyLoginOtp);
+
+// Partner Password Reset Flow
+router.post('/forgot-password', partnerController.forgotPassword);
+router.post('/reset-password', partnerController.resetPassword);
 
 // Protected Partner Routes
 // Partner Profile (Get & Update)
