@@ -322,8 +322,11 @@ const generateReferralLink = async (partnerId) => {
   // Generate HMAC
   const signature = generateHmac(payload, secretKey);
 
-  // Link to production frontend
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://seahorse-app-92emo.ondigitalocean.app';
+  // Require FRONTEND_URL for referral link configuration
+  const FRONTEND_URL = process.env.FRONTEND_URL;
+  if (!FRONTEND_URL) {
+    throw new BadRequestError('Service Misconfiguration: FRONTEND_URL is not set in environment.');
+  }
 
   return {
     // Ensuring it points to the signup page with attribution params
