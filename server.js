@@ -88,6 +88,9 @@ app.use('/api/selfie', selfieRoutes); // ✅ Mounted Selfie routes
 app.use('/api/partners', require('./routes/partnerRoutes')); // ✅ Mounted Partner routes
 app.use('/api/loans', require('./routes/loanRoutes')); // ✅ Mounted Loan routes
 
+// ✅ LOS Bridge Routes
+app.use('/api/los', require('./routes/losRoutes')); // ✅ Mounted LOS routes
+
 // ✅ Utility Routes
 app.use('/api/utils', require('./routes/utilityRoutes')); // ✅ Mounted Utilities (Base64)
 
