@@ -122,10 +122,36 @@ async function saveFullKYC(userId, data) {
       const loan = await LoanModel.createLoan(userId, loanPayload, tx);
       logger.info('✅ Loan saved userId=%s loanId=%s', userId, loan.id);
 
-      // ---------- Return ----------
-      const updatedUser = await UserModel.findUserById(userId, tx);
+      // Fetch user data for attribution sync
+      const user = await UserModel.findUserById(userId, tx);
 
-      return { user: updatedUser, employment, addressDetail, loan };
+      // ---------- Sync with LoanApplication for LOS Fetching ----------
+      // This ensures that the LOS system (which queries LoanApplication) sees all entries.
+      const application = await tx.loanApplication.create({
+        data: {
+          userId,
+          loanAmount: loanAmount,
+          loanType: 'OTHER', // Defaulting for KYC flow
+          status: 'PENDING',
+          purpose: data.purpose || null,
+          attributedPartnerId: user.attributedPartnerId,
+          attributionSource: user.attributionType || 'ORGANIC'
+        }
+      });
+      logger.info('✅ LoanApplication synced for userId=%s appId=%s', userId, application.id);
+
+      // ---------- Queue for LOS Integration ----------
+      await tx.losIntegrationJob.create({
+        data: {
+          userId,
+          applicationId: application.id,
+          status: 'PENDING'
+        }
+      });
+      logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
+
+      // ---------- Return ----------
+      return { user, employment, addressDetail, loan };
     },
     { timeout: 50000 } // 30 seconds timeout
   );
