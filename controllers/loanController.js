@@ -89,4 +89,167 @@ const applyForLoan = asyncHandler(async (req, res) => {
     });
 });
 
-module.exports = { applyForLoan };
+/**
+ * @desc    Get status of loan application for all and for specific LIN IDs
+ * @route   GET /api/loans/status
+ * @access  Private (API Key)
+ */
+const getLoanStatus = asyncHandler(async (req, res) => {
+    const { linId } = req.query;
+
+    let filter = {};
+    if (linId) {
+        filter = {
+            user: { customUserId: linId }
+        };
+    }
+
+    const applications = await prisma.loanApplication.findMany({
+        where: filter,
+        include: {
+            user: true,
+        }
+    });
+
+    const data = applications.map(app => ({
+        linId: app.user?.customUserId || app.id.toString(),
+        status: app.status,
+        applicationNumber: app.id,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt
+    }));
+
+    res.status(200).json({ data });
+});
+
+/**
+ * @desc    Export detailed loan applications
+ * @route   GET /api/loans/export
+ * @access  Private (API Key)
+ */
+const exportLoanApplications = asyncHandler(async (req, res) => {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+        throw new BadRequestError('Both "from" and "to" query parameters are required in ISO format.');
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+         throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
+    }
+
+    const applications = await prisma.loanApplication.findMany({
+        where: {
+            createdAt: {
+                gte: fromDate,
+                lte: toDate
+            }
+        },
+        include: {
+            user: {
+                include: {
+                    address: true,
+                    employment: true,
+                    business: true,
+                    locations: true,
+                    documents: true,
+                    aadhaarVerification: true,
+                    panVerification: true
+                }
+            }
+        }
+    });
+
+    const data = applications.map(app => {
+        const u = app.user;
+        const emp = u?.employment || {};
+        const addr = u?.address || {};
+        const loc = u?.locations?.[0] || {};
+        const aadh = u?.aadhaarVerification || {};
+        const pan = u?.panVerification || {};
+        
+        // Helper to extract documents by type
+        const getDocsByType = (type) => {
+            if (!u?.documents) return null;
+            const docs = u.documents.filter(d => d.docType === type);
+            if (docs.length === 0) return null;
+            if (['AADHAAR', 'PHOTO', 'PAN'].includes(type) && docs.length === 1) {
+                return ["Base64", docs[0].fileName || docs[0].filePath];
+            }
+            if (type === 'ADDRESS' || type === 'PAY_SLIP') {
+                return docs.map(d => ["Base64", d.fileName || d.filePath]);
+            }
+            return ["Base64", docs[0].fileName || docs[0].filePath];
+        };
+
+        let aadhaarFront = null;
+        let aadhaarBack = null;
+        const aadhaarDocs = u?.documents?.filter(d => d.docType === 'AADHAAR') || [];
+        if (aadhaarDocs.length > 0) aadhaarFront = ["Base64", aadhaarDocs[0].fileName || aadhaarDocs[0].filePath];
+        if (aadhaarDocs.length > 1) aadhaarBack = ["Base64", aadhaarDocs[1].fileName || aadhaarDocs[1].filePath];
+
+        return {
+            id: u?.customUserId || app.id.toString(),
+            name: u?.name || null,
+            fatherName: null,
+            dob: u?.dob || null,
+            gender: u?.gender || null,
+            mobileNo: u?.phone || null,
+            isMobileOtpVerified: u?.phoneVerified || false,
+            personalEmail: u?.email || null,
+            isPersonalEmailOtpVerified: true,
+            incomeType: emp.employmentType || null,
+            designation: emp.employerName || null,
+            monthlyIncome: emp.monthlyIncome || null,
+            workingYears: null,
+            loanAmount: app.loanAmount || null,
+            loanPeriod: null,
+            loanPurpose: app.loanType || null,
+            preferredEmiDate: null,
+            bankAccountNo: null,
+            ifscCode: null,
+            bankName: null,
+            address1: addr.currentAddress || null,
+            address2: null,
+            landmark: null,
+            pinCode: addr.postalCode || null,
+            area: addr.city || null,
+            district: addr.city || null,
+            state: addr.state || null,
+            geolocation: {
+                latitude: loc.latitude || null,
+                longitude: loc.longitude || null
+            },
+            addressDocument: null, // Address not standard docType
+            aadhaarNo: aadh.aadhaarNumber || null,
+            panNo: pan.panNumber || null,
+            profilePicture: getDocsByType('PHOTO'),
+            aadhaarFront: aadhaarFront,
+            aadhaarBack: aadhaarBack,
+            panCard: getDocsByType('PAN'),
+            termsAccepted: true,
+            organizationName: emp.employerName || null,
+            officeEmail: null,
+            isOfficeEmailVerified: false,
+            salarySlips: getDocsByType('PAY_SLIP'),
+            employmentProofDocument: null,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+            isFullyFilled: true,
+            isContinueApplicationLinkSent: true,
+            stepsCompleted: 7,
+            status: app.status,
+            applicationNumber: app.id,
+            loanAccountNumber: null,
+            reason: null,
+            employeeName: null
+        };
+    });
+
+    res.status(200).json({ data });
+});
+
+module.exports = { applyForLoan, getLoanStatus, exportLoanApplications };
