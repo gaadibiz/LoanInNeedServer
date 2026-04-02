@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
+const { generateApplicationPdf, formatApplicationNumber } = require('../services/pdfService');
 
 /**
  * @desc    Apply for a Loan
@@ -252,4 +253,55 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
     res.status(200).json({ data });
 });
 
-module.exports = { applyForLoan, getLoanStatus, exportLoanApplications };
+/**
+ * @desc    Download loan application as PDF
+ * @route   GET /api/loans/:applicationId/pdf
+ * @access  Private (Auth Token)
+ */
+const downloadApplicationPdf = asyncHandler(async (req, res) => {
+    const { applicationId } = req.params;
+    const userId = req.user.id;
+
+    const appId = parseInt(applicationId, 10);
+    if (isNaN(appId)) {
+        throw new BadRequestError('Invalid application ID.');
+    }
+
+    // Fetch the loan application with all related data
+    const application = await prisma.loanApplication.findFirst({
+        where: {
+            id: appId,
+            userId: userId  // Ensure user can only download their own
+        },
+        include: {
+            user: {
+                include: {
+                    employment: true,
+                    address: true,
+                    panVerification: true,
+                    aadhaarVerification: true,
+                }
+            }
+        }
+    });
+
+    if (!application) {
+        throw new BadRequestError('Loan application not found or access denied.');
+    }
+
+    logger.info('[PDF] Generating PDF for Application %s, User %s', appId, userId);
+
+    const pdfBuffer = await generateApplicationPdf(application);
+    const appNumber = formatApplicationNumber(application.id, application.createdAt);
+    const fileName = `LoanApplication_${appNumber.replace(/\//g, '-')}.pdf`;
+
+    res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
+});
+
+module.exports = { applyForLoan, getLoanStatus, exportLoanApplications, downloadApplicationPdf };

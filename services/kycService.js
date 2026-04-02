@@ -158,7 +158,7 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Return ----------
-      return { user, employment, addressDetail, loan };
+      return { user, employment, addressDetail, loan, application };
     },
     { timeout: 50000 } // 30 seconds timeout
   );
