@@ -1,0 +1,40 @@
+============================================================
+  LOS LIVE INTEGRATION TEST — 2026-04-07T11:08:11.181Z
+============================================================
+
+--- STEP 1: Token Auth ---
+  URL: http://59.95.101.93:7021/api/auth/login
+  Body: { UserName: "indradeep", Password: "***" }
+  HTTP Status : 200 (321ms)
+  Response    : {"isSuccess":true,"Token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbmRyYWRlZXAiLCJqdGkiOiJhYjMyMmRmMC1lODRlLTQ4ZGUtYjk1Yi1mMDU4MGVlMjQxODciLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiaW5kcmFkZWVwIiwiVXNlcklEIjoiMTAzMSIsImV4cCI6MTc3NjI1MTU1NCwiaXNzIjoiTE9TLkFQSSIsImF1ZCI6IkxPUy5DbGllbnQifQ.58VzL8p3DvaMOz34z_NCLrJ8iX3yUp4Vp-mo7gYoKoI","UserName":"Indradeep","Usertype":3}
+  TOKEN       : FOUND (length=355, first 40 chars: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ...)
+  STEP 1      : PASS
+
+--- STEP 2: SaveNewApplication ---
+  URL: http://59.95.101.93:7021/api/NewApplicationAPI/SaveNewApplication
+  Payload (summary): FirstName=Rahul, Loan=50000, Pan=ABCDE1234F
+  ERROR       : Request failed with status code 400
+  ERR HTTP    : 400
+  ERR BODY    : {"Result":500,"Message":"Exception in AddAsync: Incorrect syntax near ','.","RowsAffected":-1,"Data":null,"ErrorMessage":null}
+  STEP 2      : FAIL
+
+--- STEP 3: SaveChatBotKYCProof ---
+  URL: http://59.95.101.93:7021/api/ChatBotKYCProof/SaveChatBotKYCProof
+  Using ApplicationId: 0
+  Payload: {"ApplicationId":0,"CreatedBy":1,"Documents":[{"ProofType":"PAN","ProofNumber":"ABCDE1234F","DocumentBase64":""}]}
+  ERROR       : Request failed with status code 400
+  ERR HTTP    : 400
+  ERR BODY    : {"Message":"Document list is empty."}
+  STEP 3      : FAIL
+
+============================================================
+  TEST SUMMARY
+============================================================
+  Step 1 — Token Auth          : PASS
+  Step 2 — SaveNewApplication  : FAIL/PARTIAL
+  Step 3 — SaveChatBotKYCProof : FAIL/PARTIAL
+
+  NOTE: "PARTIAL" means HTTP 200 was received but the LOS
+  response body indicates a business-level issue (e.g.,
+  missing required fields, duplicate entry, etc.).
+============================================================

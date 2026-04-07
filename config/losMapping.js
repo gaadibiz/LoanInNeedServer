@@ -54,6 +54,58 @@ const calculateAge = (dobString) => {
 };
 
 /**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * NEW LOS PAYLOAD BUILDER (v2 – matches the LOS team's API contract)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Maps LIN database fields to the simple, clean JSON contract the LOS team
+ * shared. This is what gets pushed to POST /api/v1/loan/applications.
+ *
+ * @param {object} application  - Prisma LoanApplication record
+ * @param {object} user         - Prisma User record
+ * @returns {object}            - LOS-ready payload
+ */
+const buildNewLosPayload = (application, user) => {
+    const nameParts = (user.name || '').trim().split(' ');
+    const firstName = nameParts[0] || 'Unknown';
+    const lastName  = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
+
+    // Format applicationId as LIN/YYYY/NNNNN  (e.g. LIN/2026/00021)
+    const year = new Date(application.createdAt).getFullYear();
+    const seqNum = String(application.id).padStart(5, '0');
+    const applicationId = `LIN/${year}/${seqNum}`;
+
+    // Derive loan product label
+    const loanTypeToProduct = {
+        PAYDAY:    'Payday',
+        PERSONAL:  'Personal',
+        BUSINESS:  'Business',
+        OTHER:     'Payday'   // default to Payday as per LOS team expectation
+    };
+    const product = loanTypeToProduct[(application.loanType || 'PAYDAY').toUpperCase()] || 'Payday';
+
+    return {
+        applicationId,
+        customer: {
+            firstName,
+            lastName,
+            mobile: user.phone  || '',
+            email:  user.email  || ''
+        },
+        loanDetails: {
+            product,
+            amount:  application.loanAmount || 0,
+            tenure:  30,            // Default 30-day payday tenure
+            emiType: 'Single EMI'   // Standard for payday loans
+        },
+        source:    'WebApp',
+        timestamp: new Date().toISOString()
+    };
+};
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * LEGACY LOS PAYLOAD BUILDER (v1 – kept for backward compatibility)
+ * ─────────────────────────────────────────────────────────────────────────────
  * Builds the LOS JSON payload from LIN DB structures
  */
 const buildLosPayload = (application, user, kycEmployment, kycAddress, kycPan) => {
@@ -138,5 +190,6 @@ module.exports = {
     genderMap,
     employmentMap,
     stateMap,
-    buildLosPayload
+    buildLosPayload,       // v1 – legacy (kept for reference)
+    buildNewLosPayload     // v2 – new LOS team contract
 };

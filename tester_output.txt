@@ -1,0 +1,128 @@
+﻿
+├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É
+   LOS END-TO-END LIVE API TEST  ├óΓé¼ΓÇ¥ 2026-04-07
+├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É
+
+
+├óΓÇ¥Γé¼├óΓÇ¥Γé¼ STEP 1: Token Authentication ├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼
+  [INFO] Target: POST http://59.95.101.93:7021/api/auth/login
+  [INFO] Credentials: UserName=indradeep
+  ├ó┼ôΓÇª [OK] HTTP 200 in 198ms
+
+  Full response body:
+ {
+  "isSuccess": true,
+  "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbmRyYWRlZXAiLCJqdGkiOiJhYjMyMmRmMC1lODRlLTQ4ZGUtYjk1Yi1mMDU4MGVlMjQxODciLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiaW5kcmFkZWVwIiwiVXNlcklEIjoiMTAzMSIsImV4cCI6MTc3NjI1MTU1NCwiaXNzIjoiTE9TLkFQSSIsImF1ZCI6IkxPUy5DbGllbnQifQ.58VzL8p3DvaMOz34z_NCLrJ8iX3yUp4Vp-mo7gYoKoI",
+  "UserName": "Indradeep",
+  "Usertype": 3
+}
+  ├ó┼ôΓÇª [OK] Token extracted (first 30 chars): eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+├óΓÇ¥Γé¼├óΓÇ¥Γé¼ STEP 2: Build LOS v1 Payload ├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼
+  ├ó┼ôΓÇª [OK] Payload built successfully.
+
+  LOS v1 Payload:
+ {
+  "OrganizationID": 1,
+  "ProfileType": "I",
+  "ProductCategoryCode": "Unsecured",
+  "LoanTypeID": 16,
+  "ProductID": 13,
+  "ProductName": "PayDay Loan",
+  "ProductSchemeID": 1006,
+  "ProductSchemeName": "PayDay Loan Scheme",
+  "LoanCategoryCode": "RLT",
+  "Age": 34,
+  "Email": "rahul.test@loaninneed.com",
+  "QualificationID": null,
+  "EligibleLoanAmount": 50000,
+  "IsFormerAddress": false,
+  "IsJointApplication": false,
+  "IsCoBorrower": false,
+  "FirstName": "Rahul",
+  "MiddleName": "",
+  "LastName": "Sharma",
+  "DateOfBirth": "1990-01-15T00:00:00.000Z",
+  "Gender": 1,
+  "MobileNo": "9876543210",
+  "EmploymentTypeID": 342,
+  "NationalityID": 104,
+  "CitizenshipID": "India",
+  "Pan": "ABCDE1234F",
+  "AdharDrivingNo": "",
+  "LoanAmountRequired": 50000,
+  "Tenure": 12,
+  "InterestRate": 0,
+  "PayCheckAmt": 65000,
+  "PaydayDate": "2026-05-07T11:04:48.591Z",
+  "AddressTypeID": 335,
+  "AddressLine1": "123 Test Street, Apt 4B",
+  "AddressLine2": "",
+  "DistrictName": "Mumbai",
+  "TalukaName": "",
+  "CityName": "Mumbai",
+  "StateID": 1109,
+  "State": "Maharashtra",
+  "PinZipCode": "400001",
+  "ResidentType": 319,
+  "IsCorrespondenceAddress": true,
+  "CreatedBy": 1
+}
+
+├óΓÇ¥Γé¼├óΓÇ¥Γé¼ STEP 3: SaveNewApplication ├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼
+  [INFO] Target: POST http://59.95.101.93:7021/api/NewApplicationAPI/SaveNewApplication
+node :  ├ó┬¥┼Æ [ERR] STEP 
+3 FAILED: Request failed 
+with status code 400
+At line:1 char:32
++ $env:PYTHONIOENCODING='u
+tf-8'; node 
+tester/test_los.js 2>&1 | 
+Out-Fil ...
++                         
+       ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (   
+  ├ó┬¥┼Æ [ERR] S...stat   
+ us code 400:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+ ├ó┬¥┼Æ [ERR] HTTP 400: {"
+Result":500,"Message":"Exc
+eption in AddAsync: 
+Incorrect syntax near ','.
+","RowsAffected":-1,"Data"
+:null,"ErrorMessage":null}
+
+├óΓÇ¥Γé¼├óΓÇ¥Γé¼ STEP 4: SaveChatBotKYCProof ├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼├óΓÇ¥Γé¼
+  [INFO] Target: POST http://59.95.101.93:7021/api/ChatBotKYCProof/SaveChatBotKYCProof
+  [INFO] Using ApplicationId=0 from Step 3 response.
+
+  KYC Doc Payload sent:
+ {
+  "ApplicationId": 0,
+  "ProofType": "PAN",
+  "ProofNumber": "ABCDE1234F",
+  "DocumentBase64": "",
+  "CreatedBy": 1
+}
+ ├ó┬¥┼Æ [ERR] STEP 4 
+FAILED: Request failed 
+with status code 400
+ ├ó┬¥┼Æ [ERR] HTTP 400: 
+{"Message":"Document list 
+is empty."}
+
+├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É
+   TEST SUMMARY
+├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É
+  Step 1 ├óΓé¼ΓÇ¥ Token Auth:          ├ó┼ôΓÇª PASS
+  Step 2 ├óΓé¼ΓÇ¥ Payload Build:        ├ó┼ôΓÇª PASS
+  Step 3 ├óΓé¼ΓÇ¥ SaveNewApplication:   ├ó┬¥┼Æ FAIL
+  Step 4 ├óΓé¼ΓÇ¥ SaveChatBotKYCProof:  ├ó┬¥┼Æ FAIL
+├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É├óΓÇó┬É
+

@@ -2,14 +2,26 @@ const axios = require('axios');
 const logger = require('../utils/logger');
 
 // LOS Authentication configuration
-// Ideally these should be in .env, but hardcoding for immediate integration requirement if not provided.
-const LOS_AUTH_URL = process.env.LOS_AUTH_URL || 'http://192.168.0.16:7021/api/Auth/Token'; // Adjust if auth endpoint is different
-const LOS_USERNAME = process.env.LOS_USERNAME || 'admin';
-const LOS_PASSWORD = process.env.LOS_PASSWORD || 'password';
+const LOS_AUTH_URL = process.env.LOS_AUTH_URL || 'http://59.95.101.93:7021/api/auth/login';
+const LOS_USERNAME = process.env.LOS_USERNAME || 'indradeep';
+const LOS_PASSWORD = process.env.LOS_PASSWORD || 'admin123';
 
 // In-memory token cache
 let cachedToken = null;
 let tokenExpiry = null;
+
+/**
+ * Decode JWT expiry from token string (no external lib needed)
+ */
+const getJwtExpiry = (token) => {
+    try {
+        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
+        if (payload.exp) {
+            return new Date(payload.exp * 1000); // exp is in seconds
+        }
+    } catch (_) { /* ignore decode errors */ }
+    return null;
+};
 
 /**
  * Fetches a valid Bearer token for LOS
@@ -30,24 +42,33 @@ const getLosToken = async () => {
         // Replace this with actual authentication logic. Often it's a POST with username/password, or client_id/client_secret
         // Below is a generic implementation.
         const response = await axios.post(LOS_AUTH_URL, {
-            username: LOS_USERNAME,
-            password: LOS_PASSWORD
+            UserName: LOS_USERNAME,
+            Password: LOS_PASSWORD
         }, {
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            timeout: 30000
         });
 
-        if (response.data && response.data.token) {
-            cachedToken = response.data.token;
-            // Token validity is 1 hour
-            // Set expiry to exactly 1 hour from now
-            tokenExpiry = new Date(now.getTime() + 60 * 60 * 1000);
+        // LOS returns { isSuccess: true, Token: "...", UserName: "...", Usertype: 3 }
+        // Check Token (capital T) first since that's what LOS v1 API actually returns
+        const tokenValue = response.data?.Token
+            || response.data?.token
+            || response.data?.access_token
+            || response.data?.AccessToken
+            || response.data?.jwtToken;
 
-            logger.info('[LOS AUTH] Successfully retrieved new token');
+        if (tokenValue) {
+            cachedToken = tokenValue;
+            // Use actual JWT expiry if available, otherwise default 1 hour
+            const jwtExpiry = getJwtExpiry(tokenValue);
+            tokenExpiry = jwtExpiry || new Date(now.getTime() + 60 * 60 * 1000);
+            logger.info(`[LOS AUTH] Successfully retrieved new token. Expires: ${tokenExpiry.toISOString()}`);
             return cachedToken;
         } else {
-            throw new Error("Invalid token response from LOS");
+            logger.error('[LOS AUTH] Token response received but no token field found:', JSON.stringify(response.data));
+            throw new Error(`Invalid token response from LOS. Response: ${JSON.stringify(response.data)}`);
         }
 
     } catch (error) {

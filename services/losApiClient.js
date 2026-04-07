@@ -2,66 +2,240 @@ const axios = require('axios');
 const logger = require('../utils/logger');
 const { getLosToken, invalidateToken } = require('./losAuthService');
 
-const LOS_SAVE_URL = process.env.LOS_SAVE_URL || 'http://192.168.0.16:7021/api/NewApplicationAPI/SaveNewApplication';
-const MAX_RETRIES = 3;
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS API Endpoint Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+// Credentials confirmed by LOS team on 2026-04-07 (live public endpoints)
+const LOS_SAVE_URL    = process.env.LOS_SAVE_URL    || 'http://59.95.101.93:7021/api/NewApplicationAPI/SaveNewApplication';
+const LOS_KYC_DOC_URL = process.env.LOS_KYC_DOC_URL || 'http://59.95.101.93:7021/api/ChatBotKYCProof/SaveChatBotKYCProof';
+const LOS_TIMEOUT_MS  = 30000; // 30-second timeout
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: build auth headers using a fresh (or cached) LOS Bearer token
+// ─────────────────────────────────────────────────────────────────────────────
+const getAuthHeaders = async () => {
+    const token = await getLosToken();
+    return {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
 
 /**
- * Make the HTTP POST to LOS `SaveNewApplication` API
+ * Pushes a new loan application to the LOS system.
+ *
+ * Endpoint  : POST /api/NewApplicationAPI/SaveNewApplication
+ * Auth      : Bearer <LOS token>
+ * Payload   : Full LOS v1 payload (buildLosPayload from losMapping.js)
+ *
+ * @param   {object} payload  - Built by buildLosPayload()
+ * @returns {object}          - { success, applicationId, caseNumber, rawData }
  */
 const createLosApplication = async (payload) => {
-    let lastError = null;
+    logger.info('[LOS API] Submitting application to LOS (SaveNewApplication)...', {
+        applicationRef: payload.applicationId || payload.FirstName,
+        amount: payload.LoanAmountRequired || payload.loanDetails?.amount
+    });
 
-    // We allow internal retries specifically for 401 Unauthorized (Token Expiry)
-    for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-            // 1. Get Token
-            const token = await getLosToken();
-
-            logger.info('[LOS API] Sending application payload to LOS...', { items: Object.keys(payload) });
-
-            // 2. Perform API Call
-            const response = await axios.post(LOS_SAVE_URL, payload, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 30000 // 30 second timeout as LOS heavily processes
-            });
-
-            logger.info(`[LOS API] Success! Response Data: ${JSON.stringify(response.data)}`);
-
-            // Expected Response format handling
-            // Assuming LOS returns { ApplicationID: '1234', CaseNumber: 'C-567', Status: 'Success' }
-            return {
-                success: true,
-                applicationId: response.data.ApplicationID || null,
-                caseNumber: response.data.CaseNumber || null,
-                kycId: response.data.KyCID || null,
-                rawData: response.data
-            };
-
-        } catch (error) {
-            lastError = error;
-
-            // If it's a 401 Unauthorized, maybe token expired mid-way, invalidate and retry once
-            if (error.response && error.response.status === 401 && attempt === 1) {
-                logger.warn('[LOS API] 401 Unauthorized. Invalidating token and retrying...');
-                invalidateToken();
-                continue;
-            }
-
-            // Other errors (4xx, 5xx, network timeouts) break out immediately to the worker queue retry system
-            const status = error.response ? error.response.status : 'Network/Timeout';
-            const data = error.response ? JSON.stringify(error.response.data) : error.message;
-            logger.error(`[LOS API] Application submission failed. Status: ${status}, Response: ${data}`);
-
-            throw new Error(`LOS request failed: ${status} - ${data}`);
-        }
+    let headers;
+    try {
+        headers = await getAuthHeaders();
+    } catch (authError) {
+        logger.error(`[LOS API] ❌ Failed to get LOS auth token: ${authError.message}`);
+        throw new Error(`LOS authentication failed: ${authError.message}`);
     }
 
-    throw lastError; // Should technically never reach here without throwing inside the loop, but fallback
+    try {
+        const response = await axios.post(LOS_SAVE_URL, payload, {
+            headers,
+            timeout: LOS_TIMEOUT_MS
+        });
+
+        const data = response.data;
+        logger.info(`[LOS API] ✅ SaveNewApplication response received. Status: ${response.status}`, data);
+
+        // LOS may return success under different structures — handle all observed variants
+        // Note: LOS auth returns { isSuccess: true, Token: ... } so we also check isSuccess
+        const isSuccess = data?.isSuccess === true
+            || data?.IsSuccess === true
+            || data?.StatusCode === 200
+            || data?.status === 'SUCCESS'
+            || data?.Status === 'Success'
+            || data?.Result === 200
+            || (response.status >= 200 && response.status < 300 && !data?.IsError && !data?.Message);
+
+        if (isSuccess) {
+            const appId   = data?.ApplicationId || data?.applicationId || data?.ApplicationID || null;
+            const caseNum = data?.CaseNumber    || data?.caseNumber    || data?.CaseNo       || null;
+
+            logger.info(`[LOS API] ✅ Application pushed to LOS. ApplicationId: ${appId}, CaseNumber: ${caseNum}`);
+            return {
+                success:       true,
+                applicationId: appId,
+                caseNumber:    caseNum,
+                rawData:       data
+            };
+        }
+
+        // LOS returned HTTP 200 but with a failure body
+        logger.warn('[LOS API] ⚠️  LOS returned 200 but indicates failure in body:', data);
+        throw new Error(`LOS SaveNewApplication failure: ${data?.Message || data?.message || JSON.stringify(data)}`);
+
+    } catch (error) {
+        if (error.response) {
+            // 401 → token expired, invalidate cache so next call re-authenticates
+            if (error.response.status === 401) {
+                logger.warn('[LOS API] 401 Unauthorized — invalidating token cache.');
+                invalidateToken();
+            }
+            const status = error.response.status;
+            const body   = JSON.stringify(error.response.data);
+            logger.error(`[LOS API] ❌ HTTP ${status} from LOS SaveNewApplication. Body: ${body}`);
+            throw new Error(`LOS API returned HTTP ${status}: ${body}`);
+        }
+        if (error.code === 'ECONNABORTED') {
+            logger.error('[LOS API] ❌ Request timed out after 30s.');
+            throw new Error('LOS API request timed out. Check LOS server availability.');
+        }
+        logger.error(`[LOS API] ❌ Network error calling SaveNewApplication: ${error.message}`);
+        throw error;
+    }
+};
+
+/**
+ * Pushes KYC document proof to the LOS system.
+ *
+ * Endpoint  : POST /api/ChatBotKYCProof/SaveChatBotKYCProof
+ * Auth      : Bearer <LOS token>
+ *
+ * @param {object} docPayload - Document payload with ApplicationId and proof data
+ * @returns {object}          - { success, rawData }
+ */
+const pushKycDocumentToLos = async (docPayload) => {
+    logger.info('[LOS API] Pushing KYC document to LOS (SaveChatBotKYCProof)...', {
+        applicationId: docPayload?.ApplicationId || docPayload?.applicationId
+    });
+
+    // Normalise KYC payload — LOS expects { ApplicationId, CreatedBy, Documents: [ { ProofType, ProofNumber, DocumentBase64 } ] }
+    // If the caller passed a flat single-doc format, wrap it automatically
+    let normalisedPayload = docPayload;
+    if (!docPayload.Documents && (docPayload.ProofType || docPayload.ProofNumber)) {
+        normalisedPayload = {
+            ApplicationId: docPayload.ApplicationId || docPayload.applicationId || 0,
+            CreatedBy:     docPayload.CreatedBy || 1,
+            Documents: [
+                {
+                    ProofType:      docPayload.ProofType      || 'PAN',
+                    ProofNumber:    docPayload.ProofNumber    || '',
+                    DocumentBase64: docPayload.DocumentBase64 || '',
+                    DocumentName:   docPayload.DocumentName   || ''
+                }
+            ]
+        };
+        logger.info('[LOS API] Auto-wrapped flat KYC payload into Documents array format.');
+    }
+
+    let headers;
+    try {
+        headers = await getAuthHeaders();
+    } catch (authError) {
+        logger.error(`[LOS API] ❌ Failed to get LOS auth token for KYC doc push: ${authError.message}`);
+        throw new Error(`LOS authentication failed: ${authError.message}`);
+    }
+
+    try {
+        const response = await axios.post(LOS_KYC_DOC_URL, normalisedPayload, {
+            headers,
+            timeout: LOS_TIMEOUT_MS
+        });
+
+        const data = response.data;
+        logger.info(`[LOS API] ✅ SaveChatBotKYCProof response received. Status: ${response.status}`, data);
+
+        const isSuccess = data?.isSuccess === true
+            || data?.IsSuccess === true
+            || data?.StatusCode === 200
+            || data?.status === 'SUCCESS'
+            || data?.Status === 'Success'
+            || data?.Result === 200
+            || (response.status >= 200 && response.status < 300 && !data?.IsError && !data?.Message);
+
+        if (isSuccess) {
+            logger.info('[LOS API] ✅ KYC document pushed to LOS successfully.');
+            return { success: true, rawData: data };
+        }
+
+        logger.warn('[LOS API] ⚠️  LOS returned 200 but indicates failure in KYC doc push body:', data);
+        throw new Error(`LOS SaveChatBotKYCProof failure: ${data?.Message || data?.message || JSON.stringify(data)}`);
+
+    } catch (error) {
+        if (error.response) {
+            if (error.response.status === 401) {
+                logger.warn('[LOS API] 401 Unauthorized — invalidating token cache (KYC push).');
+                invalidateToken();
+            }
+            const status = error.response.status;
+            const body   = JSON.stringify(error.response.data);
+            logger.error(`[LOS API] ❌ HTTP ${status} from LOS SaveChatBotKYCProof. Body: ${body}`);
+            throw new Error(`LOS KYC doc push returned HTTP ${status}: ${body}`);
+        }
+        if (error.code === 'ECONNABORTED') {
+            logger.error('[LOS API] ❌ KYC doc push timed out after 30s.');
+            throw new Error('LOS KYC document push timed out.');
+        }
+        logger.error(`[LOS API] ❌ Network error calling SaveChatBotKYCProof: ${error.message}`);
+        throw error;
+    }
+};
+
+/**
+ * Pushes a status update for an existing loan application to LOS.
+ * ⚠️  Endpoint not yet confirmed by LOS team — will skip until LOS_STATUS_URL is set.
+ *
+ * @param {string} losReferenceId  - The referenceId/caseNumber from LOS
+ * @param {string} newStatus       - e.g. 'APPROVED', 'REJECTED'
+ * @param {object} [meta]          - Optional additional fields
+ */
+const pushLoanStatusToLos = async (losReferenceId, newStatus, meta = {}) => {
+    const LOS_STATUS_URL = process.env.LOS_STATUS_URL;
+
+    if (!LOS_STATUS_URL) {
+        logger.warn(
+            `[LOS API] ⚠️  Status push skipped for referenceId "${losReferenceId}". ` +
+            'LOS_STATUS_URL is not set in .env — awaiting endpoint from LOS team.'
+        );
+        return { success: false, skipped: true, reason: 'LOS_STATUS_URL not configured' };
+    }
+
+    let headers;
+    try {
+        headers = await getAuthHeaders();
+    } catch (authError) {
+        throw new Error(`LOS authentication failed: ${authError.message}`);
+    }
+
+    logger.info(`[LOS API] Pushing status "${newStatus}" for referenceId "${losReferenceId}" to LOS...`);
+
+    try {
+        const response = await axios.put(
+            `${LOS_STATUS_URL}/${losReferenceId}/status`,
+            { status: newStatus, ...meta, timestamp: new Date().toISOString() },
+            { headers, timeout: LOS_TIMEOUT_MS }
+        );
+
+        logger.info(`[LOS API] ✅ Status push success. Response: ${JSON.stringify(response.data)}`);
+        return { success: true, rawData: response.data };
+
+    } catch (error) {
+        const status = error.response ? error.response.status : 'NETWORK';
+        const body   = error.response ? JSON.stringify(error.response.data) : error.message;
+        logger.error(`[LOS API] ❌ Status push failed. HTTP ${status}: ${body}`);
+        throw new Error(`LOS status push failed: HTTP ${status} - ${body}`);
+    }
 };
 
 module.exports = {
-    createLosApplication
+    createLosApplication,
+    pushKycDocumentToLos,
+    pushLoanStatusToLos
 };
