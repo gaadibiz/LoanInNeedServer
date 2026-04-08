@@ -14,5 +14,6 @@ router.get('/:applicationId/pdf', protect, loanController.downloadApplicationPdf
 // Admin / Export Endpoints
 router.get('/status', verifyApiKey, loanController.getLoanStatus);
 router.get('/export', verifyApiKey, loanController.exportLoanApplications);
+router.put('/update-status', verifyApiKey, loanController.updateLoanStatusFromLos);
 
 module.exports = router;

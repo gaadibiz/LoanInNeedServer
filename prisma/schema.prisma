@@ -194,6 +194,11 @@ model LoanApplication {
   loanAmount          Float?
   otpVerified         Boolean            @default(false)
   status              LoanStatus         @default(PENDING)
+  employeeId          String?
+  employeeName        String?
+  reason              String?
+  loanAccountNumber   String?
+  losApplicationNumber String?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   attributedPartnerId Int?

@@ -304,4 +304,73 @@ const downloadApplicationPdf = asyncHandler(async (req, res) => {
     res.send(pdfBuffer);
 });
 
-module.exports = { applyForLoan, getLoanStatus, exportLoanApplications, downloadApplicationPdf };
+/**
+ * @desc    Update loan application status from LOS system
+ * @route   PUT /api/loans/update-status
+ * @access  Private (API Key)
+ */
+const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
+    const { employeeId, employeeName, id, status, reason, loanNo, applicationNumber } = req.body;
+
+    if (!id || !status) {
+        throw new BadRequestError('Both "id" and "status" are required in the request body.');
+    }
+
+    // Try finding the application either by its `id` (as integer) or `customUserId` of the User
+    let loanApplication = null;
+    const searchIdInt = parseInt(id, 10);
+
+    // 1. Check if ID matches a LoanApplication.id directly
+    if (!isNaN(searchIdInt)) {
+        loanApplication = await prisma.loanApplication.findUnique({
+            where: { id: searchIdInt }
+        });
+    }
+
+    // 2. If not found, check if ID matches a User's customUserId (linId) and fetch their latest application
+    if (!loanApplication) {
+        const userWithApp = await prisma.user.findUnique({
+            where: { customUserId: id.toString() },
+            include: {
+                loanApplications: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
+                }
+            }
+        });
+        
+        if (userWithApp && userWithApp.loanApplications.length > 0) {
+            loanApplication = userWithApp.loanApplications[0];
+        }
+    }
+
+    if (!loanApplication) {
+        throw new BadRequestError(`Loan Application not found for id: ${id}`);
+    }
+
+    // Map LOS payload to Prisma fields
+    const updatedApplication = await prisma.loanApplication.update({
+        where: { id: loanApplication.id },
+        data: {
+            // Prisma will enforce validation naturally if we feed it correct types
+            status: status.toUpperCase(), // Assuming LOS sends 'APPROVED'/'REJECTED' etc
+            reason: reason || null,
+            employeeId: employeeId ? employeeId.toString() : null,
+            employeeName: employeeName || null,
+            loanAccountNumber: loanNo ? loanNo.toString() : null,
+            losApplicationNumber: applicationNumber ? applicationNumber.toString() : null
+        }
+    });
+
+    res.status(200).json({
+        success: true,
+        message: 'Loan application updated successfully from LOS.',
+        data: {
+            applicationId: updatedApplication.id,
+            status: updatedApplication.status,
+            loanAccountNumber: updatedApplication.loanAccountNumber
+        }
+    });
+});
+
+module.exports = { applyForLoan, getLoanStatus, exportLoanApplications, downloadApplicationPdf, updateLoanStatusFromLos };

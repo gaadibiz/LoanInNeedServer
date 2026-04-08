@@ -1,0 +1,12 @@
+﻿=== STEP 1: Health Check ===
+Status: 200
+Body: {"status":"healthy","message":"LoanInNeed Backend is up and running!","timestamp":"2026-04-07T18:14:46.087Z"}
+
+=== STEP 2: Export Endpoint ===
+URL: https://lionfish-app-mg3te.ondigitalocean.app/api/loans/export?from=2026-01-01T00%3A00%3A00.000Z&to=2026-04-07T18%3A14%3A47.058Z
+Status: 200
+Records returned: 22
+First record name: Sangima Rath
+First record status: PENDING
+First record loanAmount: 800000
+First record createdAt: 2026-03-14T19:10:14.876Z
