@@ -359,8 +359,17 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
             employeeName: employeeName || null,
             loanAccountNumber: loanNo ? loanNo.toString() : null,
             losApplicationNumber: applicationNumber ? applicationNumber.toString() : null
+        },
+        include: {
+            user: {
+                include: {
+                    aadhaarVerification: true
+                }
+            }
         }
     });
+
+    const returnedAadhaar = updatedApplication.user?.aadhaarVerification?.aadhaarNumber || null;
 
     res.status(200).json({
         success: true,
@@ -368,7 +377,8 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
         data: {
             applicationId: updatedApplication.id,
             status: updatedApplication.status,
-            loanAccountNumber: updatedApplication.loanAccountNumber
+            loanAccountNumber: updatedApplication.loanAccountNumber,
+            aadhaarNo: returnedAadhaar
         }
     });
 });
