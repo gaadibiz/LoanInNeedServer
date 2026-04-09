@@ -372,6 +372,7 @@ model LosIntegrationJob {
   losCaseNumber    String?
   losKycId         String?
 
+  rawResponse      Json?
   lastError String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

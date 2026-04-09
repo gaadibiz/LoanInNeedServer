@@ -164,6 +164,7 @@ const processSingleJob = async (job) => {
                 status:           'SUCCESS',
                 losApplicationId: losResponse.applicationId ? losResponse.applicationId.toString() : null,
                 losCaseNumber:    losResponse.caseNumber ? losResponse.caseNumber.toString() : null,
+                rawResponse:      losResponse.rawData ? JSON.parse(JSON.stringify(losResponse.rawData)) : null,
                 lastError:        null
             }
         });
