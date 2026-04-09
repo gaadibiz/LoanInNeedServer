@@ -128,14 +128,14 @@ const buildLosPayload = (application, user, kycEmployment, kycAddress, panVerifi
         OrganizationID: 1,
         LoanTypeID: 16,
         ProductSchemeName: "PayDay Loan Scheme",
-        FirstName: firstName,
-        MiddleName: "",
-        LastName: lastName,
+        FirstName: firstName || "Unknown",
+        MiddleName: "NA",
+        LastName: lastName || "Unknown",
         DateOfBirth: DateOfBirth,
-        MobileNo: user.phone || "",
+        MobileNo: user.phone || "0000000000",
         Email: user.email || `${user.phone}@noemail.com`,
-        PanSSN: panVerification ? panVerification.panNumber : "",
-        AdharDrivingNo: "",
+        PanSSN: panVerification && panVerification.panNumber ? panVerification.panNumber : "NA",
+        AdharDrivingNo: "NA",
         LoanCategoryCode: "RLT",
         ProductCategoryCode: "UNSEC",
         ProductID: 13,
@@ -147,21 +147,21 @@ const buildLosPayload = (application, user, kycEmployment, kycAddress, panVerifi
         PayDayDate: PaydayDateString,
 
         Address: {
-            AddressLine1: kycAddress ? (kycAddress.currentAddress || "") : "",
-            CityName: kycAddress ? (kycAddress.city || "") : "",
+            AddressLine1: kycAddress && kycAddress.currentAddress ? kycAddress.currentAddress : "NA",
+            CityName: kycAddress && kycAddress.city ? kycAddress.city : "NA",
             StateID: StateCode,
-            PinZipCode: kycAddress ? (kycAddress.postalCode || "") : "",
-            PhoneNo: user.phone || ""
+            PinZipCode: kycAddress && kycAddress.postalCode ? kycAddress.postalCode : "000000",
+            PhoneNo: user.phone || "0000000000"
         },
 
         KYC_Individual: {
-            FirstName: firstName,
-            MiddleName: "",
-            LastName: lastName,
-            MobileNo: user.phone || "",
+            FirstName: firstName || "Unknown",
+            MiddleName: "NA",
+            LastName: lastName || "Unknown",
+            MobileNo: user.phone || "0000000000",
             Email: user.email || `${user.phone}@noemail.com`,
-            PanSSN: panVerification ? panVerification.panNumber : "",
-            AdharDrivingNo: ""
+            PanSSN: panVerification && panVerification.panNumber ? panVerification.panNumber : "NA",
+            AdharDrivingNo: "NA"
         },
 
         IsJointApplication: true,
