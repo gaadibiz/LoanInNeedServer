@@ -43,7 +43,9 @@ const getLosToken = async () => {
         // Below is a generic implementation.
         const response = await axios.post(LOS_AUTH_URL, {
             UserName: LOS_USERNAME,
-            Password: LOS_PASSWORD
+            Password: LOS_PASSWORD,
+            username: LOS_USERNAME,
+            password: LOS_PASSWORD
         }, {
             headers: {
                 'Content-Type': 'application/json'

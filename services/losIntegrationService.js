@@ -104,6 +104,12 @@ const processSingleJob = async (job) => {
         amount:   payload.LoanAmountRequired
     });
 
+    // Update job with rawRequest before sending
+    await prisma.losIntegrationJob.update({
+        where: { id },
+        data: { rawRequest: JSON.parse(JSON.stringify(payload)) }
+    });
+
     // ── 5. Push to LOS ───────────────────────────────────────────────────────
     const losResponse = await createLosApplication(payload);
 

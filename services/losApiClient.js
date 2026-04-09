@@ -65,8 +65,8 @@ const createLosApplication = async (payload) => {
             || (response.status >= 200 && response.status < 300 && !data?.IsError && !data?.Message);
 
         if (isSuccess) {
-            const appId   = data?.ApplicationId || data?.applicationId || data?.ApplicationID || null;
-            const caseNum = data?.CaseNumber    || data?.caseNumber    || data?.CaseNo       || null;
+            const appId   = data?.Data?.ApplicationID || data?.ApplicationId || data?.applicationId || null;
+            const caseNum = data?.Data?.CaseNumber || data?.CaseNumber || data?.caseNumber || data?.CaseNo || null;
 
             logger.info(`[LOS API] ✅ Application pushed to LOS. ApplicationId: ${appId}, CaseNumber: ${caseNum}`);
             return {
@@ -79,7 +79,7 @@ const createLosApplication = async (payload) => {
 
         // LOS returned HTTP 200 but with a failure body
         logger.warn('[LOS API] ⚠️  LOS returned 200 but indicates failure in body:', data);
-        throw new Error(`LOS SaveNewApplication failure: ${data?.Message || data?.message || JSON.stringify(data)}`);
+        throw new Error(`LOS SaveNewApplication failure: ${data?.Message || data?.message || data?.ErrorMessage || JSON.stringify(data)}`);
 
     } catch (error) {
         if (error.response) {

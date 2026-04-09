@@ -110,79 +110,62 @@ const buildNewLosPayload = (application, user) => {
  */
 const buildLosPayload = (application, user, kycEmployment, kycAddress, panVerification) => {
     // Basic null checks
-    const firstName = user.name ? user.name.split(' ')[0] : 'Unknown';
-    const lastName = user.name && user.name.includes(' ') ? user.name.split(' ').slice(1).join(' ') : 'Unknown';
+    const nameParts = user.name ? user.name.split(' ') : ['Unknown'];
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
     const age = calculateAge(user.dob);
 
-    // Formatting Dates
     const DateOfBirth = user.dob ? new Date(user.dob).toISOString() : new Date().toISOString();
+    
     // Dummy payday date
     const paydayDate = new Date();
     paydayDate.setDate(paydayDate.getDate() + 30);
     const PaydayDateString = paydayDate.toISOString();
 
-    const StateCode = kycAddress && kycAddress.state ? (stateMap[kycAddress.state] || 1109) : 1109; // Default 1109 (MH)
-    const GenderCode = genderMap[user.gender] || 1;
-    const EmploymentTypeID = kycEmployment ? (employmentMap[kycEmployment.employmentType] || 342) : 342;
+    const StateCode = kycAddress && kycAddress.state ? (stateMap[kycAddress.state] || 1059) : 1059;
 
     return {
-        // 1-9 Organization & Product
         OrganizationID: 1,
-        ProfileType: "I",
-        ProductCategoryCode: "Unsecured",
         LoanTypeID: 16,
-        ProductID: 13, // 13 for PayDay Loan
-        ProductName: "PayDay Loan",
-        ProductSchemeID: 1006,
         ProductSchemeName: "PayDay Loan Scheme",
-        LoanCategoryCode: "RLT",
-
-        // 10-13 Metrics & Options
-        Age: age,
-        Email: user.email || `${user.phone}@noemail.com`,
-        QualificationID: null, // Select Qualification
-        EligibleLoanAmount: application.loanAmount || 0, // Fallback to required
-
-        // 14-16 Application Flags
-        IsFormerAddress: false,
-        IsJointApplication: false,
-        IsCoBorrower: false,
-
-        // 17-27 Personal & KYC
         FirstName: firstName,
         MiddleName: "",
         LastName: lastName,
         DateOfBirth: DateOfBirth,
-        Gender: GenderCode,
         MobileNo: user.phone || "",
-        EmploymentTypeID: EmploymentTypeID,
-        NationalityID: 104,
-        CitizenshipID: "India",
-        Pan: panVerification ? panVerification.panNumber : "",
-        AdharDrivingNo: "", // Extract or omit
-
-        // 28-32 Loan specific
+        Email: user.email || `${user.phone}@noemail.com`,
+        PanSSN: panVerification ? panVerification.panNumber : "",
+        AdharDrivingNo: "",
+        LoanCategoryCode: "RLT",
+        ProductCategoryCode: "UNSEC",
+        ProductID: 13,
+        ProductName: "PayDay Loan",
         LoanAmountRequired: application.loanAmount || 0,
-        Tenure: 12, // Default
-        InterestRate: 0, // Default passing 0
+        Tenure: application.loanPeriod || 10,
+        InterestRate: 6,
         PayCheckAmt: kycEmployment ? (kycEmployment.monthlyIncome || 0) : 0,
-        PaydayDate: PaydayDateString,
+        PayDayDate: PaydayDateString,
 
-        // 33-43 Address Block Let's keep it flat as decided
-        AddressTypeID: 335,
-        AddressLine1: kycAddress ? (kycAddress.currentAddress || "") : "",
-        AddressLine2: "",
-        DistrictName: kycAddress ? (kycAddress.city || "") : "",
-        TalukaName: "",
-        CityName: kycAddress ? (kycAddress.city || "") : "",
-        StateID: StateCode,
-        State: kycAddress ? (kycAddress.state || "Maharashtra") : "Maharashtra",
-        PinZipCode: kycAddress ? (kycAddress.postalCode || "") : "",
-        ResidentType: 319,
-        IsCorrespondenceAddress: true,
+        Address: {
+            AddressLine1: kycAddress ? (kycAddress.currentAddress || "") : "",
+            CityName: kycAddress ? (kycAddress.city || "") : "",
+            StateID: StateCode,
+            PinZipCode: kycAddress ? (kycAddress.postalCode || "") : "",
+            PhoneNo: user.phone || ""
+        },
 
-        // 44
-        CreatedBy: 1
+        KYC_Individual: {
+            FirstName: firstName,
+            MiddleName: "",
+            LastName: lastName,
+            MobileNo: user.phone || "",
+            Email: user.email || `${user.phone}@noemail.com`,
+            PanSSN: panVerification ? panVerification.panNumber : "",
+            AdharDrivingNo: ""
+        },
+
+        IsJointApplication: true,
+        IsCoBorrower: true
     };
 };
 
