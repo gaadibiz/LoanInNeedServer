@@ -1,6 +1,8 @@
 // controllers/authController.js
 const authService = require('../services/authService');
 const asyncHandler = require('express-async-handler'); // cleaner try/catch
+const surepassService = require('../services/surepassService');
+const aadhaarService = require('../services/aadharService');
 
 // Request OTP
 const requestPhoneOtp = asyncHandler(async (req, res) => {
@@ -19,13 +21,32 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-// Verify Aadhaar OTP (Bypass)
+// Verify Aadhaar OTP (Using Surepass Validation endpoint instead of OTP)
 const verifyAadhaarOtp = asyncHandler(async (req, res) => {
-  const { otp } = req.body;
-  // Bypass logic: Accept any OTP or specifically Master OTP
-  // Since we disabled sending, we just return success
-  console.log('[AUTH] Aadhaar OTP Verified (Bypass)');
-  res.json({ success: true, message: "Aadhaar verified successfully" });
+  const { aadhaarNumber, otp } = req.body;
+  const userId = req.user?.id;
+  
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  if (!aadhaarNumber) {
+    return res.status(400).json({ success: false, message: 'Aadhaar number is required' });
+  }
+
+  // Use Surepass Validation API
+  const aadhaarDetails = await surepassService.verifyAadhaar(aadhaarNumber);
+
+  // Persist Aadhaar Validation in DB
+  await aadhaarService.submitAadhaar(userId, aadhaarNumber);
+  await aadhaarService.verifyAadhaar(userId);
+
+  console.log(`[AUTH] Aadhaar Verified successfully for user: ${userId}`);
+  res.json({ 
+    success: true, 
+    message: "Aadhaar verified successfully",
+    data: aadhaarDetails 
+  });
 });
 
 // Request Aadhaar OTP (Stub/Bypass)

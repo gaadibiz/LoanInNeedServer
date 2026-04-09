@@ -113,9 +113,8 @@ const buildLosPayload = (application, user, kycEmployment, kycAddress, panVerifi
     const nameParts = user.name ? user.name.split(' ') : ['Unknown'];
     const firstName = nameParts[0];
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
-    const age = calculateAge(user.dob);
 
-    const DateOfBirth = user.dob ? new Date(user.dob).toISOString() : new Date().toISOString();
+    const DateOfBirth = user.dob ? new Date(user.dob).toISOString() : "1997-01-20T10:38:43.468Z";
     
     // Dummy payday date
     const paydayDate = new Date();
@@ -123,65 +122,35 @@ const buildLosPayload = (application, user, kycEmployment, kycAddress, panVerifi
     const PaydayDateString = paydayDate.toISOString();
 
     const StateCode = kycAddress && kycAddress.state ? (stateMap[kycAddress.state] || 1059) : 1059;
-    const GenderCode = genderMap[user.gender] || 1;
-    const EmploymentTypeID = kycEmployment ? (employmentMap[kycEmployment.employmentType] || 342) : 342;
 
     return {
-        // Core Mappings
         OrganizationID: 1,
         LoanTypeID: 16,
-        ProductID: 13,
-        ProductName: "PayDay Loan",
-        ProductSchemeID: 1006,
         ProductSchemeName: "PayDay Loan Scheme",
-        LoanCategoryCode: "RLT",
-        ProductCategoryCode: "UNSEC",
-        ProfileType: "I",
-
-        // User Data
         FirstName: firstName || "Unknown",
         MiddleName: "NA",
         LastName: lastName || "Unknown",
         DateOfBirth: DateOfBirth,
-        Age: age,
-        Gender: GenderCode,
         MobileNo: user.phone || "0000000000",
         Email: user.email || `${user.phone}@noemail.com`,
         PanSSN: panVerification && panVerification.panNumber ? panVerification.panNumber : "NA",
         AdharDrivingNo: "NA",
-        NationalityID: 104,
-        CitizenshipID: "India",
-        EmploymentTypeID: EmploymentTypeID,
-        QualificationID: null,
-
-        // Loan Params
-        EligibleLoanAmount: application.loanAmount || 0,
-        LoanAmountRequired: application.loanAmount || 0,
+        LoanCategoryCode: "RLT",
+        ProductCategoryCode: "UNSEC",
+        ProductID: 13,
+        ProductName: "PayDay Loan",
+        LoanAmountRequired: application.loanAmount || 5000,
         Tenure: application.loanPeriod || 10,
         InterestRate: 6,
-        PayCheckAmt: kycEmployment ? (kycEmployment.monthlyIncome || 0) : 0,
+        PayCheckAmt: kycEmployment ? parseInt(kycEmployment.monthlyIncome || 50000, 10) : 50000,
         PayDayDate: PaydayDateString,
-        
-        // Flags & Meta
-        CreatedBy: 1,
-        IsFormerAddress: false,
-        IsJointApplication: true,
-        IsCoBorrower: true,
 
-        // Nested Objects required by LOS
         Address: {
-            AddressTypeID: 335,
             AddressLine1: kycAddress && kycAddress.currentAddress ? kycAddress.currentAddress : "NA",
-            AddressLine2: "NA",
-            DistrictName: kycAddress && kycAddress.city ? kycAddress.city : "NA",
-            TalukaName: "NA",
             CityName: kycAddress && kycAddress.city ? kycAddress.city : "NA",
             StateID: StateCode,
-            State: kycAddress && kycAddress.state ? kycAddress.state : "Maharashtra",
             PinZipCode: kycAddress && kycAddress.postalCode ? kycAddress.postalCode : "000000",
-            PhoneNo: user.phone || "0000000000",
-            ResidentType: 319,
-            IsCorrespondenceAddress: true
+            PhoneNo: user.phone || "0000000000"
         },
 
         KYC_Individual: {
@@ -192,7 +161,10 @@ const buildLosPayload = (application, user, kycEmployment, kycAddress, panVerifi
             Email: user.email || `${user.phone}@noemail.com`,
             PanSSN: panVerification && panVerification.panNumber ? panVerification.panNumber : "NA",
             AdharDrivingNo: "NA"
-        }
+        },
+
+        IsJointApplication: true,
+        IsCoBorrower: true
     };
 };
 

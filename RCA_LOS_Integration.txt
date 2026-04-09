@@ -1,0 +1,48 @@
+=========================================================
+ROOT CAUSE ANALYSIS & INCIDENT REPORT
+=========================================================
+TO: LOS Integration Engineering Team  
+SUBJECT: HTTP 500 / SQL Syntax Error on SaveNewApplication API Endpoint  
+DATE: 2026-04-09  
+TARGET URL: http://59.95.101.93:7021/api/NewApplicationAPI/SaveNewApplication  
+
+---------------------------------------------------------
+1. INCIDENT SUMMARY
+---------------------------------------------------------
+During integration testing of the `SaveNewApplication` API endpoint, we are consistently receiving an HTTP 400 response indicating an internal SQL query builder crash (`Exception in AddAsync: Incorrect syntax near ','`). This error entirely prevents the successful submission of loan application telemetry.
+
+---------------------------------------------------------
+2. ISOLATION TESTING & ANALYSIS
+---------------------------------------------------------
+To definitively isolate the payload formatting from our web platform infrastructure, we bypassed all internal application logic and executed raw POST requests directly against your endpoint.
+
+Test Conditions:
+1. Valid Bearer Token was acquired successfully via the `/api/auth/login` endpoint using our integration credentials.
+2. The exact, literal sample copy of the "Sample Request Body" JSON provided by your official documentation was pushed.
+
+Resulting Response:
+HTTP Status: 400 Bad Request
+
+{
+  "Result": 500,
+  "Message": "Exception in AddAsync: Incorrect syntax near ','.",
+  "RowsAffected": -1,
+  "Data": null,
+  "ErrorMessage": null
+}
+
+---------------------------------------------------------
+3. DIAGNOSIS
+---------------------------------------------------------
+Because the exact baseline JSON schema supplied by your technical documentation produces this native crash, the issue is structurally isolated strictly to the backend of the LOS application environment.
+
+The message `Exception in AddAsync: Incorrect syntax near ','` is a characteristic EntityFramework or raw SQL provider error indicating a malformed dynamic query. Common triggers include:
+- A parameter expected by your SQL INSERT mapping engine evaluating to null or completely absent, resulting in an unescaped break like `VALUES (@val1, , @val3)`.
+- A schema modification update deployed on the target database table that is momentarily unsynchronized with the backend repository mapping.
+
+---------------------------------------------------------
+4. ACTION REQUIRED
+---------------------------------------------------------
+As this failure occurs independently of our telemetry when processing your approved reference payload, please immediately review the `SaveNewApplication` AddAsync SQL execution log internally on 59.95.101.93. 
+
+Please adjust the endpoint's strict formatting dependencies or fix the query syntax and notify us when the endpoint has been functionally hotfixed so we may resume pipeline testing. Thank you.

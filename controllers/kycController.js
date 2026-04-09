@@ -10,6 +10,8 @@ const kycService = require('../services/kycService'); // Import generic service 
 
 
 
+const surepassService = require('../services/surepassService'); // Import Surepass Service
+
 /**
  * Controller to handle full KYC submission (Employment + Address + Loan)
  * Expects a single form submission with all details.
@@ -76,7 +78,10 @@ exports.verifyPAN = async (req, res, next) => {
 
     logger.info('✅ [KYC] PAN image uploaded successfully for userId=%s', userId);
 
-    // 2. Persist PAN in DB (Bypass Mode)
+    // 2. Surepass API PAN Verification
+    const panDetails = await surepassService.verifyPAN(panNumber.toUpperCase());
+
+    // 3. Persist PAN in DB
     // Check if record exists
     const existingPan = await PanModel.findByUserId(userId);
 
@@ -91,24 +96,21 @@ exports.verifyPAN = async (req, res, next) => {
     } else {
       // Create new (directly verified)
       panRecord = await PanModel.createPanRecord(userId, panNumber.toUpperCase());
-      // createPanRecord defaults verified to false, so we must update it immediately or custom create
-      // Actually, createPanRecord implementation: verified: false. 
-      // So we need to update it to true right after, or just use updatePanRecord if we could upsert.
-      // Let's just update it immediately.
+      // createPanRecord defaults verified to false, so we must update it immediately
       panRecord = await PanModel.verifyPan(userId);
     }
 
     logger.info('✅ [KYC] PAN verified and saved in DB for userId=%s', userId);
 
-    // 3. Mock Success Response
-    // We return success but NO specific user details, so the frontend stays empty/editable.
+    // 4. Return Success Response with Surepass Data
+    // Return verified data to the frontend for autofill
     return res.status(200).json({
       success: true,
-      message: 'PAN verified successfully (Bypass) ✔️',
+      message: 'PAN verified successfully ✔️',
       data: {
         panNumber: panNumber.toUpperCase(),
-        // We do NOT return firstName, lastName, dob, etc. so frontend won't autofill.
-        isVerified: true
+        isVerified: true,
+        ...panDetails
       }
     });
 
