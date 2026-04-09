@@ -13,10 +13,13 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  // If it's an unknown error, don't expose details
-  res.status(500).json({
+  // If it's a known Prisma error or any unhandled error, expose the real message instead of hiding it!
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
     status: 'error',
-    message: 'Something went wrong!'
+    message: err.message || 'Something went wrong!',
+    code: err.code || 'UNKNOWN',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 }
 
