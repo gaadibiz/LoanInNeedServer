@@ -81,8 +81,14 @@ exports.verifyPAN = async (req, res, next) => {
     // 2. Surepass API PAN Verification
     const panDetails = await surepassService.verifyPAN(panNumber.toUpperCase());
 
+    // 2.5 Ensure PAN uniqueness across the system
+    const existingPanByNumber = await PanModel.findByPanNumber(panNumber.toUpperCase());
+    if (existingPanByNumber && existingPanByNumber.userId !== userId) {
+      throw new BadRequestError('This PAN number is already registered with another account ❌');
+    }
+
     // 3. Persist PAN in DB
-    // Check if record exists
+    // Check if record exists for this specific user
     const existingPan = await PanModel.findByUserId(userId);
 
     let panRecord;

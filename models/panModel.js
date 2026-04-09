@@ -13,6 +13,16 @@ const PanModel = {
   },
 
   /**
+   * Find PAN verification record by PAN Number
+   */
+  async findByPanNumber(panNumber, tx = prisma) {
+    const client = tx;
+    return client.panVerification.findUnique({
+      where: { panNumber },
+    });
+  },
+
+  /**
    * Find PAN verification record by ID
    */
   async findById(id, tx = prisma) {
