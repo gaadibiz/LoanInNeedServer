@@ -1,7 +1,9 @@
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { buildLosPayload } = require('../config/losMapping');
-const { createLosApplication } = require('./losApiClient');
+const { createLosApplication, pushKycDocumentToLos } = require('./losApiClient');
+const path = require('path');
+const { encodeFileToBase64 } = require('../utils/base64Encoder');
 
 // Maximum times a job will be attempted before marking as permanently FAILED
 const MAX_FAILURES = 3;
@@ -62,7 +64,13 @@ const processSingleJob = async (job) => {
 
     // ── 1. Fetch records from LIN DB ─────────────────────────────────────────
     const user = await prisma.user.findUnique({
-        where: { id: userId }
+        where: { id: userId },
+        include: {
+            employment: true,
+            address: true,
+            panVerification: true,
+            aadhaarVerification: true
+        }
     });
 
     const application = await prisma.loanApplication.findUnique({
@@ -83,13 +91,13 @@ const processSingleJob = async (job) => {
         throw new Error('Customer name is missing. LOS requires firstName and lastName.');
     }
 
-    // ── 3. Fetch KYC data from LIN DB ────────────────────────────────────────
-    const kycEmployment = await prisma.kycEmployment.findFirst({ where: { userId } }).catch(() => null);
-    const kycAddress    = await prisma.kycAddress.findFirst({ where: { userId } }).catch(() => null);
-    const kycPan        = await prisma.kycPan.findFirst({ where: { userId } }).catch(() => null);
+    // ── 3. Map KYC data from LIN DB ──────────────────────────────────────────
+    const kycEmployment = user.employment || null;
+    const kycAddress    = user.address || null;
+    const panVerification = user.panVerification || null;
 
     // ── 4. Build the full LOS v1 payload ────────────────────────────────────
-    const payload = buildLosPayload(application, user, kycEmployment, kycAddress, kycPan);
+    const payload = buildLosPayload(application, user, kycEmployment, kycAddress, panVerification);
 
     logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}`, {
         customer: `${payload.FirstName} ${payload.LastName}`,
@@ -99,17 +107,71 @@ const processSingleJob = async (job) => {
     // ── 5. Push to LOS ───────────────────────────────────────────────────────
     const losResponse = await createLosApplication(payload);
 
-    // ── 6. Mark success and store the LOS IDs ────────────────────────────────
+    // ── 6. Push KYC Documents and Store LOS IDs ──────────────────────────────
     if (losResponse.success) {
         logger.info(`[LOS WORKER] ✅ Job ${id} pushed successfully. ApplicationId: ${losResponse.applicationId}, CaseNumber: ${losResponse.caseNumber}`);
+
+        // Push KYC Documents
+        try {
+            const userDocuments = await prisma.userDocument.findMany({ where: { userId } });
+            if (userDocuments && userDocuments.length > 0) {
+                logger.info(`[LOS WORKER] Found ${userDocuments.length} documents for ApplicationId: ${losResponse.applicationId}`);
+                const documentsArray = [];
+                for (const doc of userDocuments) {
+                    try {
+                        const absolutePath = path.join(__dirname, '..', doc.filePath);
+                        const base64Data = encodeFileToBase64(absolutePath, false);
+
+                        let proofNumber = '';
+                        if (doc.docType === 'PAN' && panVerification) {
+                            proofNumber = panVerification.panNumber;
+                        } else if (doc.docType === 'AADHAAR' && user.aadhaarVerification) {
+                            proofNumber = user.aadhaarVerification.aadhaarNumber;
+                        } else {
+                            proofNumber = user.phone;
+                        }
+
+                        documentsArray.push({
+                            ProofType: doc.docType,
+                            ProofNumber: proofNumber,
+                            DocumentBase64: base64Data,
+                            DocumentName: doc.fileName || `${doc.docType}.pdf`
+                        });
+                    } catch (docErr) {
+                        logger.warn(`[LOS WORKER] Failed to process document ${doc.id} (${doc.docType}): ${docErr.message}`);
+                    }
+                }
+
+                if (documentsArray.length > 0) {
+                    const kycPayload = {
+                        ApplicationId: losResponse.applicationId,
+                        CreatedBy: 1,
+                        Documents: documentsArray
+                    };
+                    const kycResponse = await pushKycDocumentToLos(kycPayload);
+                    if (kycResponse.success) {
+                        logger.info(`[LOS WORKER] ✅ KYC Documents pushed successfully.`);
+                    }
+                }
+            }
+        } catch (kycErr) {
+            logger.error(`[LOS WORKER] Failed to push KYC documents: ${kycErr.message}`);
+        }
 
         await prisma.losIntegrationJob.update({
             where: { id },
             data: {
                 status:           'SUCCESS',
-                losApplicationId: losResponse.applicationId || null,
-                losCaseNumber:    losResponse.caseNumber    || null,
+                losApplicationId: losResponse.applicationId ? losResponse.applicationId.toString() : null,
+                losCaseNumber:    losResponse.caseNumber ? losResponse.caseNumber.toString() : null,
                 lastError:        null
+            }
+        });
+
+        await prisma.loanApplication.update({
+            where: { id: applicationId },
+            data: {
+                losApplicationNumber: losResponse.caseNumber ? losResponse.caseNumber.toString() : null
             }
         });
     } else {
@@ -149,5 +211,6 @@ const markJobFailed = async (job, errorMessage) => {
 };
 
 module.exports = {
-    processPendingIntegrations
+    processPendingIntegrations,
+    processSingleJob
 };

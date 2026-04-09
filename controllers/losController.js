@@ -91,7 +91,62 @@ const updateJobStatus = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * @desc    Manually trigger the LOS Integration for an application
+ * @route   POST /api/los/applications/:applicationId/trigger
+ * @access  Private (API Key / Admin)
+ */
+const triggerLosIntegration = asyncHandler(async (req, res) => {
+    const { applicationId } = req.params;
+    
+    // Find job
+    let job = await prisma.losIntegrationJob.findUnique({
+        where: { applicationId: parseInt(applicationId) }
+    });
+    
+    if (!job) {
+        // Find application to get userId
+        const app = await prisma.loanApplication.findUnique({ where: { id: parseInt(applicationId) } });
+        if (!app) {
+            throw new NotFoundError(`LoanApplication ID ${applicationId} not found`);
+        }
+        // Create job if it doesn't exist
+        job = await prisma.losIntegrationJob.create({
+            data: {
+                userId: app.userId,
+                applicationId: app.id,
+                status: 'PENDING'
+            }
+        });
+    }
+    
+    // Import processSingleJob dynamically to avoid circular dependencies (if any) or just use it
+    const { processSingleJob } = require('../services/losIntegrationService');
+    
+    try {
+        await processSingleJob(job);
+        
+        // Fetch updated job
+        const updatedJob = await prisma.losIntegrationJob.findUnique({
+             where: { id: job.id }
+        });
+        
+        res.status(200).json({
+            success: true,
+            message: 'LOS integration triggered successfully.',
+            job: updatedJob
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'LOS integration encountered an error.',
+            error: error.message
+        });
+    }
+});
+
 module.exports = {
     getApplicationsForLos,
-    updateJobStatus
+    updateJobStatus,
+    triggerLosIntegration
 };

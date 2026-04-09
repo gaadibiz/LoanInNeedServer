@@ -108,7 +108,7 @@ const buildNewLosPayload = (application, user) => {
  * ─────────────────────────────────────────────────────────────────────────────
  * Builds the LOS JSON payload from LIN DB structures
  */
-const buildLosPayload = (application, user, kycEmployment, kycAddress, kycPan) => {
+const buildLosPayload = (application, user, kycEmployment, kycAddress, panVerification) => {
     // Basic null checks
     const firstName = user.name ? user.name.split(' ')[0] : 'Unknown';
     const lastName = user.name && user.name.includes(' ') ? user.name.split(' ').slice(1).join(' ') : 'Unknown';
@@ -158,7 +158,7 @@ const buildLosPayload = (application, user, kycEmployment, kycAddress, kycPan) =
         EmploymentTypeID: EmploymentTypeID,
         NationalityID: 104,
         CitizenshipID: "India",
-        Pan: kycPan ? kycPan.panNumber : "",
+        Pan: panVerification ? panVerification.panNumber : "",
         AdharDrivingNo: "", // Extract or omit
 
         // 28-32 Loan specific
