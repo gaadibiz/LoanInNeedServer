@@ -21,7 +21,9 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-// Verify Aadhaar OTP (Using Surepass Validation endpoint instead of OTP)
+// Verify Aadhaar OTP (Using Surepass Validation endpoint OR master OTP bypass)
+const MASTER_OTP = '261102';
+
 const verifyAadhaarOtp = asyncHandler(async (req, res) => {
   const { aadhaarNumber, otp } = req.body;
   const userId = req.user?.id;
@@ -34,8 +36,21 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Aadhaar number is required' });
   }
 
-  // Use Surepass Validation API
-  const aadhaarDetails = await surepassService.verifyAadhaar(aadhaarNumber);
+  let aadhaarDetails;
+
+  // Master OTP bypass — skips external Surepass API
+  if (otp === MASTER_OTP) {
+    console.log(`[AUTH] Master OTP used — bypassing Surepass for user: ${userId}`);
+    aadhaarDetails = {
+      client_id: 'bypass_master_otp',
+      aadhaar_number: aadhaarNumber.replace(/.(?=....)/g, '*'),
+      status: 'valid',
+      message: 'Verified via master OTP bypass'
+    };
+  } else {
+    // Use Surepass Validation API for real OTP flow
+    aadhaarDetails = await surepassService.verifyAadhaar(aadhaarNumber);
+  }
 
   // Persist Aadhaar Validation in DB
   await aadhaarService.submitAadhaar(userId, aadhaarNumber);
