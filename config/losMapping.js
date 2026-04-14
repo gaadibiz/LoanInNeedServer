@@ -69,10 +69,9 @@ const buildNewLosPayload = (application, user) => {
     const firstName = nameParts[0] || 'Unknown';
     const lastName  = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
 
-    // Format applicationId as LIN/YYYY/NNNNN  (e.g. LIN/2026/00021)
-    const year = new Date(application.createdAt).getFullYear();
-    const seqNum = String(application.id).padStart(5, '0');
-    const applicationId = `LIN/${year}/${seqNum}`;
+    // Format applicationId as LN1234567890
+    const seqNum = String(application.id).padStart(10, '0');
+    const applicationId = `LN${seqNum}`;
 
     // Derive loan product label
     const loanTypeToProduct = {

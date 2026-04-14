@@ -8,13 +8,12 @@ const logger = require('../utils/logger');
 
 /**
  * Formats the application number from raw DB id + createdAt date
- * Format: LIN/YYYY/XXXXX
- * Example: LIN/2026/00007
+ * Format: LN + 10 digits
+ * Example: LN0000000034
  */
 function formatApplicationNumber(applicationId, createdAt) {
-    const year = new Date(createdAt).getFullYear();
-    const paddedId = String(applicationId).padStart(5, '0');
-    return `LIN/${year}/${paddedId}`;
+    const paddedId = String(applicationId).padStart(10, '0');
+    return `LN${paddedId}`;
 }
 
 /**
