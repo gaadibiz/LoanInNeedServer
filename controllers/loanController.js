@@ -383,4 +383,58 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
     });
 });
 
-module.exports = { applyForLoan, getLoanStatus, exportLoanApplications, downloadApplicationPdf, updateLoanStatusFromLos };
+const checkEligibility = asyncHandler(async (req, res) => {
+    const { 
+        loanAmount, 
+        monthlySalaryRange, 
+        salaryReceivedIn, 
+        cibilScore, 
+        income, 
+        expense, 
+        tenure 
+    } = req.body;
+
+    // Signup-style Eligibility Check
+    if (monthlySalaryRange || salaryReceivedIn || cibilScore) {
+        if (
+            salaryReceivedIn !== "Bank Transfer" || 
+            cibilScore === "< 650 (Poor)" || 
+            monthlySalaryRange === "Less than Rs.25,000/-"
+        ) {
+            return res.status(200).json({
+                eligible: false,
+                reason: "Does not meet basic criteria."
+            });
+        }
+        return res.status(200).json({
+            eligible: true,
+            message: "Eligible for next steps."
+        });
+    }
+
+    // Calculator-style Eligibility Check
+    if (income !== undefined && expense !== undefined && tenure !== undefined) {
+        const expenseAmount = (income * expense) / 100;
+        const netIncome = income - expenseAmount;
+        const maxEmi = netIncome * 0.4; // 40% EMI rule
+        const totalMonths = tenure * 12;
+        const eligibleLoanAmount = maxEmi * totalMonths;
+
+        return res.status(200).json({
+            eligible: true,
+            eligibleAmount: eligibleLoanAmount > 0 ? eligibleLoanAmount : 0,
+            emi: maxEmi > 0 ? maxEmi : 0
+        });
+    }
+
+    return res.status(400).json({ error: "Invalid eligibility parameters provided." });
+});
+
+module.exports = { 
+    applyForLoan, 
+    getLoanStatus, 
+    exportLoanApplications, 
+    downloadApplicationPdf, 
+    updateLoanStatusFromLos,
+    checkEligibility
+};

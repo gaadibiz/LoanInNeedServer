@@ -11,6 +11,9 @@ router.post('/apply', protect, attributionMiddleware, loanController.applyForLoa
 // PDF Download (User Auth)
 router.get('/:applicationId/pdf', protect, loanController.downloadApplicationPdf);
 
+// Public Endpoints
+router.post('/check-eligibility', loanController.checkEligibility);
+
 // Admin / Export Endpoints
 router.get('/status', verifyApiKey, loanController.getLoanStatus);
 router.get('/export', verifyApiKey, loanController.exportLoanApplications);
