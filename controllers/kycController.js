@@ -64,19 +64,19 @@ exports.verifyPAN = async (req, res, next) => {
     const userId = req.user.id;
 
     if (!panNumber) throw new BadRequestError('PAN number is required ❌');
-    if (!panImage) throw new BadRequestError('PAN image is required ❌');
 
     logger.info('📝 [KYC] PAN verification request for userId=%s, PAN=%s', userId, panNumber);
 
-    // 1. Upload PAN Image to Supabase (using documentService)
-    // We treat this as a 'PAN' document type
-    const uploadedDoc = await documentVerificationService.uploadDocument(
-      userId,
-      panImage,
-      'PAN'
-    );
-
-    logger.info('✅ [KYC] PAN image uploaded successfully for userId=%s', userId);
+    // 1. Upload PAN Image to Supabase (if provided)
+    let uploadedDoc = null;
+    if (panImage) {
+      uploadedDoc = await documentVerificationService.uploadDocument(
+        userId,
+        panImage,
+        'PAN'
+      );
+      logger.info('✅ [KYC] PAN image uploaded successfully for userId=%s', userId);
+    }
 
     // 2. Surepass API PAN Verification
     const panDetails = await surepassService.verifyPAN(panNumber.toUpperCase());
