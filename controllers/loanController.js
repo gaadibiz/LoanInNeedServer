@@ -389,16 +389,22 @@ const checkEligibility = asyncHandler(async (req, res) => {
         monthlySalaryRange, 
         salaryReceivedIn, 
         cibilScore, 
+        purposeOfLoan,
+        occupation,
+        city,
         income, 
         expense, 
         tenure 
     } = req.body;
 
     // Signup-style Eligibility Check
-    if (monthlySalaryRange || salaryReceivedIn || cibilScore) {
+    // Now we use the new payload format coming from the frontend Step 2
+    if (monthlySalaryRange || salaryReceivedIn || occupation) {
+        // We log or process the new fields
+        logger.info(`[ELIGIBILITY] Checking for User - Amount: ${loanAmount}, Salary: ${monthlySalaryRange}, ReceivedIn: ${salaryReceivedIn}, Occ: ${occupation}, City: ${city}`);
+        
         if (
             salaryReceivedIn !== "Bank Transfer" || 
-            cibilScore === "< 650 (Poor)" || 
             monthlySalaryRange === "Less than Rs.25,000/-"
         ) {
             return res.status(200).json({
