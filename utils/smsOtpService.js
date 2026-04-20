@@ -69,7 +69,7 @@ async function sendOtp(phone) {
         }
 
         // Prepare SMS content
-        const smsContent = `Your OTP for LoanInNeed verification is ${otpCode}. Valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this code.`;
+        const smsContent = `Dear Customer, your OTP for LOANINNEED is ${otpCode}. It is valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this OTP with anyone. -SASHIM`;
 
         // Prepare API request
         const requestBody = {

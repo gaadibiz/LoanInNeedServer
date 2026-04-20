@@ -12,7 +12,7 @@ async function testRawAPI() {
     const requestBody = {
         listsms: [
             {
-                sms: "Your OTP for LoanInNeed verification is 123456. Valid for 10 minutes. Do not share this code.",
+                sms: "Dear Customer, your OTP for LOANINNEED is 123456. It is valid for 10 minutes. Do not share this OTP with anyone. -SASHIM",
                 mobiles: phoneNumber,
                 senderid: SMS_SENDER_ID,
                 entityid: SMS_ENTITY_ID,
