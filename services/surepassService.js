@@ -64,7 +64,7 @@ class SurepassService {
     if (aadhaarNumber === '123456789012') {
       return {
         client_id: "mock_client_demo123",
-        aadhaar_number: "XXXXXXXX9012",
+        aadhaar_number: "123456789012",
         status: "valid"
       };
     }

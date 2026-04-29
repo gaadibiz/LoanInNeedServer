@@ -34,8 +34,8 @@ class AadhaarService {
       throw new BadRequestError("Invalid Aadhaar number format. Must be 12 digits starting with 2-9");
     }
 
-    // Mask the Aadhaar before storing
-    const masked = this.maskAadhaar(cleanedNumber);
+    // Do not mask the Aadhaar before storing as per new requirement
+    const finalAadhaar = cleanedNumber;
 
     return prisma.$transaction(async (tx) => {
       const existing = await AadhaarModel.findByUserId(userId, tx);
@@ -43,14 +43,14 @@ class AadhaarService {
       if (existing) {
         // Update existing record
         return AadhaarModel.updateAadhaarRecord(userId, {
-          aadhaarNumber: masked,
+          aadhaarNumber: finalAadhaar,
           verified: false,
           verifiedAt: null
         }, tx);
       }
 
       // Create new record
-      return AadhaarModel.createAadhaarRecord(userId, masked, tx);
+      return AadhaarModel.createAadhaarRecord(userId, finalAadhaar, tx);
     });
   }
 

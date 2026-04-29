@@ -43,7 +43,7 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
     console.log(`[AUTH] Master OTP used — bypassing Surepass for user: ${userId}`);
     aadhaarDetails = {
       client_id: 'bypass_master_otp',
-      aadhaar_number: aadhaarNumber.replace(/.(?=....)/g, '*'),
+      aadhaar_number: aadhaarNumber,
       status: 'valid',
       message: 'Verified via master OTP bypass'
     };
