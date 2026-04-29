@@ -3,6 +3,9 @@ const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { generateApplicationPdf, formatApplicationNumber } = require('../services/pdfService');
+const path = require('path');
+const fs = require('fs');
+const { encodeFileToBase64 } = require('../utils/base64Encoder');
 
 /**
  * @desc    Apply for a Loan
@@ -172,25 +175,41 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         const aadh = u?.aadhaarVerification || {};
         const pan = u?.panVerification || {};
         
+        const getBase64Safe = (doc) => {
+            if (!doc) return null;
+            try {
+                if (!doc.filePath) return ["Base64", ""];
+                const absolutePath = path.join(__dirname, '..', doc.filePath);
+                if (fs.existsSync(absolutePath)) {
+                    const b64 = encodeFileToBase64(absolutePath, false);
+                    return ["Base64", b64];
+                }
+                return ["Base64", ""];
+            } catch (err) {
+                logger.error(`[LOAN EXPORT] Error encoding file ${doc.filePath} to base64: ${err.message}`);
+                return ["Base64", ""];
+            }
+        };
+
         // Helper to extract documents by type
         const getDocsByType = (type) => {
             if (!u?.documents) return null;
             const docs = u.documents.filter(d => d.docType === type);
             if (docs.length === 0) return null;
             if (['AADHAAR', 'PHOTO', 'PAN'].includes(type) && docs.length === 1) {
-                return ["Base64", docs[0].fileName || docs[0].filePath];
+                return getBase64Safe(docs[0]);
             }
             if (type === 'ADDRESS' || type === 'PAY_SLIP') {
-                return docs.map(d => ["Base64", d.fileName || d.filePath]);
+                return docs.map(d => getBase64Safe(d));
             }
-            return ["Base64", docs[0].fileName || docs[0].filePath];
+            return getBase64Safe(docs[0]);
         };
 
         let aadhaarFront = null;
         let aadhaarBack = null;
         const aadhaarDocs = u?.documents?.filter(d => d.docType === 'AADHAAR') || [];
-        if (aadhaarDocs.length > 0) aadhaarFront = ["Base64", aadhaarDocs[0].fileName || aadhaarDocs[0].filePath];
-        if (aadhaarDocs.length > 1) aadhaarBack = ["Base64", aadhaarDocs[1].fileName || aadhaarDocs[1].filePath];
+        if (aadhaarDocs.length > 0) aadhaarFront = getBase64Safe(aadhaarDocs[0]);
+        if (aadhaarDocs.length > 1) aadhaarBack = getBase64Safe(aadhaarDocs[1]);
 
         return {
             id: u?.customUserId || app.id.toString(),
