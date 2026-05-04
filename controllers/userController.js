@@ -69,13 +69,13 @@ const getCompleteProfile = asyncHandler(async (req, res) => {
   });
 });
 
-// ✅ Login via Phone + DOB → Send OTP
+// ✅ Login via Phone → Send OTP
 const loginUser = asyncHandler(async (req, res) => {
-  const { phone, dob } = req.body;
+  const { phone } = req.body;
 
   logger.info(`[USER CONTROLLER] Login attempt for phone: ${phone}`);
 
-  const result = await userService.loginViaPhoneAndDob(phone, dob);
+  const result = await userService.loginViaPhone(phone);
 
   res.status(200).json({
     message: result.message, // "OTP sent for login. Please verify to continue."

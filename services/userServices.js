@@ -77,29 +77,25 @@ async function registerUser(userId, data) {
 }
 /**
  * ==============================
- * Login with Phone + DOB + OTP
+ * Login with Phone + OTP
  * ==============================
  */
-async function loginViaPhoneAndDob(phone, dob) {
-  logger.info(`📌 [USER SERVICE] Login attempt via phone & DOB: ${phone}`);
+async function loginViaPhone(phone) {
+  logger.info(`📌 [USER SERVICE] Login attempt via phone: ${phone}`);
 
-  if (!phone || !dob) {
-    throw new BadRequestError("Phone and Date of Birth are required.");
+  if (!phone) {
+    throw new BadRequestError("Phone number is required.");
   }
 
-  // Convert DOB format
-  const formattedDob = new Date(dob).toISOString().split("T")[0]; // YYYY-MM-DD only
-
-  // ✅ Find user with same phone & DOB
+  // ✅ Find user with same phone
   const user = await prisma.user.findFirst({
     where: {
-      phone,
-      dob: new Date(formattedDob)
+      phone
     }
   });
 
   if (!user) {
-    logger.warn(`❌ Login failed: No user matched phone + dob for phone: ${phone}`);
+    logger.warn(`❌ Login failed: No user matched phone: ${phone}`);
     throw new UnauthorizedError("User not found or credentials incorrect.");
   }
 
@@ -277,6 +273,6 @@ module.exports = {
   registerUser,
   getProfile,
   getCompleteProfile,
-  loginViaPhoneAndDob,
+  loginViaPhone,
   loginAdmin
 };
