@@ -176,26 +176,35 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         const pan = u?.panVerification || {};
         
         const getBase64Safe = (doc) => {
-            if (!doc) return null;
+            const defaultImage = "https://via.placeholder.com/150";
+            if (!doc) return `default.jpg,${defaultImage}`;
+
+            const docName = doc.fileName || (doc.filePath ? path.basename(doc.filePath) : (doc.docType ? `${doc.docType}.jpg` : 'document.jpg'));
+            
             try {
-                if (!doc.filePath) return ["Base64", ""];
+                if (!doc.filePath) return `${docName},${defaultImage}`;
                 const absolutePath = path.join(__dirname, '..', doc.filePath);
                 if (fs.existsSync(absolutePath)) {
                     const b64 = encodeFileToBase64(absolutePath, false);
-                    return ["Base64", b64];
+                    return `${docName},${b64}`;
                 }
-                return ["Base64", ""];
+                return `${docName},${defaultImage}`;
             } catch (err) {
                 logger.error(`[LOAN EXPORT] Error encoding file ${doc.filePath} to base64: ${err.message}`);
-                return ["Base64", ""];
+                return `${docName},${defaultImage}`;
             }
         };
 
         // Helper to extract documents by type
         const getDocsByType = (type) => {
-            if (!u?.documents) return null;
+            const defaultStr = getBase64Safe(null);
+            if (!u?.documents) {
+                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [defaultStr] : defaultStr;
+            }
             const docs = u.documents.filter(d => d.docType === type);
-            if (docs.length === 0) return null;
+            if (docs.length === 0) {
+                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [defaultStr] : defaultStr;
+            }
             if (['AADHAAR', 'PHOTO', 'PAN'].includes(type) && docs.length === 1) {
                 return getBase64Safe(docs[0]);
             }
@@ -205,8 +214,8 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             return getBase64Safe(docs[0]);
         };
 
-        let aadhaarFront = null;
-        let aadhaarBack = null;
+        let aadhaarFront = getBase64Safe(null);
+        let aadhaarBack = getBase64Safe(null);
         const aadhaarDocs = u?.documents?.filter(d => d.docType === 'AADHAAR') || [];
         if (aadhaarDocs.length > 0) aadhaarFront = getBase64Safe(aadhaarDocs[0]);
         if (aadhaarDocs.length > 1) aadhaarBack = getBase64Safe(aadhaarDocs[1]);
