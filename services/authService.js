@@ -19,6 +19,13 @@ async function requestPhoneOtp(phone) {
     throw new BadRequestError('Phone number must include country code, e.g., +919830069363');
   }
 
+  // Check if user already exists
+  const existingUser = await prisma.user.findUnique({ where: { phone: targetPhone } });
+  if (existingUser) {
+    logger.warn('Phone number already registered: %s', targetPhone);
+    throw new BadRequestError('number already registered');
+  }
+
   // ✅ Mock OTP for Test Numbers (+9199...)
   if (targetPhone.startsWith('+9199')) {
     logger.info('✅ Test number detected: bypassing SMS OTP for %s', targetPhone);
