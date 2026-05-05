@@ -252,7 +252,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                 latitude: loc.latitude || null,
                 longitude: loc.longitude || null
             },
-            addressDocument: null, // Address not standard docType
+            addressDocument: getDocsByType('ADDRESS').map(docStr => ["Base64", docStr]),
             aadhaarNo: aadh.aadhaarNumber || null,
             panNo: pan.panNumber || null,
             profilePicture: getDocsByType('PHOTO'),
