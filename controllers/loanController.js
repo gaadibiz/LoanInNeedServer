@@ -274,6 +274,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             officeEmail: null,
             isOfficeEmailVerified: false,
             salarySlips: getDocsByType('PAY_SLIP'),
+            bankStatements: getDocsByType('BANK_STATEMENT'),
             employmentProofDocument: null,
             createdAt: app.createdAt,
             updatedAt: app.updatedAt,
