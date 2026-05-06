@@ -176,40 +176,50 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         const pan = u?.panVerification || {};
         
         const getBase64Safe = (doc) => {
-            const defaultImage = "https://via.placeholder.com/150";
-            if (!doc) return `default.jpg,${defaultImage}`;
+            if (!doc) return null;
 
             const docName = doc.fileName || (doc.filePath ? path.basename(doc.filePath) : (doc.docType ? `${doc.docType}.jpg` : 'document.jpg'));
             
             try {
-                if (!doc.filePath) return `${docName},${defaultImage}`;
-                const absolutePath = path.join(__dirname, '..', doc.filePath);
-                if (fs.existsSync(absolutePath)) {
-                    const b64 = encodeFileToBase64(absolutePath, false);
-                    return `${docName},${b64}`;
+                if (!doc.filePath && !doc.fileUrl) return null;
+                
+                // Try local path first
+                if (doc.filePath) {
+                    const absolutePath = path.join(__dirname, '..', doc.filePath);
+                    if (fs.existsSync(absolutePath)) {
+                        const b64 = encodeFileToBase64(absolutePath, false);
+                        return `${docName},${b64}`;
+                    }
+                    logger.warn(`[LOAN EXPORT] File not found on disk: ${absolutePath}`);
                 }
-                return `${docName},${defaultImage}`;
+                
+                // Fallback to URL (if implemented in your encoder)
+                if (doc.fileUrl) {
+                    // Logic for fetching/encoding from URL would go here if required
+                    logger.info(`[LOAN EXPORT] File provided as URL: ${doc.fileUrl}`);
+                }
+                
+                return null;
             } catch (err) {
-                logger.error(`[LOAN EXPORT] Error encoding file ${doc.filePath} to base64: ${err.message}`);
-                return `${docName},${defaultImage}`;
+                logger.error(`[LOAN EXPORT] Error encoding file ${doc.filePath || doc.fileUrl} to base64: ${err.message}`);
+                return null;
             }
         };
 
         // Helper to extract documents by type
         const getDocsByType = (type) => {
-            const defaultStr = getBase64Safe(null);
             if (!u?.documents) {
-                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [defaultStr] : defaultStr;
+                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [] : null;
             }
             const docs = u.documents.filter(d => d.docType === type);
             if (docs.length === 0) {
-                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [defaultStr] : defaultStr;
+                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [] : null;
             }
             if (['AADHAAR', 'PHOTO', 'PAN'].includes(type) && docs.length === 1) {
                 return getBase64Safe(docs[0]);
             }
             if (type === 'ADDRESS' || type === 'PAY_SLIP') {
-                return docs.map(d => getBase64Safe(d));
+                return docs.map(d => getBase64Safe(d)).filter(Boolean);
             }
             return getBase64Safe(docs[0]);
         };
