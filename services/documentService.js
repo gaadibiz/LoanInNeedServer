@@ -7,9 +7,8 @@ const crypto = require('crypto');
 const path = require('path');
 const OtpService = require('./otpService');
 const { encodeBufferToBase64 } = require('../utils/base64Encoder');
-const { supabase } = require('../config/supabase');
 
-const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'Documents';
+const UPLOAD_BUCKET = 'Documents';
 
 class DocumentVerificationService {
 
@@ -20,7 +19,6 @@ class DocumentVerificationService {
   async uploadDocument(userId, file, docType, tx = prisma) {
     if (!file) throw new BadRequestError('No file provided');
 
-    // Validate Document Type
     const validTypes = [
       'AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT', 'PHOTO',
       'SIGNATURE', 'GST_CERTIFICATE', 'TRADE_LICENSE', 'COMPANY_PAN'
@@ -32,9 +30,9 @@ class DocumentVerificationService {
     // 1. Construct Path
     const timestamp = Date.now();
     const sanitizedFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storagePath = `${docType}/${userId}/${timestamp}_${sanitizedFilename}`;
+    const filePath = `${docType}/${userId}/${timestamp}_${sanitizedFilename}`;
 
-    // 2. Read File Buffer
+    // 2. Read File
     let fileBuffer;
     if (file.buffer) {
       fileBuffer = file.buffer;
@@ -44,54 +42,32 @@ class DocumentVerificationService {
       throw new BadRequestError('File content missing');
     }
 
-    // 3. Generate Base64
+    // 3. Generate Base64 (for response only)
     const base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
 
-    // 4. Upload to Supabase Storage (persists across redeployments)
-    let publicUrl = null;
-    try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(SUPABASE_BUCKET)
-        .upload(storagePath, fileBuffer, {
-          contentType: file.mimetype,
-          upsert: true
-        });
+    // 4. Save to Local File System (DigitalOcean disk)
+    const relativeFilePath = `uploads/${UPLOAD_BUCKET}/${filePath}`;
+    const absoluteDirPath = path.join(__dirname, '..', `uploads/${UPLOAD_BUCKET}/${docType}/${userId}`);
+    const absoluteFilePath = path.join(__dirname, '..', relativeFilePath);
 
-      if (uploadError) {
-        logger.error(`[DOC UPLOAD] Supabase upload failed: ${uploadError.message}`);
-      } else {
-        const { data: urlData } = supabase.storage
-          .from(SUPABASE_BUCKET)
-          .getPublicUrl(storagePath);
-        publicUrl = urlData?.publicUrl || null;
-        logger.info(`[DOC UPLOAD] Uploaded to Supabase: ${publicUrl}`);
-      }
-    } catch (err) {
-      logger.error(`[DOC UPLOAD] Supabase error: ${err.message}`);
-    }
+    await fs.mkdir(absoluteDirPath, { recursive: true });
+    await fs.writeFile(absoluteFilePath, fileBuffer);
 
-    // 5. Also save to local disk as backup (for local dev)
-    const relativeFilePath = `uploads/${SUPABASE_BUCKET}/${storagePath}`;
-    try {
-      const absoluteDirPath = path.join(__dirname, '..', `uploads/${SUPABASE_BUCKET}/${docType}/${userId}`);
-      const absoluteFilePath = path.join(__dirname, '..', relativeFilePath);
-      await fs.mkdir(absoluteDirPath, { recursive: true });
-      await fs.writeFile(absoluteFilePath, fileBuffer);
-    } catch (diskErr) {
-      logger.warn(`[DOC UPLOAD] Local disk save failed (non-critical): ${diskErr.message}`);
-    }
+    // 5. Public URL
+    const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+    const publicUrl = `${appUrl}/${relativeFilePath}`;
 
-    // 6. Calculate Checksum
+    // 6. Checksum
     const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
-    // 7. DB Persistence — store Supabase public URL as fileUrl
+    // 7. DB Persistence
     const document = await tx.userDocument.create({
       data: {
         userId: parseInt(userId),
         docType: docType,
         fileName: file.originalname,
         filePath: relativeFilePath,
-        fileUrl: publicUrl || relativeFilePath, // Supabase URL preferred
+        fileUrl: publicUrl,
         mimeType: file.mimetype,
         size: file.size,
         checksum: checksum,
@@ -126,22 +102,14 @@ class DocumentVerificationService {
 
     const result = await prisma.$transaction(async tx => {
       const uploadedDocs = [];
-
-      // Upload Bank Statements
       for (const file of bankStatements) {
         uploadedDocs.push(await this.uploadDocument(userId, file, 'BANK_STATEMENT', tx));
       }
-
-      // Upload Salary Slips
       for (const file of salarySlips) {
         uploadedDocs.push(await this.uploadDocument(userId, file, 'PAY_SLIP', tx));
       }
-
       return uploadedDocs;
     });
-
-    // Trigger Selfie OTP if needed (Legacy Flow)
-    // await OtpService.sendOtp(userId); // Bypassed as per user request (Master OTP flow)
 
     return {
       message: 'Documents uploaded successfully. OTP sent for selfie verification ✅',

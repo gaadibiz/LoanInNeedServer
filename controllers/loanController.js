@@ -5,29 +5,7 @@ const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { generateApplicationPdf, formatApplicationNumber } = require('../services/pdfService');
 const path = require('path');
 const fs = require('fs');
-const https = require('https');
-const http = require('http');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
-const { supabase } = require('../config/supabase');
-const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'Documents';
-
-/**
- * Fetches a file from a URL and returns its base64 string.
- */
-function fetchFileAsBase64(url) {
-    return new Promise((resolve, reject) => {
-        const client = url.startsWith('https') ? https : http;
-        client.get(url, (res) => {
-            if (res.statusCode !== 200) {
-                return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-            }
-            const chunks = [];
-            res.on('data', chunk => chunks.push(chunk));
-            res.on('end', () => resolve(Buffer.concat(chunks).toString('base64')));
-            res.on('error', reject);
-        }).on('error', reject);
-    });
-}
 
 /**
  * @desc    Apply for a Loan
@@ -189,152 +167,120 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         }
     });
 
-    const data = await Promise.all(applications.map(async (app) => {
+    const data = applications.map(app => {
         const u = app.user;
         const emp = u?.employment || {};
         const addr = u?.address || {};
         const loc = u?.locations?.[0] || {};
         const aadh = u?.aadhaarVerification || {};
         const pan = u?.panVerification || {};
-        
-        const getBase64Safe = async (doc) => {
+
+        // Read file from local disk and return "filename,base64" or null
+        const getBase64Safe = (doc) => {
             if (!doc) return null;
-
             const docName = doc.fileName || (doc.filePath ? path.basename(doc.filePath) : (doc.docType ? `${doc.docType}.jpg` : 'document.jpg'));
-            
             try {
-                if (!doc.filePath && !doc.fileUrl) return null;
-
-                // 1. Try local disk (works in local dev)
-                if (doc.filePath) {
-                    const absolutePath = path.join(__dirname, '..', doc.filePath);
-                    if (fs.existsSync(absolutePath)) {
-                        const b64 = encodeFileToBase64(absolutePath, false);
-                        return `${docName},${b64}`;
-                    }
-                }
-
-                // 2. Try Supabase Storage directly using stored filePath
-                //    filePath format: uploads/Documents/AADHAAR/73/timestamp_file.jpg
-                //    Supabase path is the part after uploads/Documents/
-                if (doc.filePath) {
-                    const supabasePath = doc.filePath.replace(/^uploads\/[^\/]+\//, '');
-                    const { data, error } = await supabase.storage
-                        .from(SUPABASE_BUCKET)
-                        .download(supabasePath);
-                    if (!error && data) {
-                        const arrayBuffer = await data.arrayBuffer();
-                        const b64 = Buffer.from(arrayBuffer).toString('base64');
-                        return `${docName},${b64}`;
-                    }
-                    logger.warn(`[LOAN EXPORT] Supabase download failed for ${supabasePath}: ${error?.message}`);
-                }
-
-                // 3. Try fileUrl via HTTP (last resort)
-                if (doc.fileUrl && !doc.fileUrl.startsWith('uploads/')) {
-                    const b64 = await fetchFileAsBase64(doc.fileUrl);
+                if (!doc.filePath) return null;
+                const absolutePath = path.join(__dirname, '..', doc.filePath);
+                if (fs.existsSync(absolutePath)) {
+                    const b64 = encodeFileToBase64(absolutePath, false);
                     return `${docName},${b64}`;
                 }
-
+                logger.warn(`[LOAN EXPORT] File not found on disk: ${absolutePath}`);
                 return null;
             } catch (err) {
-                logger.error(`[LOAN EXPORT] Error encoding ${doc.filePath || doc.fileUrl}: ${err.message}`);
+                logger.error(`[LOAN EXPORT] Error encoding ${doc.filePath}: ${err.message}`);
                 return null;
             }
         };
 
-        // Helper to extract documents by type (async — awaits base64 fetch)
-        const getDocsByType = async (type) => {
-            if (!u?.documents) {
-                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [] : null;
-            }
+        // Get documents by type
+        const getDocsByType = (type) => {
+            if (!u?.documents) return (type === 'ADDRESS' || type === 'PAY_SLIP' || type === 'BANK_STATEMENT') ? [] : null;
             const docs = u.documents.filter(d => d.docType === type);
-            if (docs.length === 0) {
-                return (type === 'ADDRESS' || type === 'PAY_SLIP') ? [] : null;
+            if (docs.length === 0) return (type === 'ADDRESS' || type === 'PAY_SLIP' || type === 'BANK_STATEMENT') ? [] : null;
+            if (type === 'ADDRESS' || type === 'PAY_SLIP' || type === 'BANK_STATEMENT') {
+                return docs.map(d => getBase64Safe(d)).filter(Boolean);
             }
-            if (['AADHAAR', 'PHOTO', 'PAN'].includes(type) && docs.length === 1) {
-                return await getBase64Safe(docs[0]);
-            }
-            if (type === 'ADDRESS' || type === 'PAY_SLIP') {
-                const results = await Promise.all(docs.map(d => getBase64Safe(d)));
-                return results.filter(Boolean);
-            }
-            return await getBase64Safe(docs[0]);
+            return getBase64Safe(docs[0]);
         };
 
-        let aadhaarFront = null;
-        let aadhaarBack = null;
+        // Helper: wrap a single base64 string as ["Base64", content] or null
+        const wrapDoc = (str) => str ? ["Base64", str] : null;
+
+        // Helper: wrap an array of base64 strings as [["Base64", content], ...]
+        const wrapDocs = (arr) => arr.map(str => ["Base64", str]);
+
         const aadhaarDocs = u?.documents?.filter(d => d.docType === 'AADHAAR') || [];
-        if (aadhaarDocs.length > 0) aadhaarFront = await getBase64Safe(aadhaarDocs[0]);
-        if (aadhaarDocs.length > 1) aadhaarBack = await getBase64Safe(aadhaarDocs[1]);
+        const aadhaarFront = wrapDoc(aadhaarDocs.length > 0 ? getBase64Safe(aadhaarDocs[0]) : null);
+        const aadhaarBack  = wrapDoc(aadhaarDocs.length > 1 ? getBase64Safe(aadhaarDocs[1]) : null);
 
-        const [addressDocument, profilePicture, panCard, salarySlips, bankStatements] =
-            await Promise.all([
-                getDocsByType('ADDRESS'),
-                getDocsByType('PHOTO'),
-                getDocsByType('PAN'),
-                getDocsByType('PAY_SLIP'),
-                getDocsByType('BANK_STATEMENT'),
-            ]);
+        const addressDocument        = wrapDocs(getDocsByType('ADDRESS'));
+        const profilePicture         = wrapDoc(getDocsByType('PHOTO'));
+        const panCard                = wrapDoc(getDocsByType('PAN'));
+        const salarySlips            = wrapDocs(getDocsByType('PAY_SLIP'));
+        const bankStatementDocs       = getDocsByType('BANK_STATEMENT');
+        const bankStatements          = wrapDocs(bankStatementDocs);
+        const employmentProofDocument = bankStatementDocs.length > 0 ? wrapDoc(bankStatementDocs[0]) : null;
 
-            return {
-                id: u?.customUserId || app.id.toString(),
-                name: u?.name || null,
-                fatherName: null,
-                dob: u?.dob || null,
-                gender: u?.gender || null,
-                mobileNo: u?.phone || null,
-                isMobileOtpVerified: u?.phoneVerified || false,
-                personalEmail: u?.email || null,
-                isPersonalEmailOtpVerified: true,
-                incomeType: emp.employmentType || null,
-                designation: emp.employerName || null,
-                monthlyIncome: emp.monthlyIncome || null,
-                workingYears: null,
-                loanAmount: app.loanAmount || null,
-                loanPeriod: null,
-                loanPurpose: app.loanType || null,
-                preferredEmiDate: null,
-                bankAccountNo: null,
-                ifscCode: null,
-                bankName: null,
-                address1: addr.currentAddress || null,
-                address2: null,
-                landmark: null,
-                pinCode: addr.postalCode || null,
-                area: addr.city || null,
-                district: addr.city || null,
-                state: addr.state || null,
-                geolocation: {
-                    latitude: loc.latitude || null,
-                    longitude: loc.longitude || null
-                },
-                addressDocument: addressDocument.map(docStr => ["Base64", docStr]),
-                aadhaarNo: aadh.aadhaarNumber || null,
-                panNo: pan.panNumber || null,
-                profilePicture,
-                aadhaarFront,
-                aadhaarBack,
-                panCard,
-                termsAccepted: true,
-                organizationName: emp.employerName || null,
-                officeEmail: null,
-                isOfficeEmailVerified: false,
-                salarySlips,
-                bankStatements,
-                employmentProofDocument: null,
-                createdAt: app.createdAt,
-                updatedAt: app.updatedAt,
-                isFullyFilled: true,
-                isContinueApplicationLinkSent: true,
-                stepsCompleted: 7,
-                status: app.status,
-                applicationNumber: app.id,
-                loanAccountNumber: null,
-                reason: null,
-                employeeName: null
-            };
-    }));
+        return {
+            id: u?.customUserId || app.id.toString(),
+            name: u?.name || null,
+            fatherName: null,
+            dob: u?.dob || null,
+            gender: u?.gender || null,
+            mobileNo: u?.phone || null,
+            isMobileOtpVerified: u?.phoneVerified || false,
+            personalEmail: u?.email || null,
+            isPersonalEmailOtpVerified: true,
+            incomeType: emp.employmentType || null,
+            designation: emp.employerName || null,
+            monthlyIncome: emp.monthlyIncome || null,
+            workingYears: null,
+            loanAmount: app.loanAmount || null,
+            loanPeriod: null,
+            loanPurpose: app.loanType || null,
+            preferredEmiDate: null,
+            bankAccountNo: null,
+            ifscCode: null,
+            bankName: null,
+            address1: addr.currentAddress || null,
+            address2: null,
+            landmark: null,
+            pinCode: addr.postalCode || null,
+            area: addr.city || null,
+            district: addr.city || null,
+            state: addr.state || null,
+            geolocation: {
+                latitude: loc.latitude || null,
+                longitude: loc.longitude || null
+            },
+            addressDocument,
+            aadhaarNo: aadh.aadhaarNumber || null,
+            panNo: pan.panNumber || null,
+            profilePicture,
+            aadhaarFront,
+            aadhaarBack,
+            panCard,
+            termsAccepted: true,
+            organizationName: emp.employerName || null,
+            officeEmail: null,
+            isOfficeEmailVerified: false,
+            salarySlips,
+            bankStatements,
+            employmentProofDocument,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+            isFullyFilled: true,
+            isContinueApplicationLinkSent: true,
+            stepsCompleted: 7,
+            status: app.status,
+            applicationNumber: app.id,
+            loanAccountNumber: null,
+            reason: null,
+            employeeName: null
+        };
+    });
 
     res.status(200).json({ data });
 });
