@@ -7,8 +7,9 @@ const crypto = require('crypto');
 const path = require('path');
 const OtpService = require('./otpService');
 const { encodeBufferToBase64 } = require('../utils/base64Encoder');
+const { supabase } = require('../config/supabase');
 
-const SUPABASE_BUCKET = 'Documents';
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'Documents';
 
 class DocumentVerificationService {
 
@@ -28,50 +29,69 @@ class DocumentVerificationService {
       throw new BadRequestError(`Invalid document type: ${docType}`);
     }
 
-    // 1. Construct Path: Documents/{DOC_TYPE}/{userId}/{timestamp}_{filename}
-    // Note: 'Documents' is the bucket name, so we start with docType
+    // 1. Construct Path
     const timestamp = Date.now();
     const sanitizedFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `${docType}/${userId}/${timestamp}_${sanitizedFilename}`;
+    const storagePath = `${docType}/${userId}/${timestamp}_${sanitizedFilename}`;
 
-    // 2. Read File
+    // 2. Read File Buffer
     let fileBuffer;
     if (file.buffer) {
-      // Memory Storage
       fileBuffer = file.buffer;
     } else if (file.path) {
-      // Disk Storage
       fileBuffer = await fs.readFile(file.path);
     } else {
       throw new BadRequestError('File content missing');
     }
 
-    // 2.5 Generate Base64 String
+    // 3. Generate Base64
     const base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
 
-    // 3. Save to Local File System
-    const relativeFilePath = `uploads/${SUPABASE_BUCKET}/${filePath}`;
-    const absoluteDirPath = path.join(__dirname, '..', `uploads/${SUPABASE_BUCKET}/${docType}/${userId}`);
-    const absoluteFilePath = path.join(__dirname, '..', relativeFilePath);
+    // 4. Upload to Supabase Storage (persists across redeployments)
+    let publicUrl = null;
+    try {
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(SUPABASE_BUCKET)
+        .upload(storagePath, fileBuffer, {
+          contentType: file.mimetype,
+          upsert: true
+        });
 
-    await fs.mkdir(absoluteDirPath, { recursive: true });
-    await fs.writeFile(absoluteFilePath, fileBuffer);
+      if (uploadError) {
+        logger.error(`[DOC UPLOAD] Supabase upload failed: ${uploadError.message}`);
+      } else {
+        const { data: urlData } = supabase.storage
+          .from(SUPABASE_BUCKET)
+          .getPublicUrl(storagePath);
+        publicUrl = urlData?.publicUrl || null;
+        logger.info(`[DOC UPLOAD] Uploaded to Supabase: ${publicUrl}`);
+      }
+    } catch (err) {
+      logger.error(`[DOC UPLOAD] Supabase error: ${err.message}`);
+    }
 
-    // 4. Get Public URL
-    const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
-    const publicUrl = `${appUrl}/${relativeFilePath}`;
+    // 5. Also save to local disk as backup (for local dev)
+    const relativeFilePath = `uploads/${SUPABASE_BUCKET}/${storagePath}`;
+    try {
+      const absoluteDirPath = path.join(__dirname, '..', `uploads/${SUPABASE_BUCKET}/${docType}/${userId}`);
+      const absoluteFilePath = path.join(__dirname, '..', relativeFilePath);
+      await fs.mkdir(absoluteDirPath, { recursive: true });
+      await fs.writeFile(absoluteFilePath, fileBuffer);
+    } catch (diskErr) {
+      logger.warn(`[DOC UPLOAD] Local disk save failed (non-critical): ${diskErr.message}`);
+    }
 
-    // 5. Calculate Checksum
+    // 6. Calculate Checksum
     const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
-    // 6. DB Persistence
+    // 7. DB Persistence — store Supabase public URL as fileUrl
     const document = await tx.userDocument.create({
       data: {
         userId: parseInt(userId),
         docType: docType,
         fileName: file.originalname,
         filePath: relativeFilePath,
-        fileUrl: publicUrl,
+        fileUrl: publicUrl || relativeFilePath, // Supabase URL preferred
         mimeType: file.mimetype,
         size: file.size,
         checksum: checksum,
@@ -79,10 +99,9 @@ class DocumentVerificationService {
       }
     });
 
-    // Attach Base64 text to the returned document object
     document.base64Data = base64Data;
 
-    // 7. Cleanup Temp File (only if disk storage was used)
+    // 8. Cleanup Temp File
     if (file.path) {
       try {
         await fs.unlink(file.path);

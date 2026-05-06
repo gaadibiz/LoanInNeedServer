@@ -8,6 +8,8 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
+const { supabase } = require('../config/supabase');
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'Documents';
 
 /**
  * Fetches a file from a URL and returns its base64 string.
@@ -202,26 +204,41 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             
             try {
                 if (!doc.filePath && !doc.fileUrl) return null;
-                
-                // Try local path first (works in local dev)
+
+                // 1. Try local disk (works in local dev)
                 if (doc.filePath) {
                     const absolutePath = path.join(__dirname, '..', doc.filePath);
                     if (fs.existsSync(absolutePath)) {
                         const b64 = encodeFileToBase64(absolutePath, false);
                         return `${docName},${b64}`;
                     }
-                    logger.warn(`[LOAN EXPORT] File not on disk, trying URL: ${doc.fileUrl || 'no URL'}`);
                 }
-                
-                // Fallback: fetch via fileUrl (required on production after redeploy)
-                if (doc.fileUrl) {
+
+                // 2. Try Supabase Storage directly using stored filePath
+                //    filePath format: uploads/Documents/AADHAAR/73/timestamp_file.jpg
+                //    Supabase path is the part after uploads/Documents/
+                if (doc.filePath) {
+                    const supabasePath = doc.filePath.replace(/^uploads\/[^\/]+\//, '');
+                    const { data, error } = await supabase.storage
+                        .from(SUPABASE_BUCKET)
+                        .download(supabasePath);
+                    if (!error && data) {
+                        const arrayBuffer = await data.arrayBuffer();
+                        const b64 = Buffer.from(arrayBuffer).toString('base64');
+                        return `${docName},${b64}`;
+                    }
+                    logger.warn(`[LOAN EXPORT] Supabase download failed for ${supabasePath}: ${error?.message}`);
+                }
+
+                // 3. Try fileUrl via HTTP (last resort)
+                if (doc.fileUrl && !doc.fileUrl.startsWith('uploads/')) {
                     const b64 = await fetchFileAsBase64(doc.fileUrl);
                     return `${docName},${b64}`;
                 }
-                
+
                 return null;
             } catch (err) {
-                logger.error(`[LOAN EXPORT] Error encoding file ${doc.filePath || doc.fileUrl}: ${err.message}`);
+                logger.error(`[LOAN EXPORT] Error encoding ${doc.filePath || doc.fileUrl}: ${err.message}`);
                 return null;
             }
         };
