@@ -268,42 +268,14 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         if (aadhaarDocs.length > 0) aadhaarFront = await getBase64Safe(aadhaarDocs[0]);
         if (aadhaarDocs.length > 1) aadhaarBack = await getBase64Safe(aadhaarDocs[1]);
 
-        return {
-            id: u?.customUserId || app.id.toString(),
-            name: u?.name || null,
-            fatherName: null,
-            dob: u?.dob || null,
-            gender: u?.gender || null,
-            mobileNo: u?.phone || null,
-            isMobileOtpVerified: u?.phoneVerified || false,
-            personalEmail: u?.email || null,
-            isPersonalEmailOtpVerified: true,
-            incomeType: emp.employmentType || null,
-            designation: emp.employerName || null,
-            monthlyIncome: emp.monthlyIncome || null,
-            workingYears: null,
-            loanAmount: app.loanAmount || null,
-            loanPeriod: null,
-            loanPurpose: app.loanType || null,
-            preferredEmiDate: null,
-            bankAccountNo: null,
-            ifscCode: null,
-            bankName: null,
-            address1: addr.currentAddress || null,
-            address2: null,
-            landmark: null,
-            pinCode: addr.postalCode || null,
-            area: addr.city || null,
-            district: addr.city || null,
-            state: addr.state || null,
-            const [addressDocument, profilePicture, panCard, salarySlips, bankStatements] =
-                await Promise.all([
-                    getDocsByType('ADDRESS'),
-                    getDocsByType('PHOTO'),
-                    getDocsByType('PAN'),
-                    getDocsByType('PAY_SLIP'),
-                    getDocsByType('BANK_STATEMENT'),
-                ]);
+        const [addressDocument, profilePicture, panCard, salarySlips, bankStatements] =
+            await Promise.all([
+                getDocsByType('ADDRESS'),
+                getDocsByType('PHOTO'),
+                getDocsByType('PAN'),
+                getDocsByType('PAY_SLIP'),
+                getDocsByType('BANK_STATEMENT'),
+            ]);
 
             return {
                 id: u?.customUserId || app.id.toString(),
