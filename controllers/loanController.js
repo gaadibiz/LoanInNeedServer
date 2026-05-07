@@ -175,7 +175,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         const aadh = u?.aadhaarVerification || {};
         const pan = u?.panVerification || {};
 
-        // Read file from local disk and return "filename,base64" or null
+        // Read file from local disk and return [base64, filename] or null
         const getBase64Safe = (doc) => {
             if (!doc) return null;
             const docName = doc.fileName || (doc.filePath ? path.basename(doc.filePath) : (doc.docType ? `${doc.docType}.jpg` : 'document.jpg'));
@@ -184,7 +184,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                 const absolutePath = path.join(__dirname, '..', doc.filePath);
                 if (fs.existsSync(absolutePath)) {
                     const b64 = encodeFileToBase64(absolutePath, false);
-                    return `${docName},${b64}`;
+                    return [b64, docName];
                 }
                 logger.warn(`[LOAN EXPORT] File not found on disk: ${absolutePath}`);
                 return null;
@@ -196,32 +196,26 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
 
         // Get documents by type
         const getDocsByType = (type) => {
-            if (!u?.documents) return (type === 'ADDRESS' || type === 'PAY_SLIP' || type === 'BANK_STATEMENT') ? [] : null;
+            if (!u?.documents) return null;
             const docs = u.documents.filter(d => d.docType === type);
-            if (docs.length === 0) return (type === 'ADDRESS' || type === 'PAY_SLIP' || type === 'BANK_STATEMENT') ? [] : null;
+            if (docs.length === 0) return null;
             if (type === 'ADDRESS' || type === 'PAY_SLIP' || type === 'BANK_STATEMENT') {
-                return docs.map(d => getBase64Safe(d)).filter(Boolean);
+                const results = docs.map(d => getBase64Safe(d)).filter(Boolean);
+                return results.length > 0 ? results : null;
             }
             return getBase64Safe(docs[0]);
         };
 
-        // Helper: wrap a single base64 string as ["Base64", content] or null
-        const wrapDoc = (str) => str ? ["Base64", str] : null;
-
-        // Helper: wrap an array of base64 strings as [["Base64", content], ...]
-        const wrapDocs = (arr) => arr.map(str => ["Base64", str]);
-
         const aadhaarDocs = u?.documents?.filter(d => d.docType === 'AADHAAR') || [];
-        const aadhaarFront = wrapDoc(aadhaarDocs.length > 0 ? getBase64Safe(aadhaarDocs[0]) : null);
-        const aadhaarBack  = wrapDoc(aadhaarDocs.length > 1 ? getBase64Safe(aadhaarDocs[1]) : null);
+        const aadhaarFront = aadhaarDocs.length > 0 ? getBase64Safe(aadhaarDocs[0]) : null;
+        const aadhaarBack  = aadhaarDocs.length > 1 ? getBase64Safe(aadhaarDocs[1]) : null;
 
-        const addressDocument        = wrapDocs(getDocsByType('ADDRESS'));
-        const profilePicture         = wrapDoc(getDocsByType('PHOTO'));
-        const panCard                = wrapDoc(getDocsByType('PAN'));
-        const salarySlips            = wrapDocs(getDocsByType('PAY_SLIP'));
-        const bankStatementDocs       = getDocsByType('BANK_STATEMENT');
-        const bankStatements          = wrapDocs(bankStatementDocs);
-        const employmentProofDocument = bankStatementDocs.length > 0 ? wrapDoc(bankStatementDocs[0]) : null;
+        const addressDocument        = getDocsByType('ADDRESS');
+        const profilePicture         = getDocsByType('PHOTO');
+        const panCard                = getDocsByType('PAN');
+        const salarySlips            = getDocsByType('PAY_SLIP');
+        const bankStatements         = getDocsByType('BANK_STATEMENT');
+        const employmentProofDocument = (bankStatements && bankStatements.length > 0) ? bankStatements[0] : null;
 
         return {
             id: u?.customUserId || app.id.toString(),
