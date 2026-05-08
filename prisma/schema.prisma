@@ -314,6 +314,9 @@ enum LoanStatus {
   APPROVED
   REJECTED
   CLOSED
+  HOLD
+  IN_PROGRESS
+  COMPLETED
 }
 
 enum EmploymentType {
