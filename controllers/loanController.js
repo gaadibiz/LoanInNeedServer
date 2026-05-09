@@ -199,7 +199,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             if (!u?.documents) return null;
             const docs = u.documents.filter(d => d.docType === type);
             if (docs.length === 0) return null;
-            if (['ADDRESS', 'PAY_SLIP', 'BANK_STATEMENT', 'PAN', 'AADHAAR'].includes(type)) {
+            if (['ADDRESS', 'PAY_SLIP', 'BANK_STATEMENT'].includes(type)) {
                 const results = docs.map(d => getBase64Safe(d)).filter(Boolean);
                 return results.length > 0 ? results : null;
             }
@@ -207,7 +207,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         };
 
         const aadhaarFront           = getDocsByType('AADHAAR');
-        const aadhaarBack            = null; // Handled inside aadhaarFront if multiple
+        const aadhaarBack            = null;
 
         const addressDocument        = getDocsByType('ADDRESS');
         const profilePicture         = getDocsByType('PHOTO');
