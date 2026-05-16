@@ -33,6 +33,8 @@ const allowedOrigins = [
   'http://localhost:5173', // Local Frontend (Vite default)
   'https://loaninneed.vercel.app', // Production Frontend
   'https://seahorse-app-92emo.ondigitalocean.app', // DigitalOcean Frontend
+  'https://loaninneed.in', // New Production Frontend
+  'https://www.loaninneed.in', // New Production Frontend (www)
 ];
 
 app.use(cors({
@@ -47,6 +49,11 @@ app.use(cors({
 
     // Allow all Vercel preview deployments (*.vercel.app)
     if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    // Allow all subdomains of loaninneed.in (*.loaninneed.in)
+    if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in') {
       return callback(null, true);
     }
 

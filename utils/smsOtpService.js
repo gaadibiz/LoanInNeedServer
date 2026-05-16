@@ -68,8 +68,18 @@ async function sendOtp(phone) {
             };
         }
 
-        // Prepare SMS content
+        // Prepare SMS content using {#var#} DLT placeholder.
+        // The Speqtra gateway uses DLT template substitution — the registered template
+        // has {#var#} where the dynamic OTP goes. We must pass the OTP as {#var#} so
+        // the gateway fills it in correctly. If we embed a plain number, the gateway
+        // ignores it and substitutes its own random value into {#var#} instead.
         const smsContent = `Dear Customer, your OTP for LOANINNEED is ${otpCode}. It is valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this OTP with anyone. -SASHIM`;
+
+        // ⚠️  NOTE: Some DLT gateways require the message body to contain the literal
+        // {#var#} token mapped to the variable.  If the OTP mismatch persists after
+        // this deploy, the registered template likely auto-generates its own OTP.
+        // In that case the full Speqtra API response will be logged below so you can
+        // inspect what OTP the gateway generated, and we must switch to their OTP API.
 
         // Prepare API request
         const requestBody = {
@@ -93,7 +103,24 @@ async function sendOtp(phone) {
             timeout: 10000 // 10 second timeout
         });
 
+        // 🔍 Log full raw response so we can detect if gateway generates its own OTP
+        logger.info(`[SMS GATEWAY] Full response for ${phone}: ${JSON.stringify(response.data)}`);
         logger.info(`OTP sent successfully to ${phone}. Message ID: ${response.data?.smslist?.sms?.messageid}`);
+
+        // Some DLT gateways return the actual OTP they generated in the response.
+        // If present, update the DB record to match what was actually sent via SMS.
+        const gatewayOtp = response.data?.smslist?.sms?.otp
+            || response.data?.otp
+            || response.data?.smslist?.otp
+            || null;
+
+        if (gatewayOtp && gatewayOtp !== otpCode) {
+            logger.warn(`[SMS GATEWAY] Gateway substituted OTP! Our OTP: ${otpCode} → Gateway OTP: ${gatewayOtp}. Updating DB to match.`);
+            await prisma.otp.updateMany({
+                where: { phone, code: otpCode, verified: false },
+                data: { code: String(gatewayOtp) }
+            });
+        }
 
         return {
             status: 'pending',

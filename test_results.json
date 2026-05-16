@@ -1,0 +1,183 @@
+{
+  "timestamp": "2026-05-10T17:29:15.197Z",
+  "totalScore": 120,
+  "maxScore": 120,
+  "percentage": "100.0",
+  "healthGrade": "A+ (Excellent)",
+  "results": [
+    {
+      "category": "Frontend",
+      "name": "Home Page Routing",
+      "url": "https://seahorse-app-92emo.ondigitalocean.app/",
+      "method": "GET",
+      "expectStatus": [
+        200,
+        304
+      ],
+      "status": "✅ PASS",
+      "latency": 386,
+      "score": 10,
+      "message": "Status 200 (Valid Payload)"
+    },
+    {
+      "category": "Frontend",
+      "name": "Apply Now Form",
+      "url": "https://seahorse-app-92emo.ondigitalocean.app/apply-now",
+      "method": "GET",
+      "expectStatus": [
+        200,
+        304
+      ],
+      "status": "✅ PASS",
+      "latency": 65,
+      "score": 10,
+      "message": "Status 200 (Valid Payload)"
+    },
+    {
+      "category": "Frontend",
+      "name": "Track Loan Tracker",
+      "url": "https://seahorse-app-92emo.ondigitalocean.app/track-loan",
+      "method": "GET",
+      "expectStatus": [
+        200,
+        304
+      ],
+      "status": "✅ PASS",
+      "latency": 170,
+      "score": 10,
+      "message": "Status 200 (Valid Payload)"
+    },
+    {
+      "category": "Frontend",
+      "name": "Static Content (About Us)",
+      "url": "https://seahorse-app-92emo.ondigitalocean.app/about-us",
+      "method": "GET",
+      "expectStatus": [
+        200,
+        304
+      ],
+      "status": "✅ PASS",
+      "latency": 219,
+      "score": 10,
+      "message": "Status 200 (Valid Payload)"
+    },
+    {
+      "category": "Backend System",
+      "name": "Primary Health Check",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/",
+      "method": "GET",
+      "expectStatus": [
+        200
+      ],
+      "status": "✅ PASS",
+      "latency": 265,
+      "score": 10,
+      "message": "Status 200 (Valid Payload)"
+    },
+    {
+      "category": "Auth Security",
+      "name": "OTP Request (Malformed Data)",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/api/auth/phone/request-otp",
+      "method": "POST",
+      "data": {
+        "phone": "invalid"
+      },
+      "expectStatus": [
+        400,
+        422,
+        500
+      ],
+      "status": "✅ PASS",
+      "latency": 125,
+      "score": 10,
+      "message": "Status 400 (Expected Error)"
+    },
+    {
+      "category": "JWT Protection",
+      "name": "Secure Route: User Profile",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/api/users/profile/complete",
+      "method": "GET",
+      "expectStatus": [
+        401,
+        403
+      ],
+      "status": "✅ PASS",
+      "latency": 219,
+      "score": 10,
+      "message": "Status 401 (Expected Error)"
+    },
+    {
+      "category": "JWT Protection",
+      "name": "Secure Route: KYC Details",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/api/kyc/",
+      "method": "GET",
+      "expectStatus": [
+        401,
+        403,
+        404
+      ],
+      "status": "✅ PASS",
+      "latency": 151,
+      "score": 10,
+      "message": "Status 401 (Expected Error)"
+    },
+    {
+      "category": "JWT Protection",
+      "name": "Secure Route: Document Status",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/api/document/status",
+      "method": "GET",
+      "expectStatus": [
+        401,
+        403
+      ],
+      "status": "✅ PASS",
+      "latency": 144,
+      "score": 10,
+      "message": "Status 401 (Expected Error)"
+    },
+    {
+      "category": "JWT Protection",
+      "name": "Secure Route: Partner Dashboard",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/api/partners/dashboard",
+      "method": "GET",
+      "expectStatus": [
+        401,
+        403
+      ],
+      "status": "✅ PASS",
+      "latency": 150,
+      "score": 10,
+      "message": "Status 401 (Expected Error)"
+    },
+    {
+      "category": "Validation",
+      "name": "Selfie Upload (Missing Form Data)",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/api/selfie/upload",
+      "method": "POST",
+      "expectStatus": [
+        400,
+        401,
+        403
+      ],
+      "status": "✅ PASS",
+      "latency": 110,
+      "score": 10,
+      "message": "Status 401 (Expected Error)"
+    },
+    {
+      "category": "Validation",
+      "name": "Loan Application (Missing Payload)",
+      "url": "https://lionfish-app-mg3te.ondigitalocean.app/api/loans/apply",
+      "method": "POST",
+      "expectStatus": [
+        400,
+        401,
+        403
+      ],
+      "status": "✅ PASS",
+      "latency": 115,
+      "score": 10,
+      "message": "Status 401 (Expected Error)"
+    }
+  ]
+}
