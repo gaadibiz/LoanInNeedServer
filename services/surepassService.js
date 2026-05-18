@@ -40,18 +40,18 @@ class SurepassService {
       });
 
       if (!response.data.success) {
-        throw new BadRequestError(response.data.message || 'PAN Verification failed');
+        throw new BadRequestError('oops Invalid Pan number');
       }
 
       return response.data.data; // Surepass usually wraps standard data in { data: { ... } }
     } catch (error) {
       if (error.response && error.response.data) {
         logger.error(`Surepass PAN API Error: ${JSON.stringify(error.response.data)}`);
-        throw new BadRequestError(error.response.data.message || 'Invalid PAN');
+        throw new BadRequestError('oops Invalid Pan number');
       }
       console.error("RAW_NATIVE_ERROR:", error);
       logger.error('Surepass PAN execution error:', error.message);
-      throw new BadRequestError('Failed to verify PAN with external provider');
+      throw new BadRequestError('oops Invalid Pan number');
     }
   }
 
@@ -75,17 +75,17 @@ class SurepassService {
       });
 
       if (!response.data.success) {
-        throw new BadRequestError(response.data.message || 'Aadhaar Verification failed');
+        throw new BadRequestError('oops invalid adhar number');
       }
 
       return response.data.data;
     } catch (error) {
       if (error.response && error.response.data) {
         logger.error(`Surepass Aadhaar API Error: ${JSON.stringify(error.response.data)}`);
-        throw new BadRequestError(error.response.data.message || 'Invalid Aadhaar Number');
+        throw new BadRequestError('oops invalid adhar number');
       }
       logger.error('Surepass Aadhaar execution error:', error.message);
-      throw new BadRequestError('Failed to verify Aadhaar with external provider');
+      throw new BadRequestError('oops invalid adhar number');
     }
   }
 }
