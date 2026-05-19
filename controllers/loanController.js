@@ -167,18 +167,20 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         }
     });
 
-    // Filter out incomplete applications (missing Name, PAN, or Aadhaar)
+    // Filter out incomplete applications (missing Name or PAN — Aadhaar is collected but not required for LOS)
     const validApplications = applications.filter(app => {
         const u = app.user;
         if (!u) return false;
         
-        // Ensure name is present (checking for first and last name presence if possible, but at least not empty)
+        // Ensure name is present with at least 2 words (first + last name)
         if (!u.name || u.name.trim() === '') return false;
-        // Optionally check if they have at least 2 words (first name + last name)
         if (u.name.trim().split(/\s+/).length < 2) return false;
 
+        // PAN is required
         if (!u.panVerification || !u.panVerification.panNumber || u.panVerification.panNumber.trim() === '') return false;
-        if (!u.aadhaarVerification || !u.aadhaarVerification.aadhaarNumber || u.aadhaarVerification.aadhaarNumber.trim() === '') return false;
+
+        // Aadhaar is NOT required — user may have had a duplicate Aadhaar situation
+        // Aadhaar data is still captured and stored when available
 
         return true;
     });
