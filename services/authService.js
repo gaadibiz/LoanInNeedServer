@@ -21,22 +21,19 @@ async function requestPhoneOtp(phone) {
 
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({ where: { phone: targetPhone } });
-  if (existingUser) {
-    logger.warn('Phone number already registered: %s', targetPhone);
-    throw new BadRequestError('number already registered');
-  }
+  const isExistingUser = !!existingUser;
 
   // ✅ Mock OTP for Test Numbers (+9199...)
   if (targetPhone.startsWith('+9199')) {
     logger.info('✅ Test number detected: bypassing SMS OTP for %s', targetPhone);
-    return { message: 'OTP sent successfully (Mocked).' };
+    return { message: 'OTP sent successfully (Mocked).', isExistingUser };
   }
 
   // Use new SMS OTP service
   await smsOtpService.sendOtp(targetPhone);
-  logger.info('OTP sent successfully to: %s', targetPhone);
+  logger.info('OTP sent successfully to %s (existingUser=%s)', targetPhone, isExistingUser);
 
-  return { message: 'OTP sent successfully.' };
+  return { message: 'OTP sent successfully.', isExistingUser };
 }
 
 // ==============================
@@ -120,6 +117,12 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
   logger.info(`[AUTH SERVICE] Generating token for User: ${user.phone}, Role: ${user.role}`);
   const token = generateToken(user);
 
+  // Fetch profile completeness for the frontend to decide next step
+  const hasName = !!user.name;
+  const hasPan = !!(await prisma.panVerification.findUnique({ where: { userId: user.id } }));
+  const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
+  const isProfileComplete = hasName && hasPan && hasAadhaar;
+
   return {
     message: 'Phone verified successfully.',
     user: {
@@ -128,7 +131,9 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
       role: user.role,
       verificationStatus: user.verificationStatus
     },
-    token
+    token,
+    isExistingUser: !!(await prisma.user.findUnique({ where: { id: user.id }, select: { phoneVerifiedAt: true, name: true } }))?.name,
+    isProfileComplete
   };
 }
 
