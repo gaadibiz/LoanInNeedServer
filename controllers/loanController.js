@@ -167,7 +167,23 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         }
     });
 
-    const data = applications.map(app => {
+    // Filter out incomplete applications (missing Name, PAN, or Aadhaar)
+    const validApplications = applications.filter(app => {
+        const u = app.user;
+        if (!u) return false;
+        
+        // Ensure name is present (checking for first and last name presence if possible, but at least not empty)
+        if (!u.name || u.name.trim() === '') return false;
+        // Optionally check if they have at least 2 words (first name + last name)
+        if (u.name.trim().split(/\s+/).length < 2) return false;
+
+        if (!u.panVerification || !u.panVerification.panNumber || u.panVerification.panNumber.trim() === '') return false;
+        if (!u.aadhaarVerification || !u.aadhaarVerification.aadhaarNumber || u.aadhaarVerification.aadhaarNumber.trim() === '') return false;
+
+        return true;
+    });
+
+    const data = validApplications.map(app => {
         const u = app.user;
         const emp = u?.employment || {};
         const addr = u?.address || {};
