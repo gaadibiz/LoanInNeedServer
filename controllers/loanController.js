@@ -267,7 +267,9 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                 longitude: loc.longitude || null
             },
             addressDocument,
-            aadhaarNo: aadh.aadhaarNumber || null,
+            aadhaarNo: aadh.aadhaarNumber
+                ? aadh.aadhaarNumber.replace(/_DUP_\d+$/, '').trim() || null
+                : null,
             panNo: pan.panNumber || null,
             profilePicture,
             aadhaarFront,
