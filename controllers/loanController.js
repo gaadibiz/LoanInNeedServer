@@ -269,7 +269,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             bankAccountNo: null,
             ifscCode: null,
             bankName: null,
-            address1: addr.currentAddress || null,
+            address1: addr.city || addr.currentAddress || null,
             address2: null,
             landmark: null,
             pinCode: addr.postalCode || null,
