@@ -168,7 +168,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
     });
 
     // Filter out incomplete applications — only export fully complete submissions
-    const REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PHOTO'];
+    const REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'];
 
     const validApplications = applications.filter(app => {
         const u = app.user;
@@ -192,9 +192,6 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         for (const reqType of REQUIRED_DOC_TYPES) {
             if (!submittedDocTypes.has(reqType)) return false;
         }
-
-        // 4. At least one income document (PAY_SLIP or BANK_STATEMENT) must be submitted
-        if (!submittedDocTypes.has('PAY_SLIP') && !submittedDocTypes.has('BANK_STATEMENT')) return false;
 
         return true;
     });

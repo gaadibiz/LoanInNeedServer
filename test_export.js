@@ -37,7 +37,7 @@ async function runTest() {
                         fileName: 'test_file.txt'
                     },
                     {
-                        docType: 'PHOTO',
+                        docType: 'BANK_STATEMENT',
                         filePath: relativePath,
                         fileName: 'test_file.txt'
                     },

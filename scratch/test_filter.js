@@ -32,8 +32,8 @@ async function runTest() {
                 create: [
                     { docType: 'AADHAAR', filePath: 'uploads/Documents/AADHAAR/test.jpg', fileName: 'test.jpg' },
                     { docType: 'PAN', filePath: 'uploads/Documents/PAN/test.jpg', fileName: 'test.jpg' },
-                    { docType: 'PHOTO', filePath: 'uploads/Documents/PHOTO/test.jpg', fileName: 'test.jpg' },
-                    { docType: 'PAY_SLIP', filePath: 'uploads/Documents/PAY_SLIP/test.jpg', fileName: 'test.jpg' }
+                    { docType: 'PAY_SLIP', filePath: 'uploads/Documents/PAY_SLIP/test.jpg', fileName: 'test.jpg' },
+                    { docType: 'BANK_STATEMENT', filePath: 'uploads/Documents/BANK_STATEMENT/test.jpg', fileName: 'test.jpg' }
                 ]
             },
             loanApplications: {
