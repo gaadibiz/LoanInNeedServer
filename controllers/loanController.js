@@ -375,6 +375,16 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
         throw new BadRequestError('Both "id" and "status" are required in the request body.');
     }
 
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED', 'HOLD', 'IN_PROGRESS', 'COMPLETED'];
+    const uppercaseStatus = status.toUpperCase();
+    if (!validStatuses.includes(uppercaseStatus)) {
+        throw new BadRequestError(`Invalid status value. Must be one of: ${validStatuses.join(', ')}`);
+    }
+
+    if (uppercaseStatus === 'REJECTED' && (!reason || reason.trim() === '')) {
+        throw new BadRequestError('Reason is required when status is REJECTED.');
+    }
+
     // Try finding the application either by its `id` (as integer) or `customUserId` of the User
     let loanApplication = null;
     const searchIdInt = parseInt(id, 10);
@@ -412,7 +422,7 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
         where: { id: loanApplication.id },
         data: {
             // Prisma will enforce validation naturally if we feed it correct types
-            status: status.toUpperCase(), // Assuming LOS sends 'APPROVED'/'REJECTED' etc
+            status: uppercaseStatus,
             reason: reason || null,
             employeeId: employeeId ? employeeId.toString() : null,
             employeeName: employeeName || null,
