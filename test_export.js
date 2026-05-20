@@ -18,12 +18,35 @@ async function runTest() {
         data: {
             phone: `99999${Date.now().toString().slice(-5)}`,
             name: 'Test User Base64',
+            panVerification: {
+                create: { panNumber: `PAN${Date.now().toString().slice(-6)}`, verified: true }
+            },
+            aadhaarVerification: {
+                create: { aadhaarNumber: `AADHAAR${Date.now().toString().slice(-5)}`, verified: true }
+            },
             documents: {
-                create: {
-                    docType: 'AADHAAR',
-                    filePath: relativePath,
-                    fileName: 'test_file.txt'
-                }
+                create: [
+                    {
+                        docType: 'AADHAAR',
+                        filePath: relativePath,
+                        fileName: 'test_file.txt'
+                    },
+                    {
+                        docType: 'PAN',
+                        filePath: relativePath,
+                        fileName: 'test_file.txt'
+                    },
+                    {
+                        docType: 'PHOTO',
+                        filePath: relativePath,
+                        fileName: 'test_file.txt'
+                    },
+                    {
+                        docType: 'PAY_SLIP',
+                        filePath: relativePath,
+                        fileName: 'test_file.txt'
+                    }
+                ]
             },
             loanApplications: {
                 create: {
@@ -50,8 +73,8 @@ async function runTest() {
                 console.log("Found Application!");
                 console.log("aadhaarFront:", app.aadhaarFront);
                 // Also check if decoded base64 matches original content
-                if (app.aadhaarFront && app.aadhaarFront[1]) {
-                    const decoded = Buffer.from(app.aadhaarFront[1], 'base64').toString('utf8');
+                if (app.aadhaarFront && app.aadhaarFront[0]) {
+                    const decoded = Buffer.from(app.aadhaarFront[0], 'base64').toString('utf8');
                     console.log("Decoded Content:", decoded);
                 }
             } else {

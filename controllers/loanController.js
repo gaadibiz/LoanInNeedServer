@@ -183,7 +183,11 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         if (!u.panVerification.panNumber || u.panVerification.panNumber.trim() === '') return false;
         if (!u.panVerification.verified) return false;
 
-        // 3. All required document types must be submitted
+        // 3. Aadhaar verification record must be present and aadhaarNumber must be provided
+        if (!u.aadhaarVerification) return false;
+        if (!u.aadhaarVerification.aadhaarNumber || u.aadhaarVerification.aadhaarNumber.trim() === '') return false;
+
+        // 4. All required document types must be submitted
         const submittedDocTypes = new Set((u.documents || []).map(d => d.docType));
         for (const reqType of REQUIRED_DOC_TYPES) {
             if (!submittedDocTypes.has(reqType)) return false;
