@@ -167,20 +167,30 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         }
     });
 
-    // Filter out incomplete applications (missing Name or PAN — Aadhaar is collected but not required for LOS)
+    // Filter out incomplete applications — only export fully complete submissions
+    const REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PHOTO'];
+
     const validApplications = applications.filter(app => {
         const u = app.user;
         if (!u) return false;
-        
-        // Ensure name is present with at least 2 words (first + last name)
+
+        // 1. Name must be present with at least 2 words (first + last name)
         if (!u.name || u.name.trim() === '') return false;
         if (u.name.trim().split(/\s+/).length < 2) return false;
 
-        // PAN is required
-        if (!u.panVerification || !u.panVerification.panNumber || u.panVerification.panNumber.trim() === '') return false;
+        // 2. PAN must be present AND verified
+        if (!u.panVerification) return false;
+        if (!u.panVerification.panNumber || u.panVerification.panNumber.trim() === '') return false;
+        if (!u.panVerification.verified) return false;
 
-        // Aadhaar is NOT required — user may have had a duplicate Aadhaar situation
-        // Aadhaar data is still captured and stored when available
+        // 3. All required document types must be submitted
+        const submittedDocTypes = new Set((u.documents || []).map(d => d.docType));
+        for (const reqType of REQUIRED_DOC_TYPES) {
+            if (!submittedDocTypes.has(reqType)) return false;
+        }
+
+        // 4. At least one income document (PAY_SLIP or BANK_STATEMENT) must be submitted
+        if (!submittedDocTypes.has('PAY_SLIP') && !submittedDocTypes.has('BANK_STATEMENT')) return false;
 
         return true;
     });
