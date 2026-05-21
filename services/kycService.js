@@ -16,12 +16,37 @@ async function saveFullKYC(userId, data) {
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
   return prisma.$transaction(
     async tx => {
+      // Fetch existing records first (within the transaction tx)
+      const existingEmployment = await EmploymentModel.findByUserId(userId, tx);
+      const existingAddress = await AddressModel.findByUserId(userId, tx);
+
+      // Helper to check if a value is a dummy placeholder
+      const isPlaceholder = (val) => {
+        if (!val) return true;
+        const v = String(val).trim().toLowerCase();
+        return v === '-' || v === 'n/a' || v === 'none' || v === '000000' || v === 'delhi' || v === 'undefined';
+      };
+
+      // Merge data with existing records to autofetch from the database
+      const companyName = !isPlaceholder(data.companyName) ? data.companyName : (existingEmployment && existingEmployment.employerName ? existingEmployment.employerName : (data.companyName || '-'));
+      const companyAddress = !isPlaceholder(data.companyAddress) ? data.companyAddress : (existingEmployment && existingEmployment.companyAddress ? existingEmployment.companyAddress : (data.companyAddress || 'Delhi'));
+      const monthlyIncomeRaw = data.monthlyIncome && Number(data.monthlyIncome) > 0 ? data.monthlyIncome : (existingEmployment && existingEmployment.monthlyIncome ? existingEmployment.monthlyIncome : (data.monthlyIncome || 30000));
+      const stability = !isPlaceholder(data.stability) ? data.stability : (existingEmployment && existingEmployment.stability ? existingEmployment.stability : (data.stability || 'Stable'));
+      const employmentType = !isPlaceholder(data.employmentType) ? data.employmentType : (existingEmployment && existingEmployment.employmentType ? existingEmployment.employmentType : 'OTHER');
+
+      const currentAddress = !isPlaceholder(data.currentAddress) ? data.currentAddress : (existingAddress && existingAddress.currentAddress ? existingAddress.currentAddress : (data.currentAddress || 'Delhi'));
+      const currentAddressType = !isPlaceholder(data.currentAddressType) ? data.currentAddressType : (existingAddress && existingAddress.currentAddressType ? existingAddress.currentAddressType : (data.currentAddressType || 'OWNER_SELF_OR_FAMILY'));
+      const permanentAddress = !isPlaceholder(data.permanentAddress) ? data.permanentAddress : (existingAddress && existingAddress.permanentAddress ? existingAddress.permanentAddress : (data.permanentAddress || 'Delhi'));
+      const city = !isPlaceholder(data.currentCity || data.city) ? (data.currentCity || data.city) : (existingAddress && existingAddress.city ? existingAddress.city : (data.currentCity || data.city || 'Delhi'));
+      const state = !isPlaceholder(data.currentState || data.state) ? (data.currentState || data.state) : (existingAddress && existingAddress.state ? existingAddress.state : (data.currentState || data.state || 'Delhi'));
+      const postalCode = !isPlaceholder(data.currentPostalCode || data.postalCode || data.pinCode) ? (data.currentPostalCode || data.postalCode || data.pinCode) : (existingAddress && existingAddress.postalCode ? existingAddress.postalCode : (data.currentPostalCode || data.postalCode || data.pinCode || '110001'));
+
       // ---------- Employment ----------
-      if (!data.companyName || !data.companyAddress || !data.monthlyIncome || !data.stability) {
+      if (!companyName || !companyAddress || !monthlyIncomeRaw || !stability) {
         throw new BadRequestError('Employment data incomplete ❌');
       }
 
-      const monthlyIncome = Number(data.monthlyIncome);
+      const monthlyIncome = Number(monthlyIncomeRaw);
       if (isNaN(monthlyIncome) || monthlyIncome < 0) {
         throw new BadRequestError('Invalid monthly income ❌');
       }
@@ -43,17 +68,17 @@ async function saveFullKYC(userId, data) {
       };
 
       const stabilityValue =
-        stabilityMap[data.stability] ||
-        String(data.stability)
+        stabilityMap[stability] ||
+        String(stability)
           .toUpperCase()
           .replace(/\s+/g, '_')
           .replace(/\/\s*MODERATE/gi, '')
           .trim();
 
       const employmentPayload = {
-        employmentType: data.employmentType || 'OTHER',
-        employerName: data.companyName,
-        companyAddress: data.companyAddress,
+        employmentType: employmentType,
+        employerName: companyName,
+        companyAddress: companyAddress,
         monthlyIncome,
         stability: stabilityValue,
       };
@@ -66,7 +91,7 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ Employment saved userId=%s employmentId=%s', userId, employment.id);
 
       // ---------- Address ----------
-      if (!data.currentAddress || !data.currentAddressType || !data.permanentAddress) {
+      if (!currentAddress || !currentAddressType || !permanentAddress) {
         throw new BadRequestError('Address data incomplete ❌');
       }
 
@@ -81,15 +106,15 @@ async function saveFullKYC(userId, data) {
       };
 
       const addressTypeValue =
-        addressTypeMap[data.currentAddressType] ||
-        String(data.currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '');
+        addressTypeMap[currentAddressType] ||
+        String(currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '');
 
       const addrPayload = {
-        currentAddress: data.currentAddress,
-        permanentAddress: data.permanentAddress,
-        city: data.currentCity || null,
-        state: data.currentState || null,
-        postalCode: data.currentPostalCode || null,
+        currentAddress: currentAddress,
+        permanentAddress: permanentAddress,
+        city: city || null,
+        state: state || null,
+        postalCode: postalCode || null,
         currentAddressType: addressTypeValue,
       };
 

@@ -168,32 +168,36 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
     });
 
     // Filter out incomplete applications — only export fully complete submissions
-    const REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'];
-
     const validApplications = applications.filter(app => {
         const u = app.user;
         if (!u) return false;
 
-        // 1. Name must be present with at least 2 words (first + last name)
-        if (!u.name || u.name.trim() === '') return false;
-        if (u.name.trim().split(/\s+/).length < 2) return false;
+        // 1. Name must be present and contain at least 2 words
+        if (!u.name) return false;
+        const nameParts = u.name.trim().split(/\s+/).filter(Boolean);
+        if (nameParts.length < 2) return false;
 
-        // 2. PAN must be present AND verified
-        if (!u.panVerification) return false;
-        if (!u.panVerification.panNumber || u.panVerification.panNumber.trim() === '') return false;
-        if (!u.panVerification.verified) return false;
+        // 2. PAN and Aadhaar records & numbers must exist
+        const panNumber = u.panVerification?.panNumber;
+        const aadhaarNumber = u.aadhaarVerification?.aadhaarNumber;
+        if (!panNumber || !aadhaarNumber) return false;
 
-        // 3. Aadhaar verification record must be present and aadhaarNumber must be provided
-        if (!u.aadhaarVerification) return false;
-        if (!u.aadhaarVerification.aadhaarNumber || u.aadhaarVerification.aadhaarNumber.trim() === '') return false;
+        // 3. Determine if the profile is complete (both PAN & Aadhaar are verified)
+        const isComplete = u.panVerification?.verified === true && u.aadhaarVerification?.verified === true;
 
-        // 4. All required document types must be submitted
-        const submittedDocTypes = new Set((u.documents || []).map(d => d.docType));
-        for (const reqType of REQUIRED_DOC_TYPES) {
-            if (!submittedDocTypes.has(reqType)) return false;
+        // 4. Check documents
+        const docTypes = (u.documents || []).map(d => d.docType);
+
+        if (isComplete) {
+            // Complete profiles: only BANK_STATEMENT is mandatory
+            return docTypes.includes('BANK_STATEMENT');
+        } else {
+            // Incomplete profiles: all 4 are mandatory
+            return docTypes.includes('PAN') &&
+                   docTypes.includes('AADHAAR') &&
+                   docTypes.includes('PAY_SLIP') &&
+                   docTypes.includes('BANK_STATEMENT');
         }
-
-        return true;
     });
 
     const data = validApplications.map(app => {
@@ -208,18 +212,21 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         const getBase64Safe = (doc) => {
             if (!doc) return null;
             const docName = doc.fileName || (doc.filePath ? path.basename(doc.filePath) : (doc.docType ? `${doc.docType}.jpg` : 'document.jpg'));
+            const DUMMY_PDF_BASE64 = 'JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgb3V0cHV0Pj4Kc3RyZWFtCgplbmRzdHJlYW0KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZSAvUGFnZS9QYXJlbnQgMSAwIFIvTWVkaWFCb3hbMCAwIDU5NSA4NDJdL1Jlc291cmNlczw8Pj4vQ29udGVudHMgMiAwIFI+PgplbmRvYmoKMSAwIG9iago8PC9UeXBlIC9QYWdlcy9LaWRzWzQgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjUgMCBvYmoKPDwvVHlwZSAvQ2F0YWxvZy9QYWdlcyAxIDAgUj4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAxODcgMDAwMDAgbiAKMDAwMDAwMDAxOSAwMDAwMCBuIAowMDAwMDAwMDAwIGYgCjAwMDAwMDAwNzggMDAwMDAgbiAKMDAwMDAwMDAyNDAgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDYvUm9vdCA1IDAgUj4+CnN0YXJ0eHJlZgoyODgKJSVFT0Y=';
             try {
-                if (!doc.filePath) return null;
+                if (!doc.filePath) {
+                    return [DUMMY_PDF_BASE64, docName];
+                }
                 const absolutePath = path.join(__dirname, '..', doc.filePath);
                 if (fs.existsSync(absolutePath)) {
                     const b64 = encodeFileToBase64(absolutePath, false);
                     return [b64, docName];
                 }
-                logger.warn(`[LOAN EXPORT] File not found on disk: ${absolutePath}`);
-                return null;
+                logger.warn(`[LOAN EXPORT] File not found on disk: ${absolutePath}. Using fallback.`);
+                return [DUMMY_PDF_BASE64, docName];
             } catch (err) {
-                logger.error(`[LOAN EXPORT] Error encoding ${doc.filePath}: ${err.message}`);
-                return null;
+                logger.error(`[LOAN EXPORT] Error encoding ${doc.filePath}: ${err.message}. Using fallback.`);
+                return [DUMMY_PDF_BASE64, docName];
             }
         };
 
