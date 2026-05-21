@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const kycController = require('../controllers/kycController');
 const { protect } = require('../middleware/authMiddleware');
+const { attachAuditHook } = require('../middleware/auditMiddleware');
 const multer = require('multer');
 
 // Configure multer for memory storage
@@ -10,8 +11,8 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// Submit KYC details
-router.post('/', protect, kycController.submitKYC);
+// Submit KYC details — audit middleware fires AFTER response (non-blocking)
+router.post('/', protect, attachAuditHook, kycController.submitKYC);
 
 // Get KYC details
 router.get('/', protect, kycController.getKYC);

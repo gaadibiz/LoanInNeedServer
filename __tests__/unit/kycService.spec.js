@@ -1,17 +1,19 @@
 /* eslint-env jest */
 // Unit tests for services/kycService.js
 
-// Mock PrismaClient before importing the service so the module-level prisma is the mocked one
-jest.mock('@prisma/client', () => {
-  return {
-    PrismaClient: jest.fn().mockImplementation(() => ({
-      $transaction: async (cb, opts) => {
-        // execute the transaction callback with a dummy tx object
-        return cb({});
-      },
-    })),
-  };
-});
+// Mock prismaClient directly to ensure module require cache gets the mock
+const mockTx = {
+  loanApplication: {
+    create: jest.fn().mockResolvedValue({ id: 999 }),
+  },
+  losIntegrationJob: {
+    create: jest.fn().mockResolvedValue({ id: 999 }),
+  },
+};
+
+jest.mock('../../utils/prismaClient', () => ({
+  $transaction: jest.fn().mockImplementation(async (cb) => cb(mockTx)),
+}));
 
 const faker = require('faker');
 
@@ -77,8 +79,23 @@ describe('KycService.saveFullKYC (unit)', () => {
     ...overrides,
   });
 
+  let baseValidPayload;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    baseValidPayload = makePayload();
+
+    // Default mock setup to prevent TypeError on undefined model properties
+    mockFindEmploymentByUserId.mockResolvedValue(null);
+    mockCreateEmploymentDetails.mockResolvedValue({ id: 100 });
+    mockUpdateEmploymentDetails.mockResolvedValue({ id: 100 });
+
+    mockFindAddressByUserId.mockResolvedValue(null);
+    mockCreateAddress.mockResolvedValue({ id: 200 });
+    mockUpdateAddress.mockResolvedValue({ id: 200 });
+
+    mockCreateLoan.mockResolvedValue({ id: 300 });
+    mockFindUserById.mockResolvedValue({ id: userId, name: 'John Doe' });
   });
 
   it('throws when userId is not provided', async () => {

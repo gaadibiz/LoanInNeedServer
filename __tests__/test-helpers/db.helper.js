@@ -37,6 +37,14 @@ class DbHelper {
         },
       });
 
+      await prisma.losIntegrationJob.deleteMany({
+        where: {
+          user: {
+            phone: { startsWith: '+91' },
+          },
+        },
+      });
+
       await prisma.loanApplication.deleteMany({
         where: {
           user: {
@@ -78,6 +86,14 @@ class DbHelper {
       });
 
       await prisma.otpVerification.deleteMany({
+        where: {
+          user: {
+            phone: { startsWith: '+91' },
+          },
+        },
+      });
+
+      await prisma.loan.deleteMany({
         where: {
           user: {
             phone: { startsWith: '+91' },
@@ -127,12 +143,14 @@ class DbHelper {
   static async deleteTestUser(userId) {
     await prisma.userLocation.deleteMany({ where: { userId } });
     await prisma.userDocument.deleteMany({ where: { userId } });
+    await prisma.losIntegrationJob.deleteMany({ where: { userId } });
     await prisma.loanApplication.deleteMany({ where: { userId } });
     await prisma.employmentDetail.deleteMany({ where: { userId } });
     await prisma.addressDetail.deleteMany({ where: { userId } });
     await prisma.aadhaarVerification.deleteMany({ where: { userId } });
     await prisma.panVerification.deleteMany({ where: { userId } });
     await prisma.otpVerification.deleteMany({ where: { userId } });
+    await prisma.loan.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
   }
 

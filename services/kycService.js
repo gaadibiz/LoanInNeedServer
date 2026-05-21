@@ -28,18 +28,18 @@ async function saveFullKYC(userId, data) {
       };
 
       // Merge data with existing records to autofetch from the database
-      const companyName = !isPlaceholder(data.companyName) ? data.companyName : (existingEmployment && existingEmployment.employerName ? existingEmployment.employerName : (data.companyName || '-'));
-      const companyAddress = !isPlaceholder(data.companyAddress) ? data.companyAddress : (existingEmployment && existingEmployment.companyAddress ? existingEmployment.companyAddress : (data.companyAddress || 'Delhi'));
-      const monthlyIncomeRaw = data.monthlyIncome && Number(data.monthlyIncome) > 0 ? data.monthlyIncome : (existingEmployment && existingEmployment.monthlyIncome ? existingEmployment.monthlyIncome : (data.monthlyIncome || 30000));
-      const stability = !isPlaceholder(data.stability) ? data.stability : (existingEmployment && existingEmployment.stability ? existingEmployment.stability : (data.stability || 'Stable'));
+      const companyName = !isPlaceholder(data.companyName) ? data.companyName : (existingEmployment && existingEmployment.employerName ? existingEmployment.employerName : data.companyName);
+      const companyAddress = !isPlaceholder(data.companyAddress) ? data.companyAddress : (existingEmployment && existingEmployment.companyAddress ? existingEmployment.companyAddress : data.companyAddress);
+      const monthlyIncomeRaw = data.monthlyIncome && Number(data.monthlyIncome) > 0 ? data.monthlyIncome : (existingEmployment && existingEmployment.monthlyIncome ? existingEmployment.monthlyIncome : data.monthlyIncome);
+      const stability = !isPlaceholder(data.stability) ? data.stability : (existingEmployment && existingEmployment.stability ? existingEmployment.stability : data.stability);
       const employmentType = !isPlaceholder(data.employmentType) ? data.employmentType : (existingEmployment && existingEmployment.employmentType ? existingEmployment.employmentType : 'OTHER');
 
-      const currentAddress = !isPlaceholder(data.currentAddress) ? data.currentAddress : (existingAddress && existingAddress.currentAddress ? existingAddress.currentAddress : (data.currentAddress || 'Delhi'));
-      const currentAddressType = !isPlaceholder(data.currentAddressType) ? data.currentAddressType : (existingAddress && existingAddress.currentAddressType ? existingAddress.currentAddressType : (data.currentAddressType || 'OWNER_SELF_OR_FAMILY'));
-      const permanentAddress = !isPlaceholder(data.permanentAddress) ? data.permanentAddress : (existingAddress && existingAddress.permanentAddress ? existingAddress.permanentAddress : (data.permanentAddress || 'Delhi'));
-      const city = !isPlaceholder(data.currentCity || data.city) ? (data.currentCity || data.city) : (existingAddress && existingAddress.city ? existingAddress.city : (data.currentCity || data.city || 'Delhi'));
-      const state = !isPlaceholder(data.currentState || data.state) ? (data.currentState || data.state) : (existingAddress && existingAddress.state ? existingAddress.state : (data.currentState || data.state || 'Delhi'));
-      const postalCode = !isPlaceholder(data.currentPostalCode || data.postalCode || data.pinCode) ? (data.currentPostalCode || data.postalCode || data.pinCode) : (existingAddress && existingAddress.postalCode ? existingAddress.postalCode : (data.currentPostalCode || data.postalCode || data.pinCode || '110001'));
+      const currentAddress = !isPlaceholder(data.currentAddress) ? data.currentAddress : (existingAddress && existingAddress.currentAddress ? existingAddress.currentAddress : data.currentAddress);
+      const currentAddressType = !isPlaceholder(data.currentAddressType) ? data.currentAddressType : (existingAddress && existingAddress.currentAddressType ? existingAddress.currentAddressType : data.currentAddressType);
+      const permanentAddress = !isPlaceholder(data.permanentAddress) ? data.permanentAddress : (existingAddress && existingAddress.permanentAddress ? existingAddress.permanentAddress : data.permanentAddress);
+      const city = !isPlaceholder(data.currentCity || data.city) ? (data.currentCity || data.city) : (existingAddress && existingAddress.city ? existingAddress.city : (data.currentCity || data.city));
+      const state = !isPlaceholder(data.currentState || data.state) ? (data.currentState || data.state) : (existingAddress && existingAddress.state ? existingAddress.state : null);
+      const postalCode = !isPlaceholder(data.currentPostalCode || data.postalCode || data.pinCode) ? (data.currentPostalCode || data.postalCode || data.pinCode) : (existingAddress && existingAddress.postalCode ? existingAddress.postalCode : (data.currentPostalCode || data.postalCode || data.pinCode));
 
       // ---------- Employment ----------
       if (!companyName || !companyAddress || !monthlyIncomeRaw || !stability) {

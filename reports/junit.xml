@@ -1,3 +1,227 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="LoanInNeed Backend Tests" tests="0" failures="0" errors="0" time="1.559">
+<testsuites name="LoanInNeed Backend Tests" tests="41" failures="9" errors="0" time="30.323">
+  <testsuite name="__tests__\unit\services\kycService.spec.js" errors="0" failures="3" skipped="0" timestamp="2026-05-21T18:40:02" time="4.648" tests="3">
+    <testcase classname="📋 KYCService Unit Tests › saveFullKYC" name="✅ should save full KYC data successfully" time="0.042">
+      <failure>Error: expect(jest.fn()).toHaveBeenCalled()
+
+Expected number of calls: &gt;= 1
+Received number of calls:    0
+    at Object.toHaveBeenCalled (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\services\kycService.spec.js:59:55)</failure>
+    </testcase>
+    <testcase classname="📋 KYCService Unit Tests › saveFullKYC" name="❌ should handle missing required fields" time="0.003">
+      <failure>Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined
+    at expect (D:\Project\LoanInNeedServer2\Backend\node_modules\expect\build\index.js:113:15)
+    at Object.expect (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\services\kycService.spec.js:76:13)
+    at Promise.then.completed (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:316:40)
+    at _runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="📋 KYCService Unit Tests › saveFullKYC" name="❌ should validate data types" time="0.002">
+      <failure>Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined
+    at expect (D:\Project\LoanInNeedServer2\Backend\node_modules\expect\build\index.js:113:15)
+    at Object.expect (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\services\kycService.spec.js:88:13)
+    at Promise.then.completed (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:316:40)
+    at _runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\kycService.spec.js" errors="0" failures="5" skipped="0" timestamp="2026-05-21T18:40:07" time="3.53" tests="6">
+    <testcase classname="KycService.saveFullKYC (unit)" name="throws when userId is not provided" time="0.014">
+    </testcase>
+    <testcase classname="KycService.saveFullKYC (unit)" name="validates employment payload presence" time="0.001">
+      <failure>Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined
+    at expect (D:\Project\LoanInNeedServer2\Backend\node_modules\expect\build\index.js:113:15)
+    at Object.expect (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\kycService.spec.js:109:11)
+    at Promise.then.completed (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:316:40)
+    at _runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="KycService.saveFullKYC (unit)" name="validates monthlyIncome numeric and non-negative" time="0.001">
+      <failure>Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined
+    at expect (D:\Project\LoanInNeedServer2\Backend\node_modules\expect\build\index.js:113:15)
+    at Object.expect (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\kycService.spec.js:114:11)
+    at Promise.then.completed (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:316:40)
+    at _runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="KycService.saveFullKYC (unit)" name="validates address payload presence" time="0">
+      <failure>Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined
+    at expect (D:\Project\LoanInNeedServer2\Backend\node_modules\expect\build\index.js:113:15)
+    at Object.expect (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\kycService.spec.js:123:11)
+    at Promise.then.completed (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:316:40)
+    at _runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="KycService.saveFullKYC (unit)" name="validates loan payload presence and amount" time="0.001">
+      <failure>Error: expect(received).rejects.toThrow()
+
+Received promise resolved instead of rejected
+Resolved to value: undefined
+    at expect (D:\Project\LoanInNeedServer2\Backend\node_modules\expect\build\index.js:113:15)
+    at Object.expect (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\kycService.spec.js:129:11)
+    at Promise.then.completed (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\utils.js:231:10)
+    at _callCircusTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:316:40)
+    at _runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:252:3)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:126:9)
+    at _runTestsForDescribeBlock (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:121:9)
+    at run (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\run.js:71:3)
+    at runAndTransformResultsToJestFormat (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+    at jestAdapter (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+    at runTestInternal (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:367:16)
+    at runTest (D:\Project\LoanInNeedServer2\Backend\node_modules\jest-runner\build\runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="KycService.saveFullKYC (unit)" name="saves employment, address and loan and returns aggregated result for multiple payloads" time="0.001">
+      <failure>Error: expect(received).toBeDefined()
+
+Received: undefined
+    at Object.toBeDefined (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\kycService.spec.js:156:22)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\services\selfieService.spec.js" errors="0" failures="1" skipped="0" timestamp="2026-05-21T18:40:10" time="3.13" tests="5">
+    <testcase classname="📸 SelfieService Unit Tests › saveSelfie" name="✅ should save selfie successfully" time="0.002">
+      <failure>Error: expect(jest.fn()).toHaveBeenCalled()
+
+Expected number of calls: &gt;= 1
+Received number of calls:    0
+    at Object.toHaveBeenCalled (D:\Project\LoanInNeedServer2\Backend\__tests__\unit\services\selfieService.spec.js:56:37)</failure>
+    </testcase>
+    <testcase classname="📸 SelfieService Unit Tests › saveSelfie" name="❌ should reject if no file provided" time="0.007">
+    </testcase>
+    <testcase classname="📸 SelfieService Unit Tests › saveSelfie" name="❌ should handle Supabase upload errors" time="0.004">
+    </testcase>
+    <testcase classname="📸 SelfieService Unit Tests › getSelfieStatus" name="✅ should return selfie status if exists" time="0">
+    </testcase>
+    <testcase classname="📸 SelfieService Unit Tests › getSelfieStatus" name="✅ should return not uploaded if no selfie exists" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\services\locationService.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-05-21T18:40:14" time="3.29" tests="5">
+    <testcase classname="📍 LocationService Unit Tests › saveLocation" name="✅ should save location successfully" time="0.006">
+    </testcase>
+    <testcase classname="📍 LocationService Unit Tests › saveLocation" name="❌ should reject location without latitude" time="0.005">
+    </testcase>
+    <testcase classname="📍 LocationService Unit Tests › saveLocation" name="❌ should reject location without longitude" time="0.001">
+    </testcase>
+    <testcase classname="📍 LocationService Unit Tests › getLatestLocation" name="✅ should return latest location" time="0.001">
+    </testcase>
+    <testcase classname="📍 LocationService Unit Tests › getLatestLocation" name="✅ should return null if no location exists" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\utils\jwt.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-05-21T18:40:17" time="3.17" tests="5">
+    <testcase classname="🎫 JWT Utility Tests › generateToken" name="✅ should generate a valid JWT token" time="0.005">
+    </testcase>
+    <testcase classname="🎫 JWT Utility Tests › generateToken" name="✅ should include expiration in token" time="0.003">
+    </testcase>
+    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="✅ should verify a valid token" time="0.002">
+    </testcase>
+    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="❌ should reject invalid token" time="0.006">
+    </testcase>
+    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="❌ should reject expired token" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\services\authService.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-05-21T18:40:20" time="3.282" tests="4">
+    <testcase classname="🔐 AuthService Unit Tests › requestPhoneOtp" name="✅ should request OTP successfully" time="0.002">
+    </testcase>
+    <testcase classname="🔐 AuthService Unit Tests › requestPhoneOtp" name="❌ should handle OTP service errors" time="0.004">
+    </testcase>
+    <testcase classname="🔐 AuthService Unit Tests › verifyPhoneOtp" name="✅ should verify OTP and return token" time="0.001">
+    </testcase>
+    <testcase classname="🔐 AuthService Unit Tests › verifyPhoneOtp" name="❌ should reject invalid OTP" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\middleware\authMiddleware.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-05-21T18:40:23" time="2.94" tests="5">
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="✅ should authenticate valid token" time="0.003">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request without token" time="0">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token format" time="0.001">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token" time="0">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request if user not found in DB" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\jwt.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-05-21T18:40:26" time="3.19" tests="4">
+    <testcase classname="🛡️ JWT Utility" name="✅ should generate a valid JWT token" time="0.001">
+    </testcase>
+    <testcase classname="🛡️ JWT Utility" name="✅ should verify a valid JWT token" time="0">
+    </testcase>
+    <testcase classname="🛡️ JWT Utility" name="❌ should fail verification for invalid token" time="0.006">
+    </testcase>
+    <testcase classname="🛡️ JWT Utility" name="❌ should fail verification for expired token" time="0.026">
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__\unit\hash.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-05-21T18:40:29" time="2.955" tests="4">
+    <testcase classname="🔒 Hash Utility" name="✅ should hash a password successfully" time="0.068">
+    </testcase>
+    <testcase classname="🔒 Hash Utility" name="✅ should compare correct password successfully" time="0.054">
+    </testcase>
+    <testcase classname="🔒 Hash Utility" name="❌ should fail comparison with incorrect password" time="0.053">
+    </testcase>
+    <testcase classname="🔒 Hash Utility" name="❌ should throw error if password is missing" time="0.003">
+    </testcase>
+  </testsuite>
 </testsuites>

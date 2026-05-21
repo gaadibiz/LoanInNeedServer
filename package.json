@@ -32,21 +32,6 @@
     "format:check": "prettier --check \"**/*.{js,json,md}\"",
     "lint:format": "npm run lint:fix && npm run format"
   },
-  "jest": {
-    "testEnvironment": "node",
-    "reporters": [
-      "default",
-      [
-        "jest-html-reporters",
-        {
-          "publicPath": "./reports",
-          "filename": "test-report.html",
-          "expand": true,
-          "pageTitle": "LoanInNeed Backend API Test Report"
-        }
-      ]
-    ]
-  },
   "author": "Priyanshu Routh",
   "license": "ISC",
   "dependencies": {

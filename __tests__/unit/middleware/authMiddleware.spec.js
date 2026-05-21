@@ -1,9 +1,15 @@
 const { authenticate } = require('../../../middleware/authMiddleware');
-const { verifyToken } = require('../../../utils/jwt');
+const jwt = require('jsonwebtoken');
+const prisma = require('../../../utils/prismaClient');
 const { UnauthorizedError } = require('../../../GlobalExceptionHandler/exception');
 const { mockRequest, mockResponse, mockNext } = require('../../test-helpers/mock-factories');
 
-jest.mock('../../../utils/jwt');
+jest.mock('jsonwebtoken');
+jest.mock('../../../utils/prismaClient', () => ({
+  user: {
+    findUnique: jest.fn(),
+  },
+}));
 
 describe('🔐 AuthMiddleware Unit Tests', () => {
   let req, res, next;
@@ -18,21 +24,33 @@ describe('🔐 AuthMiddleware Unit Tests', () => {
   it('✅ should authenticate valid token', async () => {
     const token = 'valid-token';
     req.headers.authorization = `Bearer ${token}`;
-    verifyToken.mockReturnValue({ id: 1, phone: '+911234567890' });
+    jwt.verify.mockReturnValue({ id: 1 });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 1,
+      customUserId: 'U1',
+      email: 'test@example.com',
+      phone: '+911234567890',
+      role: 'CUSTOMER',
+    });
 
     await authenticate(req, res, next);
 
-    expect(verifyToken).toHaveBeenCalledWith(token);
-    expect(req.user).toBeDefined();
-    expect(req.user.id).toBe(1);
-    expect(next).toHaveBeenCalled();
+    expect(jwt.verify).toHaveBeenCalledWith(token, process.env.JWT_SECRET);
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 1 } });
+    expect(req.user).toEqual({
+      id: 1,
+      customUserId: 'U1',
+      email: 'test@example.com',
+      phone: '+911234567890',
+      role: 'CUSTOMER',
+    });
+    expect(next).toHaveBeenCalledWith();
   });
 
   it('❌ should reject request without token', async () => {
     await authenticate(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
   });
 
   it('❌ should reject request with invalid token format', async () => {
@@ -40,20 +58,27 @@ describe('🔐 AuthMiddleware Unit Tests', () => {
 
     await authenticate(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
   });
 
   it('❌ should reject request with invalid token', async () => {
     req.headers.authorization = 'Bearer invalid-token';
-    verifyToken.mockImplementation(() => {
-      throw new Error('Invalid token');
+    jwt.verify.mockImplementation(() => {
+      throw new Error('jwt expired');
     });
 
     await authenticate(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  it('❌ should reject request if user not found in DB', async () => {
+    req.headers.authorization = 'Bearer valid-token';
+    jwt.verify.mockReturnValue({ id: 999 });
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await authenticate(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
   });
 });
-
