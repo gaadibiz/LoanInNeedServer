@@ -42,8 +42,8 @@ async function saveFullKYC(userId, data) {
       const postalCode = !isPlaceholder(data.currentPostalCode || data.postalCode || data.pinCode) ? (data.currentPostalCode || data.postalCode || data.pinCode) : (existingAddress && existingAddress.postalCode ? existingAddress.postalCode : (data.currentPostalCode || data.postalCode || data.pinCode));
 
       // ---------- Employment ----------
-      if (!companyName || !companyAddress || !monthlyIncomeRaw || !stability) {
-        throw new BadRequestError('Employment data incomplete ❌');
+      if (!companyName || !monthlyIncomeRaw) {
+        throw new BadRequestError('Employment data incomplete ❌ (Company Name and Income required)');
       }
 
       const monthlyIncome = Number(monthlyIncomeRaw);
@@ -67,18 +67,14 @@ async function saveFullKYC(userId, data) {
         VERY_STABLE: 'VERY_STABLE',
       };
 
-      const stabilityValue =
-        stabilityMap[stability] ||
-        String(stability)
-          .toUpperCase()
-          .replace(/\s+/g, '_')
-          .replace(/\/\s*MODERATE/gi, '')
-          .trim();
+      const stabilityValue = stability
+        ? stabilityMap[stability] || String(stability).toUpperCase().replace(/\s+/g, '_').replace(/\/\s*MODERATE/gi, '').trim()
+        : null;
 
       const employmentPayload = {
         employmentType: employmentType,
         employerName: companyName,
-        companyAddress: companyAddress,
+        companyAddress: companyAddress || null,
         monthlyIncome,
         stability: stabilityValue,
       };
@@ -91,9 +87,7 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ Employment saved userId=%s employmentId=%s', userId, employment.id);
 
       // ---------- Address ----------
-      if (!currentAddress || !currentAddressType || !permanentAddress) {
-        throw new BadRequestError('Address data incomplete ❌');
-      }
+      // Address data is optional for initial creation, so we don't throw an error if incomplete
 
       // Map frontend address type values to enum values
       const addressTypeMap = {
@@ -105,13 +99,18 @@ async function saveFullKYC(userId, data) {
         RENTED: 'RENTED',
       };
 
-      const addressTypeValue =
-        addressTypeMap[currentAddressType] ||
-        String(currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '');
+      let addressTypeValue = null;
+      if (currentAddressType) {
+         addressTypeValue = addressTypeMap[currentAddressType] || 
+                            String(currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '');
+         if (!['OWNER_SELF_OR_FAMILY', 'RENTED'].includes(addressTypeValue)) {
+             addressTypeValue = null;
+         }
+      }
 
       const addrPayload = {
-        currentAddress: currentAddress,
-        permanentAddress: permanentAddress,
+        currentAddress: currentAddress || null,
+        permanentAddress: permanentAddress || null,
         city: city || null,
         state: state || null,
         postalCode: postalCode || null,
