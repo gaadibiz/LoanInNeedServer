@@ -104,6 +104,9 @@ function validateForExport(user, classification) {
   };
 
   // ── 1. Name ───────────────────────────────────────────────
+  if (!user.bankName) {
+    warnings.push('Bank name is missing');
+  }
   if (!user.name) {
     issues.push('Customer name is missing entirely');
   } else {
@@ -202,10 +205,12 @@ function validateForExport(user, classification) {
   if (!addr) {
     warnings.push('No address record found — address fields will be blank in export');
   } else {
-    if (!addr.currentAddress) warnings.push('Current address not filled');
-    if (!addr.city)           warnings.push('City not captured');
-    if (!addr.postalCode)     warnings.push('Pin code is missing');
-    if (!addr.state)          warnings.push('State is missing');
+    if (!user.address?.currentAddress) {
+    warnings.push('Current address not filled');
+  }
+  if (!user.address?.city) warnings.push('City not captured');
+  if (!user.address?.postalCode) warnings.push('Pin code is missing');
+  if (!user.address?.state) warnings.push('State is missing');
     
     // Pincode validation
     correctness.postalCodeFormat.value = addr.postalCode || null;
