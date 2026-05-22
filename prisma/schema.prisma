@@ -384,3 +384,13 @@ model LosIntegrationJob {
   user        User            @relation(fields: [userId], references: [id])
   application LoanApplication @relation(fields: [applicationId], references: [id])
 }
+
+model LosExportLog {
+  id                     Int      @id @default(autoincrement())
+  calledAt               DateTime @default(now())
+  ipAddress              String?
+  userAgent              String?
+  statusFilterRequested  String?
+  exportedCount          Int
+  exportedApplicationIds Json
+}

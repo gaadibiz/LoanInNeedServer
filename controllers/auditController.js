@@ -11,6 +11,7 @@ const {
   auditApplication,
   auditAllApplications,
   getAuditLogs,
+  getExportLogs,
 } = require('../services/applicationAuditService');
 
 const logger = require('../utils/logger');
@@ -104,6 +105,22 @@ exports.getNotExported = async (req, res) => {
     return res.status(200).json({ success: true, ...result });
   } catch (err) {
     logger.error('[AUDIT-CTRL] getNotExported: ' + err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * GET /api/audit/export-logs
+ * ----------------------------
+ * Fetches the LOS export logs to track when Finnaux pulled data
+ */
+exports.getExportLogs = async (req, res) => {
+  try {
+    const { page, limit } = req.query;
+    const result = await getExportLogs({ page, limit });
+    return res.status(200).json(result);
+  } catch (err) {
+    logger.error('[AUDIT-CTRL] getExportLogs: ' + err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -12,6 +12,7 @@ const {
   runSingleAudit,
   runBulkAudit,
   getNotExported,
+  getExportLogs,
 } = require('../controllers/auditController');
 
 /**
@@ -25,6 +26,12 @@ router.get('/logs', verifyApiKey, getAuditLogs);
  * Only applications that failed LOS export — with reasons
  */
 router.get('/not-exported', verifyApiKey, getNotExported);
+
+/**
+ * GET  /api/audit/export-logs
+ * Fetch LOS export history / analytics
+ */
+router.get('/export-logs', verifyApiKey, getExportLogs);
 
 /**
  * POST /api/audit/run/:userId

@@ -48,6 +48,25 @@ const getApplicationsForLos = asyncHandler(async (req, res) => {
         orderBy: { createdAt: 'desc' }
     });
 
+    // Log the export API call
+    try {
+        const exportedApplicationIds = applications.map(app => app.id);
+        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const ua = req.headers['user-agent'] || 'UNKNOWN';
+
+        await prisma.losExportLog.create({
+            data: {
+                ipAddress: typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip),
+                userAgent: ua.substring(0, 255), // avoid overflow if very long
+                statusFilterRequested: status || null,
+                exportedCount: applications.length,
+                exportedApplicationIds: exportedApplicationIds
+            }
+        });
+    } catch (err) {
+        logger.error('[LOS] Failed to log export API call: ' + err.message);
+    }
+
     res.status(200).json({
         message: 'Successfully retrieved target applications for LOS integration.',
         count: applications.length,

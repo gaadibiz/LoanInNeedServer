@@ -445,10 +445,33 @@ async function getAuditLogs({ page = 1, limit = 50, exportEligible, category, se
   return { summary, total, page: parseInt(page), limit: parseInt(limit), logs: paged };
 }
 
+// ============================================================
+// GET EXPORT LOGS — analytics for LOS export API calls
+// ============================================================
+async function getExportLogs({ page = 1, limit = 50 } = {}) {
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const total = await prisma.losExportLog.count();
+  
+  const logs = await prisma.losExportLog.findMany({
+    skip,
+    take: parseInt(limit),
+    orderBy: { calledAt: 'desc' }
+  });
+
+  return {
+    success: true,
+    total,
+    page: parseInt(page),
+    limit: parseInt(limit),
+    logs
+  };
+}
+
 module.exports = {
   auditApplication,
   auditAllApplications,
   getAuditLogs,
+  getExportLogs,
   classifyApplication,
   validateForExport,
 };
