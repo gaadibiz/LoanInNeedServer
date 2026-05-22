@@ -167,9 +167,9 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         }
     });
 
-    // Filter out incomplete applications only if explicitly requested
+    // Filter out incomplete applications unless explicitly disabled
     let validApplications = applications;
-    if (filterIncomplete === 'true') {
+    if (filterIncomplete !== 'false') {
         validApplications = applications.filter(app => {
             const u = app.user;
             if (!u) return false;
@@ -187,19 +187,11 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             // 3. Determine if the profile is complete (both PAN & Aadhaar are verified)
             const isComplete = u.panVerification?.verified === true && u.aadhaarVerification?.verified === true;
 
+            if (!isComplete) return false;
+
             // 4. Check documents
             const docTypes = (u.documents || []).map(d => d.docType);
-
-            if (isComplete) {
-                // Complete profiles: only BANK_STATEMENT is mandatory
-                return docTypes.includes('BANK_STATEMENT');
-            } else {
-                // Incomplete profiles: all 4 are mandatory
-                return docTypes.includes('PAN') &&
-                       docTypes.includes('AADHAAR') &&
-                       docTypes.includes('PAY_SLIP') &&
-                       docTypes.includes('BANK_STATEMENT');
-            }
+            return docTypes.includes('BANK_STATEMENT');
         });
     }
 
