@@ -132,7 +132,7 @@ const getLoanStatus = asyncHandler(async (req, res) => {
  * @access  Private (API Key)
  */
 const exportLoanApplications = asyncHandler(async (req, res) => {
-    const { from, to } = req.query;
+    const { from, to, filterIncomplete } = req.query;
 
     if (!from || !to) {
         throw new BadRequestError('Both "from" and "to" query parameters are required in ISO format.');
@@ -167,38 +167,41 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         }
     });
 
-    // Filter out incomplete applications — only export fully complete submissions
-    const validApplications = applications.filter(app => {
-        const u = app.user;
-        if (!u) return false;
+    // Filter out incomplete applications only if explicitly requested
+    let validApplications = applications;
+    if (filterIncomplete === 'true') {
+        validApplications = applications.filter(app => {
+            const u = app.user;
+            if (!u) return false;
 
-        // 1. Name must be present and contain at least 2 words
-        if (!u.name) return false;
-        const nameParts = u.name.trim().split(/\s+/).filter(Boolean);
-        if (nameParts.length < 2) return false;
+            // 1. Name must be present and contain at least 2 words
+            if (!u.name) return false;
+            const nameParts = u.name.trim().split(/\s+/).filter(Boolean);
+            if (nameParts.length < 2) return false;
 
-        // 2. PAN and Aadhaar records & numbers must exist
-        const panNumber = u.panVerification?.panNumber;
-        const aadhaarNumber = u.aadhaarVerification?.aadhaarNumber;
-        if (!panNumber || !aadhaarNumber) return false;
+            // 2. PAN and Aadhaar records & numbers must exist
+            const panNumber = u.panVerification?.panNumber;
+            const aadhaarNumber = u.aadhaarVerification?.aadhaarNumber;
+            if (!panNumber || !aadhaarNumber) return false;
 
-        // 3. Determine if the profile is complete (both PAN & Aadhaar are verified)
-        const isComplete = u.panVerification?.verified === true && u.aadhaarVerification?.verified === true;
+            // 3. Determine if the profile is complete (both PAN & Aadhaar are verified)
+            const isComplete = u.panVerification?.verified === true && u.aadhaarVerification?.verified === true;
 
-        // 4. Check documents
-        const docTypes = (u.documents || []).map(d => d.docType);
+            // 4. Check documents
+            const docTypes = (u.documents || []).map(d => d.docType);
 
-        if (isComplete) {
-            // Complete profiles: only BANK_STATEMENT is mandatory
-            return docTypes.includes('BANK_STATEMENT');
-        } else {
-            // Incomplete profiles: all 4 are mandatory
-            return docTypes.includes('PAN') &&
-                   docTypes.includes('AADHAAR') &&
-                   docTypes.includes('PAY_SLIP') &&
-                   docTypes.includes('BANK_STATEMENT');
-        }
-    });
+            if (isComplete) {
+                // Complete profiles: only BANK_STATEMENT is mandatory
+                return docTypes.includes('BANK_STATEMENT');
+            } else {
+                // Incomplete profiles: all 4 are mandatory
+                return docTypes.includes('PAN') &&
+                       docTypes.includes('AADHAAR') &&
+                       docTypes.includes('PAY_SLIP') &&
+                       docTypes.includes('BANK_STATEMENT');
+            }
+        });
+    }
 
     const data = validApplications.map(app => {
         const u = app.user;
