@@ -2,10 +2,26 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, "../uploads/temp");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Storage (conditionally local disk or memory for S3)
+let storage;
+if (process.env.STORAGE_PROVIDER === 's3') {
+  storage = multer.memoryStorage();
+} else {
+  // Ensure uploads directory exists only if using local storage
+  const uploadDir = path.join(__dirname, "../uploads/temp");
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${Date.now()}-${file.fieldname}${ext}`);
+    },
+  });
 }
 
 // Allowed MIME types
@@ -15,17 +31,6 @@ const allowedMimeTypes = [
   "image/jpg",
   "image/png",
 ];
-
-// Storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${file.fieldname}${ext}`);
-  },
-});
 
 // File Filter for validation
 const fileFilter = (req, file, cb) => {

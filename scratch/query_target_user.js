@@ -2,46 +2,30 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  const phone = '8800222344';
-  
-  const user = await prisma.user.findFirst({
+  const users = await prisma.user.findMany({
     where: {
-      phone: {
-        contains: phone
-      }
-    },
-    include: {
-      panVerification: true,
-      aadhaarVerification: true,
-      documents: true,
-      loanApplications: true
+      OR: [
+        { name: { contains: 'Parimal', mode: 'insensitive' } },
+        { name: { contains: 'Routh', mode: 'insensitive' } }
+      ]
     }
   });
 
-  if (!user) {
-    console.log("No user found with phone containing " + phone);
+  if (users.length === 0) {
+    console.log('No users found matching Parimal or Routh.');
     return;
   }
 
-  console.log("--- USER ---");
-  console.log("ID:", user.id);
-  console.log("Name:", user.name);
-  console.log("Phone:", user.phone);
-  console.log("verificationStatus:", user.verificationStatus);
-  
-  console.log("\n--- PAN VERIFICATION ---");
-  console.log(user.panVerification);
-
-  console.log("\n--- AADHAAR VERIFICATION ---");
-  console.log(user.aadhaarVerification);
-
-  console.log("\n--- DOCUMENTS ---");
-  console.log(user.documents.map(d => ({ docType: d.docType, status: d.status, filePath: d.filePath })));
-
-  console.log("\n--- LOAN APPLICATIONS ---");
-  console.log(user.loanApplications.map(a => ({ id: a.id, status: a.status, createdAt: a.createdAt })));
+  console.log('Found users:');
+  for (const user of users) {
+    console.log(`- ${user.name} (ID: ${user.id}, Email: ${user.email}, Phone: ${user.phone})`);
+  }
 }
 
 main()
-  .catch(e => console.error(e))
-  .finally(() => prisma.$disconnect());
+  .catch(e => {
+    console.error(e);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

@@ -195,7 +195,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         });
     }
 
-    const data = validApplications.map(app => {
+    const data = await Promise.all(validApplications.map(async app => {
         const u = app.user;
         const emp = u?.employment || {};
         const addr = u?.address || {};
@@ -203,15 +203,43 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         const aadh = u?.aadhaarVerification || {};
         const pan = u?.panVerification || {};
 
-        // Read file from local disk and return [base64, filename] or null
-        const getBase64Safe = (doc) => {
+        // Read file from local disk or S3 and return [base64, filename] or null
+        const getBase64Safe = async (doc) => {
             if (!doc) return null;
             const docName = doc.fileName || (doc.filePath ? path.basename(doc.filePath) : (doc.docType ? `${doc.docType}.jpg` : 'document.jpg'));
             const DUMMY_PDF_BASE64 = 'JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgb3V0cHV0Pj4Kc3RyZWFtCgplbmRzdHJlYW0KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZSAvUGFnZS9QYXJlbnQgMSAwIFIvTWVkaWFCb3hbMCAwIDU5NSA4NDJdL1Jlc291cmNlczw8Pj4vQ29udGVudHMgMiAwIFI+PgplbmRvYmoKMSAwIG9iago8PC9UeXBlIC9QYWdlcy9LaWRzWzQgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjUgMCBvYmoKPDwvVHlwZSAvQ2F0YWxvZy9QYWdlcyAxIDAgUj4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAxODcgMDAwMDAgbiAKMDAwMDAwMDAxOSAwMDAwMCBuIAowMDAwMDAwMDAwIGYgCjAwMDAwMDAwNzggMDAwMDAgbiAKMDAwMDAwMDAyNDAgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDYvUm9vdCA1IDAgUj4+CnN0YXJ0eHJlZgoyODgKJSVFT0Y=';
             try {
-                if (!doc.filePath) {
+                if (!doc.filePath && !doc.fileUrl) {
                     return [DUMMY_PDF_BASE64, docName];
                 }
+                
+                // Fetch from S3 if configured
+                if (process.env.STORAGE_PROVIDER === 's3') {
+                    let s3UrlToFetch = null;
+                    
+                    // If it's a new file, it already has the S3 URL
+                    if (doc.fileUrl && doc.fileUrl.includes(process.env.DO_SPACES_BUCKET)) {
+                        s3UrlToFetch = doc.fileUrl;
+                    } 
+                    // If it's an old migrated file, construct the S3 URL using its filePath (which starts with 'uploads/')
+                    else if (doc.filePath) {
+                        const endpointHost = new URL(process.env.DO_SPACES_ENDPOINT).host;
+                        const s3Key = doc.filePath.replace(/\\/g, '/'); // Ensure forward slashes
+                        s3UrlToFetch = `https://${process.env.DO_SPACES_BUCKET}.${endpointHost}/${s3Key}`;
+                    }
+
+                    if (s3UrlToFetch) {
+                        try {
+                            const axios = require('axios');
+                            const response = await axios.get(s3UrlToFetch, { responseType: 'arraybuffer' });
+                            const b64 = Buffer.from(response.data, 'binary').toString('base64');
+                            return [b64, docName];
+                        } catch (err) {
+                            logger.warn(`[LOAN EXPORT] Error fetching from S3 ${s3UrlToFetch}: ${err.message}. Trying local fallback...`);
+                        }
+                    }
+                }
+
                 const absolutePath = path.join(__dirname, '..', doc.filePath);
                 if (fs.existsSync(absolutePath)) {
                     const b64 = encodeFileToBase64(absolutePath, false);
@@ -226,25 +254,26 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         };
 
         // Get documents by type
-        const getDocsByType = (type) => {
+        const getDocsByType = async (type) => {
             if (!u?.documents) return null;
             const docs = u.documents.filter(d => d.docType === type);
             if (docs.length === 0) return null;
             if (['ADDRESS', 'PAY_SLIP', 'BANK_STATEMENT'].includes(type)) {
-                const results = docs.map(d => getBase64Safe(d)).filter(Boolean);
-                return results.length > 0 ? results : null;
+                const results = await Promise.all(docs.map(d => getBase64Safe(d)));
+                const filtered = results.filter(Boolean);
+                return filtered.length > 0 ? filtered : null;
             }
-            return getBase64Safe(docs[0]);
+            return await getBase64Safe(docs[0]);
         };
 
-        const aadhaarFront           = getDocsByType('AADHAAR');
+        const aadhaarFront           = await getDocsByType('AADHAAR');
         const aadhaarBack            = null;
 
-        const addressDocument        = getDocsByType('ADDRESS');
-        const profilePicture         = getDocsByType('PHOTO');
-        const panCard                = getDocsByType('PAN');
-        const salarySlips            = getDocsByType('PAY_SLIP');
-        const bankStatements         = getDocsByType('BANK_STATEMENT');
+        const addressDocument        = await getDocsByType('ADDRESS');
+        const profilePicture         = await getDocsByType('PHOTO');
+        const panCard                = await getDocsByType('PAN');
+        const salarySlips            = await getDocsByType('PAY_SLIP');
+        const bankStatements         = await getDocsByType('BANK_STATEMENT');
         const employmentProofDocument = (bankStatements && bankStatements.length > 0) ? bankStatements[0] : null;
 
         return {
@@ -306,7 +335,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             reason: null,
             employeeName: null
         };
-    });
+    }));
 
     res.status(200).json({ data });
 });

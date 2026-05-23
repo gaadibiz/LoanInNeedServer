@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const path = require('path');
 const OtpService = require('./otpService');
 const { encodeBufferToBase64 } = require('../utils/base64Encoder');
+const s3Client = require('../utils/s3Client');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const UPLOAD_BUCKET = 'Documents';
 
@@ -45,17 +47,38 @@ class DocumentVerificationService {
     // 3. Generate Base64 (for response only)
     const base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
 
-    // 4. Save to Local File System (DigitalOcean disk)
-    const relativeFilePath = `uploads/${UPLOAD_BUCKET}/${filePath}`;
-    const absoluteDirPath = path.join(__dirname, '..', `uploads/${UPLOAD_BUCKET}/${docType}/${userId}`);
-    const absoluteFilePath = path.join(__dirname, '..', relativeFilePath);
+    // 4 & 5. Save and Public URL
+    let relativeFilePath, publicUrl;
 
-    await fs.mkdir(absoluteDirPath, { recursive: true });
-    await fs.writeFile(absoluteFilePath, fileBuffer);
+    if (process.env.STORAGE_PROVIDER === 's3') {
+      const s3Key = `${UPLOAD_BUCKET}/${filePath}`;
+      const command = new PutObjectCommand({
+        Bucket: process.env.DO_SPACES_BUCKET,
+        Key: s3Key,
+        Body: fileBuffer,
+        ACL: 'public-read',
+        ContentType: file.mimetype,
+      });
 
-    // 5. Public URL
-    const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
-    const publicUrl = `${appUrl}/${relativeFilePath}`;
+      await s3Client.send(command);
+      
+      relativeFilePath = s3Key;
+      // Depending on endpoint, it might be https://bucket.endpoint/key
+      // Ensure we parse out the correct public URL. Assuming endpoints like https://sfo3.digitaloceanspaces.com
+      const endpointHost = new URL(process.env.DO_SPACES_ENDPOINT).host; // e.g. sfo3.digitaloceanspaces.com
+      publicUrl = `https://${process.env.DO_SPACES_BUCKET}.${endpointHost}/${s3Key}`;
+    } else {
+      // Local File System Fallback
+      relativeFilePath = `uploads/${UPLOAD_BUCKET}/${filePath}`;
+      const absoluteDirPath = path.join(__dirname, '..', `uploads/${UPLOAD_BUCKET}/${docType}/${userId}`);
+      const absoluteFilePath = path.join(__dirname, '..', relativeFilePath);
+
+      await fs.mkdir(absoluteDirPath, { recursive: true });
+      await fs.writeFile(absoluteFilePath, fileBuffer);
+
+      const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+      publicUrl = `${appUrl}/${relativeFilePath}`;
+    }
 
     // 6. Checksum
     const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');

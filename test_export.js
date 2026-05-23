@@ -4,14 +4,9 @@ const fs = require('fs');
 const path = require('path');
 
 async function runTest() {
-    // 1. Create a dummy file in uploads/Documents/AADHAAR/1/
-    const dirPath = path.join(__dirname, 'uploads', 'Documents', 'AADHAAR', '1');
-    fs.mkdirSync(dirPath, { recursive: true });
-    
-    const filePath = path.join(dirPath, 'test_file.txt');
-    fs.writeFileSync(filePath, 'This is a test document content');
-    
-    const relativePath = 'uploads/Documents/AADHAAR/1/test_file.txt';
+    // For S3 testing, we don't need a local file. We will use a known uploaded file from DO Spaces.
+    const relativePath = 'Documents/AADHAAR/9999/1779557820532_test_dummy.txt';
+    const s3Url = 'https://bumchum.sfo3.digitaloceanspaces.com/Documents/AADHAAR/9999/1779557820532_test_dummy.txt';
 
     // 2. Insert dummy User, Document, and LoanApplication
     const user = await prisma.user.create({
@@ -29,22 +24,26 @@ async function runTest() {
                     {
                         docType: 'AADHAAR',
                         filePath: relativePath,
-                        fileName: 'test_file.txt'
+                        fileUrl: s3Url,
+                        fileName: 'test_dummy.txt'
                     },
                     {
                         docType: 'PAN',
                         filePath: relativePath,
-                        fileName: 'test_file.txt'
+                        fileUrl: s3Url,
+                        fileName: 'test_dummy.txt'
                     },
                     {
                         docType: 'BANK_STATEMENT',
                         filePath: relativePath,
-                        fileName: 'test_file.txt'
+                        fileUrl: s3Url,
+                        fileName: 'test_dummy.txt'
                     },
                     {
                         docType: 'PAY_SLIP',
                         filePath: relativePath,
-                        fileName: 'test_file.txt'
+                        fileUrl: s3Url,
+                        fileName: 'test_dummy.txt'
                     }
                 ]
             },
