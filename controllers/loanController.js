@@ -176,7 +176,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
 
     let isFirstApp = true;
     let totalProcessed = 0;
-    const CHUNK_SIZE = 4; // Process 4 applications at a time
+    const CHUNK_SIZE = 25; // Drastically increased for speed since S3 is now parallelized
 
     for (let i = 0; i < applicationIds.length; i += CHUNK_SIZE) {
         const chunkIds = applicationIds.slice(i, i + CHUNK_SIZE).map(a => a.id);

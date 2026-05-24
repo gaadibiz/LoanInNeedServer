@@ -8,6 +8,7 @@ const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
+const compression = require('compression');
 const dotenv = require('dotenv');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -25,6 +26,7 @@ dotenv.config();
 const app = express();
 
 // Middleware
+app.use(compression());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false })); // Adjust helmet to allow local static files
