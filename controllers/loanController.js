@@ -299,9 +299,9 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                                 try {
                                     await prisma.userDocument.update({
                                         where: { id: doc.id },
-                                        data: { status: 'MISSING', notes: 'S3 Object not found' }
+                                        data: { status: 'REJECTED', notes: 'MISSING_IN_S3: Object not found in bucket' }
                                     });
-                                    logger.info(`[LOAN EXPORT] Flagged document ID ${doc.id} as MISSING to stop endless retries.`);
+                                    logger.info(`[LOAN EXPORT] Flagged document ID ${doc.id} as REJECTED (Missing in S3) to stop endless retries.`);
                                 } catch(dbErr) {
                                     logger.error(`[LOAN EXPORT] Error updating DB for missing doc ${doc.id}: ${dbErr.message}`);
                                 }
