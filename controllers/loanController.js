@@ -14,11 +14,15 @@ const s3Client = require('../utils/s3Client');
 // Free in-memory Bounded Cache Hack for S3 Base64 Files
 // Speeds up repeated exports instantly
 const S3_BASE64_CACHE = new Map();
-const MAX_CACHE_SIZE = 100; // Limits to ~100 documents to prevent OOM memory leaks
+const MAX_CACHE_SIZE = 10; // Reduced to 10 documents to prevent severe OOM crashes on constrained environments
 
 const s3AxiosInstance = axios.create({
     httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 })
 });
+
+// Load Shedding (Concurrency Limiter) variables
+let activeExports = 0;
+const MAX_CONCURRENT_EXPORTS = 2;
 
 /**
  * @desc    Apply for a Loan
@@ -158,7 +162,14 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
          throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
     }
 
-    // 1. Fetch only IDs to prevent Out Of Memory (OOM) crashes and DB strain
+    if (activeExports >= MAX_CONCURRENT_EXPORTS) {
+        res.status(429).json({ error: "System is at maximum capacity processing other heavy exports. Please wait a moment and try again." });
+        return;
+    }
+
+    activeExports++;
+    try {
+        // 1. Fetch only IDs to prevent Out Of Memory (OOM) crashes and DB strain
     const applicationIds = await prisma.loanApplication.findMany({
         where: {
             createdAt: {
@@ -176,7 +187,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
 
     let isFirstApp = true;
     let totalProcessed = 0;
-    const CHUNK_SIZE = 10; // Reduced to 10 to prevent Out-Of-Memory (OOM) crashes on DO App Platform
+    const CHUNK_SIZE = 1; // Strict 1 to completely prevent Out-Of-Memory (OOM) crashes on 512MB RAM
 
     for (let i = 0; i < applicationIds.length; i += CHUNK_SIZE) {
         const chunkIds = applicationIds.slice(i, i + CHUNK_SIZE).map(a => a.id);
@@ -283,7 +294,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                             const b64 = buffer.toString('base64');
                             
                             // Save to Bounded Cache
-                            if (S3_BASE64_CACHE.size >= 100) {
+                            if (S3_BASE64_CACHE.size >= MAX_CACHE_SIZE) {
                                 // Delete the oldest item (Map preserves insertion order)
                                 const oldestKey = S3_BASE64_CACHE.keys().next().value;
                                 S3_BASE64_CACHE.delete(oldestKey);
@@ -409,15 +420,22 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         }
         }));
 
-        // Stream this chunk of applications instantly
-        chunkResults.forEach(app => {
+        // Stream this chunk of applications instantly with strict TCP backpressure
+        for (const app of chunkResults) {
             if (!isFirstApp) {
-                res.write(',');
+                if (!res.write(',')) {
+                    await new Promise(resolve => res.once('drain', resolve));
+                }
             }
-            res.write(JSON.stringify(app));
+            if (!res.write(JSON.stringify(app))) {
+                await new Promise(resolve => res.once('drain', resolve));
+            }
             isFirstApp = false;
-        });
+        }
         totalProcessed += chunkResults.length;
+
+        // Force Event Loop to yield so V8 Garbage Collector can clean up massive Base64 strings
+        await new Promise(resolve => setImmediate(resolve));
     }
 
     // End JSON array and response
@@ -425,6 +443,9 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
     res.end();
     
     logger.info(`Export Stream Completed Successfully for ${totalProcessed} records.`);
+    } finally {
+        activeExports--;
+    }
 });
 
 /**

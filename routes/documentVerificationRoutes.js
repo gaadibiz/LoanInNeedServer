@@ -8,7 +8,6 @@ const {
 
 const { authenticate } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
-const { attachDocumentAuditHook } = require("../middleware/auditMiddleware");
 
 /**
  * @route POST /api/document/submit
@@ -23,7 +22,6 @@ router.post(
     { name: "bankStatements", maxCount: 5 },
     { name: "selfie", maxCount: 1 },
   ]),
-  attachDocumentAuditHook,
   submitDocumentVerification
 );
 
@@ -38,7 +36,6 @@ router.post(
   "/upload/:type",
   authenticate,
   upload.single("file"),
-  attachDocumentAuditHook,
   uploadDocument
 );
 

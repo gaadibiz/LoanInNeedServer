@@ -103,7 +103,6 @@ app.use('/api/loans', require('./routes/loanRoutes')); // ✅ Mounted Loan route
 app.use('/api/los', require('./routes/losRoutes')); // ✅ Mounted LOS routes
 
 // ✅ Application Audit Routes
-app.use('/api/audit', require('./routes/auditRoutes')); // ✅ Mounted Audit routes
 
 // ✅ Utility Routes
 app.use('/api/utils', require('./routes/utilityRoutes')); // ✅ Mounted Utilities (Base64)
