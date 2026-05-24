@@ -6,6 +6,12 @@ const { generateApplicationPdf, formatApplicationNumber } = require('../services
 const path = require('path');
 const fs = require('fs');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
+const axios = require('axios');
+const https = require('https');
+
+const s3AxiosInstance = axios.create({
+    httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 })
+});
 
 /**
  * @desc    Apply for a Loan
@@ -195,7 +201,13 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         });
     }
 
-    const data = await Promise.all(validApplications.map(async app => {
+    const data = [];
+    const CHUNK_SIZE = 2; // Reduced to prevent OOM crashes on DigitalOcean App Platform
+    
+    for (let i = 0; i < validApplications.length; i += CHUNK_SIZE) {
+        const chunk = validApplications.slice(i, i + CHUNK_SIZE);
+        
+        const chunkResults = await Promise.all(chunk.map(async app => {
         const u = app.user;
         const emp = u?.employment || {};
         const addr = u?.address || {};
@@ -215,27 +227,40 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                 
                 // Fetch from S3 if configured
                 if (process.env.STORAGE_PROVIDER === 's3') {
-                    let s3UrlToFetch = null;
+                    let s3Key = null;
                     
-                    // If it's a new file, it already has the S3 URL
                     if (doc.fileUrl && doc.fileUrl.includes(process.env.DO_SPACES_BUCKET)) {
-                        s3UrlToFetch = doc.fileUrl;
-                    } 
-                    // If it's an old migrated file, construct the S3 URL using its filePath (which starts with 'uploads/')
-                    else if (doc.filePath) {
-                        const endpointHost = new URL(process.env.DO_SPACES_ENDPOINT).host;
-                        const s3Key = doc.filePath.replace(/\\/g, '/'); // Ensure forward slashes
-                        s3UrlToFetch = `https://${process.env.DO_SPACES_BUCKET}.${endpointHost}/${s3Key}`;
+                        try {
+                            const urlObj = new URL(doc.fileUrl);
+                            s3Key = decodeURIComponent(urlObj.pathname.substring(1));
+                        } catch (e) {
+                            // ignore parse error
+                        }
+                    } else if (doc.filePath) {
+                        s3Key = doc.filePath.replace(/\\/g, '/'); // Ensure forward slashes
                     }
 
-                    if (s3UrlToFetch) {
+                    if (s3Key) {
                         try {
-                            const axios = require('axios');
-                            const response = await axios.get(s3UrlToFetch, { responseType: 'arraybuffer' });
-                            const b64 = Buffer.from(response.data, 'binary').toString('base64');
+                            const { GetObjectCommand } = require('@aws-sdk/client-s3');
+                            const s3Client = require('../utils/s3Client');
+                            const command = new GetObjectCommand({
+                                Bucket: process.env.DO_SPACES_BUCKET,
+                                Key: s3Key
+                            });
+                            const s3Response = await s3Client.send(command);
+                            
+                            const buffer = await new Promise((resolve, reject) => {
+                                const chunks = [];
+                                s3Response.Body.on('data', (chunk) => chunks.push(chunk));
+                                s3Response.Body.on('end', () => resolve(Buffer.concat(chunks)));
+                                s3Response.Body.on('error', reject);
+                            });
+                            
+                            const b64 = buffer.toString('base64');
                             return [b64, docName];
                         } catch (err) {
-                            logger.warn(`[LOAN EXPORT] Error fetching from S3 ${s3UrlToFetch}: ${err.message}. Trying local fallback...`);
+                            logger.warn(`[LOAN EXPORT] Error fetching from S3 Key: ${s3Key}: ${err.message}. Trying local fallback...`);
                         }
                     }
                 }
@@ -266,14 +291,15 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             return await getBase64Safe(docs[0]);
         };
 
+        // Fetch sequentially to prevent massive memory spikes
         const aadhaarFront           = await getDocsByType('AADHAAR');
         const aadhaarBack            = null;
-
         const addressDocument        = await getDocsByType('ADDRESS');
         const profilePicture         = await getDocsByType('PHOTO');
         const panCard                = await getDocsByType('PAN');
         const salarySlips            = await getDocsByType('PAY_SLIP');
         const bankStatements         = await getDocsByType('BANK_STATEMENT');
+        
         const employmentProofDocument = (bankStatements && bankStatements.length > 0) ? bankStatements[0] : null;
 
         return {
@@ -335,7 +361,10 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             reason: null,
             employeeName: null
         };
-    }));
+        }));
+        
+        data.push(...chunkResults);
+    }
 
     res.status(200).json({ data });
 });
