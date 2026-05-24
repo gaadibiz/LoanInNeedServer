@@ -283,7 +283,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                             const b64 = buffer.toString('base64');
                             
                             // Save to Bounded Cache
-                            if (S3_BASE64_CACHE.size >= MAX_CACHE_SIZE) {
+                            if (S3_BASE64_CACHE.size >= 100) {
                                 // Delete the oldest item (Map preserves insertion order)
                                 const oldestKey = S3_BASE64_CACHE.keys().next().value;
                                 S3_BASE64_CACHE.delete(oldestKey);
@@ -293,27 +293,15 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                             return [b64, docName];
                         } catch (err) {
                             logger.warn(`[LOAN EXPORT] Error fetching from S3 Key: ${s3Key} | AWS Error: ${err.name} - ${err.message}`);
-                            
-                            // Flag missing documents in DB to stop future retries
-                            if (err.name === 'NoSuchKey' || err.name === 'NotFound') {
-                                try {
-                                    await prisma.userDocument.update({
-                                        where: { id: doc.id },
-                                        data: { status: 'REJECTED', notes: 'MISSING_IN_S3: Object not found in bucket' }
-                                    });
-                                    logger.info(`[LOAN EXPORT] Flagged document ID ${doc.id} as REJECTED (Missing in S3) to stop endless retries.`);
-                                } catch(dbErr) {
-                                    logger.error(`[LOAN EXPORT] Error updating DB for missing doc ${doc.id}: ${dbErr.message}`);
-                                }
-                            }
                         }
                     }
                 }
 
-                // If S3 fetch fails, return dummy. DO NOT fall back to local ephemeral disk.
+                // Clean fallback: If S3 fails or is not configured, silently return the Dummy PDF.
+                // No local disk searching, no DB flagging. Pure and seamless.
                 return [DUMMY_PDF_BASE64, docName];
             } catch (err) {
-                logger.error(`[LOAN EXPORT] Error fetching ${doc.filePath}: ${err.message}. Using fallback.`);
+                logger.error(`[LOAN EXPORT] Critical error encoding doc: ${err.message}`);
                 return [DUMMY_PDF_BASE64, docName];
             }
         };
