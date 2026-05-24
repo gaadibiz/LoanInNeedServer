@@ -61,7 +61,7 @@ exports.verifyPAN = async (req, res, next) => {
   try {
     const { panNumber } = req.body;
     const panImage = req.file;
-    const userId = req.user.id;
+    const userId = req.user?.id || req.params?.userId;
 
     if (!panNumber) throw new BadRequestError('PAN number is required ❌');
 

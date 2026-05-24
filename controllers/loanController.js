@@ -151,55 +151,16 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
          throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
     }
 
-    const applications = await prisma.loanApplication.findMany({
+    // 1. Fetch only IDs to prevent Out Of Memory (OOM) crashes and DB strain
+    const applicationIds = await prisma.loanApplication.findMany({
         where: {
             createdAt: {
                 gte: fromDate,
                 lte: toDate
             }
         },
-        include: {
-            user: {
-                include: {
-                    address: true,
-                    employment: true,
-                    business: true,
-                    locations: true,
-                    documents: true,
-                    aadhaarVerification: true,
-                    panVerification: true
-                }
-            }
-        }
+        select: { id: true }
     });
-
-    // Filter out incomplete applications unless explicitly disabled
-    let validApplications = applications;
-    if (filterIncomplete !== 'false') {
-        validApplications = applications.filter(app => {
-            const u = app.user;
-            if (!u) return false;
-
-            // 1. Name must be present and contain at least 2 words
-            if (!u.name) return false;
-            const nameParts = u.name.trim().split(/\s+/).filter(Boolean);
-            if (nameParts.length < 2) return false;
-
-            // 2. PAN and Aadhaar records & numbers must exist
-            const panNumber = u.panVerification?.panNumber;
-            const aadhaarNumber = u.aadhaarVerification?.aadhaarNumber;
-            if (!panNumber || !aadhaarNumber) return false;
-
-            // 3. Determine if the profile is complete (both PAN & Aadhaar are verified)
-            const isComplete = u.panVerification?.verified === true && u.aadhaarVerification?.verified === true;
-
-            if (!isComplete) return false;
-
-            // 4. Check documents
-            const docTypes = (u.documents || []).map(d => d.docType);
-            return docTypes.includes('BANK_STATEMENT');
-        });
-    }
 
     // Set streaming headers immediately to bypass DigitalOcean 60s timeout
     res.setHeader('Content-Type', 'application/json');
@@ -207,11 +168,56 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
     res.write('{"data":[');
 
     let isFirstApp = true;
+    let totalProcessed = 0;
     const CHUNK_SIZE = 4; // Process 4 applications at a time
-    for (let i = 0; i < validApplications.length; i += CHUNK_SIZE) {
-        const chunk = validApplications.slice(i, i + CHUNK_SIZE);
+
+    for (let i = 0; i < applicationIds.length; i += CHUNK_SIZE) {
+        const chunkIds = applicationIds.slice(i, i + CHUNK_SIZE).map(a => a.id);
         
-        const chunkResults = await Promise.all(chunk.map(async app => {
+        // 2. Fetch full data ONLY for this chunk
+        const chunkApps = await prisma.loanApplication.findMany({
+            where: { id: { in: chunkIds } },
+            include: {
+                user: {
+                    include: {
+                        address: true,
+                        employment: true,
+                        business: true,
+                        locations: true,
+                        documents: true,
+                        aadhaarVerification: true,
+                        panVerification: true
+                    }
+                }
+            }
+        });
+
+        // 3. Filter the chunk
+        let validChunk = chunkApps;
+        if (filterIncomplete !== 'false') {
+            validChunk = chunkApps.filter(app => {
+                const u = app.user;
+                if (!u) return false;
+
+                if (!u.name) return false;
+                const nameParts = u.name.trim().split(/\s+/).filter(Boolean);
+                if (nameParts.length < 2) return false;
+
+                const panNumber = u.panVerification?.panNumber;
+                const aadhaarNumber = u.aadhaarVerification?.aadhaarNumber;
+                if (!panNumber || !aadhaarNumber) return false;
+
+                const isComplete = u.panVerification?.verified === true && u.aadhaarVerification?.verified === true;
+                if (!isComplete) return false;
+
+                const docTypes = (u.documents || []).map(d => d.docType);
+                return docTypes.includes('BANK_STATEMENT');
+            });
+        }
+
+        if (validChunk.length === 0) continue;
+        
+        const chunkResults = await Promise.all(validChunk.map(async app => {
         const u = app.user;
         const emp = u?.employment || {};
         const addr = u?.address || {};
@@ -367,9 +373,6 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             employeeName: null
         };
 
-            // Remove documents array as per requested format
-            delete processedApp.documents;
-            return processedApp;
         }));
 
         // Stream this chunk of applications instantly
@@ -380,13 +383,14 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             res.write(JSON.stringify(app));
             isFirstApp = false;
         });
+        totalProcessed += chunkResults.length;
     }
 
     // End JSON array and response
     res.write(']}');
     res.end();
     
-    logger.info(`Export Stream Completed Successfully for ${validApplications.length} records.`);
+    logger.info(`Export Stream Completed Successfully for ${totalProcessed} records.`);
 });
 
 /**
