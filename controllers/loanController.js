@@ -201,9 +201,13 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         });
     }
 
-    const data = [];
-    const CHUNK_SIZE = 2; // Reduced to prevent OOM crashes on DigitalOcean App Platform
-    
+    // Set streaming headers immediately to bypass DigitalOcean 60s timeout
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200);
+    res.write('{"data":[');
+
+    let isFirstApp = true;
+    const CHUNK_SIZE = 4; // Process 4 applications at a time
     for (let i = 0; i < validApplications.length; i += CHUNK_SIZE) {
         const chunk = validApplications.slice(i, i + CHUNK_SIZE);
         
@@ -248,6 +252,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                                 Bucket: process.env.DO_SPACES_BUCKET,
                                 Key: s3Key
                             });
+                            
                             const s3Response = await s3Client.send(command);
                             
                             const buffer = await new Promise((resolve, reject) => {
@@ -361,12 +366,27 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             reason: null,
             employeeName: null
         };
+
+            // Remove documents array as per requested format
+            delete processedApp.documents;
+            return processedApp;
         }));
-        
-        data.push(...chunkResults);
+
+        // Stream this chunk of applications instantly
+        chunkResults.forEach(app => {
+            if (!isFirstApp) {
+                res.write(',');
+            }
+            res.write(JSON.stringify(app));
+            isFirstApp = false;
+        });
     }
 
-    res.status(200).json({ data });
+    // End JSON array and response
+    res.write(']}');
+    res.end();
+    
+    logger.info(`Export Stream Completed Successfully for ${validApplications.length} records.`);
 });
 
 /**
