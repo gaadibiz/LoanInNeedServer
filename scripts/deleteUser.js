@@ -49,9 +49,6 @@ async function deleteUser() {
     console.log('Deleting Loans...');
     await prisma.loan.deleteMany({ where: { userId } });
     
-    console.log('Deleting AuditLogs...');
-    await prisma.auditLog.deleteMany({ where: { userId } });
-
     // Finally delete the user
     console.log('Deleting User record...');
     await prisma.user.delete({ where: { id: userId } });

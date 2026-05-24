@@ -176,7 +176,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
 
     let isFirstApp = true;
     let totalProcessed = 0;
-    const CHUNK_SIZE = 25; // Drastically increased for speed since S3 is now parallelized
+    const CHUNK_SIZE = 10; // Reduced to 10 to prevent Out-Of-Memory (OOM) crashes on DO App Platform
 
     for (let i = 0; i < applicationIds.length; i += CHUNK_SIZE) {
         const chunkIds = applicationIds.slice(i, i + CHUNK_SIZE).map(a => a.id);
@@ -292,20 +292,28 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                             
                             return [b64, docName];
                         } catch (err) {
-                            logger.warn(`[LOAN EXPORT] Error fetching from S3 Key: ${s3Key}: ${err.message}. Trying local fallback...`);
+                            logger.warn(`[LOAN EXPORT] Error fetching from S3 Key: ${s3Key} | AWS Error: ${err.name} - ${err.message}`);
+                            
+                            // Flag missing documents in DB to stop future retries
+                            if (err.name === 'NoSuchKey' || err.name === 'NotFound') {
+                                try {
+                                    await prisma.userDocument.update({
+                                        where: { id: doc.id },
+                                        data: { status: 'MISSING', notes: 'S3 Object not found' }
+                                    });
+                                    logger.info(`[LOAN EXPORT] Flagged document ID ${doc.id} as MISSING to stop endless retries.`);
+                                } catch(dbErr) {
+                                    logger.error(`[LOAN EXPORT] Error updating DB for missing doc ${doc.id}: ${dbErr.message}`);
+                                }
+                            }
                         }
                     }
                 }
 
-                const absolutePath = path.join(__dirname, '..', doc.filePath);
-                if (fs.existsSync(absolutePath)) {
-                    const b64 = encodeFileToBase64(absolutePath, false);
-                    return [b64, docName];
-                }
-                logger.warn(`[LOAN EXPORT] File not found on disk: ${absolutePath}. Using fallback.`);
+                // If S3 fetch fails, return dummy. DO NOT fall back to local ephemeral disk.
                 return [DUMMY_PDF_BASE64, docName];
             } catch (err) {
-                logger.error(`[LOAN EXPORT] Error encoding ${doc.filePath}: ${err.message}. Using fallback.`);
+                logger.error(`[LOAN EXPORT] Error fetching ${doc.filePath}: ${err.message}. Using fallback.`);
                 return [DUMMY_PDF_BASE64, docName];
             }
         };
