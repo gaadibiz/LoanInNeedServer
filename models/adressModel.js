@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prismaClient');
 
 const AddressModel = {
   async createAddress(userId, data, tx = prisma) {
@@ -17,6 +16,14 @@ const AddressModel = {
 
   async findByUserId(userId, tx = prisma) {
     return tx.addressDetail.findUnique({ where: { userId } });
+  },
+
+  async upsertAddress(userId, data, tx = prisma) {
+    return tx.addressDetail.upsert({
+      where: { userId },
+      update: data,
+      create: { ...data, user: { connect: { id: userId } } },
+    });
   },
 };
 module.exports = AddressModel;

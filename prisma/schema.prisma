@@ -184,6 +184,8 @@ model Loan {
   loanAmount    Float
   purposeOfLoan String?
   user          User       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model LoanApplication {
@@ -206,6 +208,8 @@ model LoanApplication {
   employmentDetail    EmploymentDetail?  @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
   user                User               @relation(fields: [userId], references: [id])
   losIntegrationJob   LosIntegrationJob?
+
+  @@index([userId])
 }
 
 model UserDocument {
@@ -243,6 +247,8 @@ model UserLocation {
   placeName  String?
   capturedAt DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model UserDocumentStatus {
@@ -383,6 +389,8 @@ model LosIntegrationJob {
 
   user        User            @relation(fields: [userId], references: [id])
   application LoanApplication @relation(fields: [applicationId], references: [id])
+
+  @@index([userId])
 }
 
 model LosExportLog {

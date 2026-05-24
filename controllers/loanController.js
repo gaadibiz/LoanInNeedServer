@@ -8,6 +8,13 @@ const fs = require('fs');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
 const axios = require('axios');
 const https = require('https');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
+const s3Client = require('../utils/s3Client');
+
+// Free in-memory Bounded Cache Hack for S3 Base64 Files
+// Speeds up repeated exports instantly
+const S3_BASE64_CACHE = new Map();
+const MAX_CACHE_SIZE = 100; // Limits to ~100 documents to prevent OOM memory leaks
 
 const s3AxiosInstance = axios.create({
     httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 })
@@ -218,6 +225,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
         if (validChunk.length === 0) continue;
         
         const chunkResults = await Promise.all(validChunk.map(async app => {
+        try {
         const u = app.user;
         const emp = u?.employment || {};
         const addr = u?.address || {};
@@ -250,10 +258,14 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                         s3Key = doc.filePath.replace(/\\/g, '/'); // Ensure forward slashes
                     }
 
+                    // Check Cache FIRST
+                    if (s3Key && S3_BASE64_CACHE.has(s3Key)) {
+                        logger.info(`[LOAN EXPORT] Serving S3 Document from Memory Cache: ${s3Key}`);
+                        return [S3_BASE64_CACHE.get(s3Key), docName];
+                    }
+
                     if (s3Key) {
                         try {
-                            const { GetObjectCommand } = require('@aws-sdk/client-s3');
-                            const s3Client = require('../utils/s3Client');
                             const command = new GetObjectCommand({
                                 Bucket: process.env.DO_SPACES_BUCKET,
                                 Key: s3Key
@@ -269,6 +281,15 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                             });
                             
                             const b64 = buffer.toString('base64');
+                            
+                            // Save to Bounded Cache
+                            if (S3_BASE64_CACHE.size >= MAX_CACHE_SIZE) {
+                                // Delete the oldest item (Map preserves insertion order)
+                                const oldestKey = S3_BASE64_CACHE.keys().next().value;
+                                S3_BASE64_CACHE.delete(oldestKey);
+                            }
+                            S3_BASE64_CACHE.set(s3Key, b64);
+                            
                             return [b64, docName];
                         } catch (err) {
                             logger.warn(`[LOAN EXPORT] Error fetching from S3 Key: ${s3Key}: ${err.message}. Trying local fallback...`);
@@ -302,15 +323,24 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             return await getBase64Safe(docs[0]);
         };
 
-        // Fetch sequentially to prevent massive memory spikes
-        const aadhaarFront           = await getDocsByType('AADHAAR');
-        const aadhaarBack            = null;
-        const addressDocument        = await getDocsByType('ADDRESS');
-        const profilePicture         = await getDocsByType('PHOTO');
-        const panCard                = await getDocsByType('PAN');
-        const salarySlips            = await getDocsByType('PAY_SLIP');
-        const bankStatements         = await getDocsByType('BANK_STATEMENT');
+        // Fetch all document types concurrently to drastically reduce waiting time
+        const [
+            aadhaarFront,
+            addressDocument,
+            profilePicture,
+            panCard,
+            salarySlips,
+            bankStatements
+        ] = await Promise.all([
+            getDocsByType('AADHAAR'),
+            getDocsByType('ADDRESS'),
+            getDocsByType('PHOTO'),
+            getDocsByType('PAN'),
+            getDocsByType('PAY_SLIP'),
+            getDocsByType('BANK_STATEMENT')
+        ]);
         
+        const aadhaarBack = null;
         const employmentProofDocument = (bankStatements && bankStatements.length > 0) ? bankStatements[0] : null;
 
         return {
@@ -372,7 +402,15 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
             reason: null,
             employeeName: null
         };
-
+        } catch (appFormatError) {
+            logger.error(`[LOAN EXPORT] Fallback triggered. Failed to load Application ID ${app.id}: ${appFormatError.message}`);
+            return {
+                applicationNumber: app.id,
+                status: 'DATA_ERROR',
+                reason: 'System fallback: Corrupted record skipped due to missing or invalid data files.',
+                error: true
+            };
+        }
         }));
 
         // Stream this chunk of applications instantly

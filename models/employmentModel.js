@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prismaClient');
 
 const EmploymentModel = {
   async findByUserId(userId, tx = prisma) {
@@ -27,6 +26,21 @@ const EmploymentModel = {
     return tx.employmentDetail.update({
       where: { userId },
       data,
+    });
+  },
+
+  async upsertEmploymentDetails(userId, data, tx = prisma) {
+    return tx.employmentDetail.upsert({
+      where: { userId },
+      update: data,
+      create: {
+        employmentType: data.employmentType || "OTHER",
+        employerName: data.employerName,
+        companyAddress: data.companyAddress,
+        monthlyIncome: data.monthlyIncome,
+        stability: data.stability,
+        user: { connect: { id: userId } },
+      },
     });
   }
 };

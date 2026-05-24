@@ -2,6 +2,8 @@
 
 // Import dependencies
 const express = require('express');
+const cluster = require('cluster');
+const os = require('os');
 const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -111,23 +113,38 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// ✅ Start Background Workers
-startLosWorker();
+if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
+  const numCPUs = Math.min(os.cpus().length, 4); // Limit to 4 to prevent heavy memory usage on DO app platform
+  logger.info(`Primary ${process.pid} is running. Forking ${numCPUs} workers for Load Balancing...`);
 
-// Start the server and log startup
-app.listen(PORT, HOST, () => {
-  logger.info(`Server is running on ${HOST}:${PORT}`);
-});
+  // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
+  startLosWorker();
 
-// Handle unexpected errors gracefully
-process.on('uncaughtException', (err) => {
-  logger.error('Uncaught Exception: %s', err.stack || err.message);
-  process.exit(1); // Optional: exit after logging
-});
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
 
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at: %s, reason: %s', promise, reason);
-  // Optionally exit process or handle appropriately
-});
+  cluster.on('exit', (worker, code, signal) => {
+    logger.error(`Worker ${worker.process.pid} died with code: ${code}. Forking a replacement...`);
+    cluster.fork();
+  });
+} else {
+  // Worker process or Test environment
+  // Start the server and log startup
+  app.listen(PORT, HOST, () => {
+    logger.info(`Worker ${process.pid} started and listening on ${HOST}:${PORT}`);
+  });
+
+  // Handle unexpected errors gracefully
+  process.on('uncaughtException', (err) => {
+    logger.error(`Worker ${process.pid} - Uncaught Exception: %s`, err.stack || err.message);
+    process.exit(1); // Optional: exit after logging
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error(`Worker ${process.pid} - Unhandled Rejection at: %s, reason: %s`, promise, reason);
+    // Optionally exit process or handle appropriately
+  });
+}
 
 module.exports = app;

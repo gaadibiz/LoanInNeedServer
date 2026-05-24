@@ -79,10 +79,7 @@ async function saveFullKYC(userId, data) {
         stability: stabilityValue,
       };
 
-      let employment = await EmploymentModel.findByUserId(userId, tx);
-      employment = employment
-        ? await EmploymentModel.updateEmploymentDetails(userId, employmentPayload, tx)
-        : await EmploymentModel.createEmploymentDetails(userId, employmentPayload, tx);
+      let employment = await EmploymentModel.upsertEmploymentDetails(userId, employmentPayload, tx);
 
       logger.info('✅ Employment saved userId=%s employmentId=%s', userId, employment.id);
 
@@ -117,10 +114,7 @@ async function saveFullKYC(userId, data) {
         currentAddressType: addressTypeValue,
       };
 
-      let addressDetail = await AddressModel.findByUserId(userId, tx);
-      addressDetail = addressDetail
-        ? await AddressModel.updateAddress(userId, addrPayload, tx)
-        : await AddressModel.createAddress(userId, addrPayload, tx);
+      let addressDetail = await AddressModel.upsertAddress(userId, addrPayload, tx);
 
       logger.info('✅ Address saved userId=%s addressDetailId=%s', userId, addressDetail.id);
 
