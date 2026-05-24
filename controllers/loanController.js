@@ -20,9 +20,39 @@ const s3AxiosInstance = axios.create({
     httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 })
 });
 
+const crypto = require('crypto');
+
 // Load Shedding (Concurrency Limiter) variables
-let activeExports = 0;
+let localActiveExports = 0;
 const MAX_CONCURRENT_EXPORTS = 2;
+
+async function requestGlobalSlot() {
+    if (!process.send) {
+        // Fallback for non-cluster / test mode
+        if (localActiveExports >= MAX_CONCURRENT_EXPORTS) return false;
+        localActiveExports++;
+        return true;
+    }
+    return new Promise(resolve => {
+        const reqId = crypto.randomUUID();
+        const handler = (msg) => {
+            if (msg.reqId === reqId) {
+                process.removeListener('message', handler);
+                resolve(msg.cmd === 'exportSlotGranted');
+            }
+        };
+        process.on('message', handler);
+        process.send({ cmd: 'requestExportSlot', reqId });
+    });
+}
+
+function releaseGlobalSlot() {
+    if (!process.send) {
+        localActiveExports = Math.max(0, localActiveExports - 1);
+    } else {
+        process.send({ cmd: 'releaseExportSlot' });
+    }
+}
 
 /**
  * @desc    Apply for a Loan
@@ -162,12 +192,12 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
          throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
     }
 
-    if (activeExports >= MAX_CONCURRENT_EXPORTS) {
+    const slotGranted = await requestGlobalSlot();
+    if (!slotGranted) {
         res.status(429).json({ error: "System is at maximum capacity processing other heavy exports. Please wait a moment and try again." });
         return;
     }
 
-    activeExports++;
     try {
         // 1. Fetch only IDs to prevent Out Of Memory (OOM) crashes and DB strain
     const applicationIds = await prisma.loanApplication.findMany({
@@ -422,16 +452,37 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
 
         // Stream this chunk of applications instantly with strict TCP backpressure
         for (const app of chunkResults) {
+            // If the client disconnects or network drops, stop processing immediately
+            if (res.destroyed) break;
+
             if (!isFirstApp) {
                 if (!res.write(',')) {
-                    await new Promise(resolve => res.once('drain', resolve));
+                    await new Promise(resolve => {
+                        if (res.destroyed) return resolve();
+                        res.once('drain', resolve);
+                        res.once('close', resolve);
+                        res.once('error', resolve);
+                    });
                 }
             }
+            if (res.destroyed) break;
+
             if (!res.write(JSON.stringify(app))) {
-                await new Promise(resolve => res.once('drain', resolve));
+                await new Promise(resolve => {
+                    if (res.destroyed) return resolve();
+                    res.once('drain', resolve);
+                    res.once('close', resolve);
+                    res.once('error', resolve);
+                });
             }
             isFirstApp = false;
         }
+        
+        if (res.destroyed) {
+            logger.warn(`[LOAN EXPORT] Client disconnected mid-stream. Halting export.`);
+            break;
+        }
+
         totalProcessed += chunkResults.length;
 
         // Force Event Loop to yield so V8 Garbage Collector can clean up massive Base64 strings
@@ -444,7 +495,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
     
     logger.info(`Export Stream Completed Successfully for ${totalProcessed} records.`);
     } finally {
-        activeExports--;
+        releaseGlobalSlot();
     }
 });
 

@@ -121,13 +121,45 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
   startLosWorker();
 
+  // --- IPC Global Traffic Controller for Heavy Exports ---
+  let globalActiveExports = 0;
+  const MAX_GLOBAL_EXPORTS = 2; // Strict absolute limit across ALL workers globally
+
   for (let i = 0; i < numCPUs; i++) {
-    cluster.fork();
+    const worker = cluster.fork();
+    
+    // Listen for IPC messages from this worker
+    worker.on('message', (msg) => {
+      if (msg.cmd === 'requestExportSlot') {
+        if (globalActiveExports < MAX_GLOBAL_EXPORTS) {
+          globalActiveExports++;
+          worker.send({ cmd: 'exportSlotGranted', reqId: msg.reqId });
+        } else {
+          worker.send({ cmd: 'exportSlotDenied', reqId: msg.reqId });
+        }
+      } else if (msg.cmd === 'releaseExportSlot') {
+        globalActiveExports = Math.max(0, globalActiveExports - 1);
+      }
+    });
   }
 
   cluster.on('exit', (worker, code, signal) => {
     logger.error(`Worker ${worker.process.pid} died with code: ${code}. Forking a replacement...`);
-    cluster.fork();
+    const newWorker = cluster.fork();
+    
+    // Attach IPC listener to the new replacement worker
+    newWorker.on('message', (msg) => {
+      if (msg.cmd === 'requestExportSlot') {
+        if (globalActiveExports < MAX_GLOBAL_EXPORTS) {
+          globalActiveExports++;
+          newWorker.send({ cmd: 'exportSlotGranted', reqId: msg.reqId });
+        } else {
+          newWorker.send({ cmd: 'exportSlotDenied', reqId: msg.reqId });
+        }
+      } else if (msg.cmd === 'releaseExportSlot') {
+        globalActiveExports = Math.max(0, globalActiveExports - 1);
+      }
+    });
   });
 } else {
   // Worker process or Test environment
