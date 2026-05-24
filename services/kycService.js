@@ -93,6 +93,7 @@ async function saveFullKYC(userId, data) {
         // Also handle if already in enum format
         OWNER_SELF_OR_FAMILY: 'OWNER_SELF_OR_FAMILY',
         OWNER: 'OWNER_SELF_OR_FAMILY', // Backward compatibility
+        OWN: 'OWNER_SELF_OR_FAMILY', // Handle "OWN" mapping
         RENTED: 'RENTED',
       };
 

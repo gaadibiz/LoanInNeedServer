@@ -204,12 +204,17 @@ exports.updateAddress = async (req, res, next) => {
       // Also handle if already in enum format
       OWNER_SELF_OR_FAMILY: 'OWNER_SELF_OR_FAMILY',
       OWNER: 'OWNER_SELF_OR_FAMILY', // Backward compatibility
+      OWN: 'OWNER_SELF_OR_FAMILY', // Handle "OWN" mapping
       RENTED: 'RENTED',
     };
 
-    const addressTypeValue = data.currentAddressType ?
+    let addressTypeValue = data.currentAddressType ?
       (addressTypeMap[data.currentAddressType] ||
         String(data.currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '')) : undefined;
+
+    if (addressTypeValue && !['OWNER_SELF_OR_FAMILY', 'RENTED'].includes(addressTypeValue)) {
+      addressTypeValue = undefined;
+    }
 
     const addrPayload = {
       currentAddress: data.currentAddress,
