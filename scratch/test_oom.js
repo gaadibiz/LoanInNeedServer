@@ -1,48 +1,67 @@
 const axios = require('axios');
 
 const API_KEY = 'paromita$432';
-const LOCAL_URL = 'http://localhost:5000/api/loans/export';
+const PROD_URL = 'https://be.loaninneed.in/api/loans/export';
 
-async function testLocalConcurrencyLimit() {
-    console.log("Starting Concurrency Limit (Load Shedding) test on Local API...");
+async function testProductionExportPerformance() {
+    console.log("🚀 Testing Optimized Production API Performance...");
     const from = '2020-01-01T00:00:00Z';
     const to = '2026-12-31T23:59:59Z';
-    const url = `${LOCAL_URL}?from=${from}&to=${to}`;
+    const url = `${PROD_URL}?from=${from}&to=${to}`;
 
-    console.log("Firing 10 simultaneous export requests to simulate multiple users clicking Export...");
-    const promises = [];
+    console.log(`Sending Export Request to: ${url}`);
     
-    for (let i = 0; i < 10; i++) {
-        promises.push(
-            axios.get(url, {
-                headers: { 'Authorization': `Key ${API_KEY}` },
-                responseType: 'stream',
-                timeout: 30000
-            }).then(res => {
-                console.log(`✅ Request ${i + 1}: Started Successfully (Status: ${res.status})`);
-                // Let the stream run for a brief moment to occupy the concurrency slot
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        res.data.destroy();
-                        resolve();
-                    }, 5000);
-                });
-            }).catch(err => {
-                if (err.response) {
-                    if (err.response.status === 429) {
-                        console.log(`🛡️ Request ${i + 1}: Safely Blocked! (Status: 429 - System Busy)`);
-                    } else {
-                        console.log(`❌ Request ${i + 1}: Error - Status ${err.response.status}`);
-                    }
-                } else {
-                    console.log(`❌ Request ${i + 1}: Network Error - ${err.message}`);
-                }
-            })
-        );
-    }
+    const startTime = Date.now();
+    let firstByteTime = null;
 
-    await Promise.all(promises);
-    console.log("\nConcurrency Test Complete! Notice how only a maximum of 2 requests were allowed to run, while the others were safely shed with 429s to prevent OOM.");
+    try {
+        const response = await axios.get(url, {
+            headers: { 'Authorization': `Key ${API_KEY}` },
+            responseType: 'stream',
+            timeout: 60000 // 60 sec timeout for headers
+        });
+        
+        let byteCount = 0;
+        let chunkCount = 0;
+
+        response.data.on('data', (chunk) => {
+            if (!firstByteTime) {
+                firstByteTime = Date.now();
+                console.log(`\n⏱️  Time to First Byte (Headers Received): ${((firstByteTime - startTime) / 1000).toFixed(2)}s`);
+                process.stdout.write("Downloading stream... ");
+            }
+            byteCount += chunk.length;
+            chunkCount++;
+            if (chunkCount % 100 === 0) {
+                 process.stdout.write(".");
+            }
+        });
+
+        await new Promise((resolve, reject) => {
+            response.data.on('end', resolve);
+            response.data.on('error', reject);
+        });
+
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+        const downloadTime = ((Date.now() - firstByteTime) / 1000).toFixed(2);
+        const mbReceived = (byteCount / 1024 / 1024).toFixed(2);
+        
+        console.log(`\n\n✅ Export Completed Successfully!`);
+        console.log(`📊 Total Data Received: ${mbReceived} MB`);
+        console.log(`📊 Time to Start Stream: ${((firstByteTime - startTime) / 1000).toFixed(2)} seconds`);
+        console.log(`📊 Time to Download Stream: ${downloadTime} seconds`);
+        console.log(`📊 Total Total Time: ${totalTime} seconds`);
+        
+    } catch (e) {
+        const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
+        console.log(`\n❌ API Error after ${timeTaken}s:`, e.message);
+        if (e.response) {
+            console.log("Status:", e.response.status);
+            if (e.response.status === 429) {
+                console.log("🛡️ Safely blocked by Concurrency Limiter (System Busy).");
+            }
+        }
+    }
 }
 
-testLocalConcurrencyLimit();
+testProductionExportPerformance();

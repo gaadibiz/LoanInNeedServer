@@ -44,3 +44,5 @@ package-lock.json
 
 # Tester Application
 tester/
+
+.cache/

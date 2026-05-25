@@ -6,9 +6,7 @@ const LOS_AUTH_URL = process.env.LOS_AUTH_URL || 'http://59.95.101.93:7021/api/a
 const LOS_USERNAME = process.env.LOS_USERNAME || 'indradeep';
 const LOS_PASSWORD = process.env.LOS_PASSWORD || 'admin123';
 
-// In-memory token cache
-let cachedToken = null;
-let tokenExpiry = null;
+const { appCache } = require('../utils/cache');
 
 /**
  * Decode JWT expiry from token string (no external lib needed)
@@ -31,8 +29,9 @@ const getLosToken = async () => {
     try {
         const now = new Date();
 
-        // 1. Return cached token if still valid (buffer of 5 mins)
-        if (cachedToken && tokenExpiry && (tokenExpiry.getTime() - now.getTime()) > 5 * 60 * 1000) {
+        // 1. Return cached token if still valid
+        const cachedToken = appCache.get('los_auth_token');
+        if (cachedToken) {
             return cachedToken;
         }
 
@@ -62,12 +61,16 @@ const getLosToken = async () => {
             || response.data?.jwtToken;
 
         if (tokenValue) {
-            cachedToken = tokenValue;
             // Use actual JWT expiry if available, otherwise default 1 hour
             const jwtExpiry = getJwtExpiry(tokenValue);
-            tokenExpiry = jwtExpiry || new Date(now.getTime() + 60 * 60 * 1000);
-            logger.info(`[LOS AUTH] Successfully retrieved new token. Expires: ${tokenExpiry.toISOString()}`);
-            return cachedToken;
+            const tokenExpiry = jwtExpiry || new Date(now.getTime() + 60 * 60 * 1000);
+            
+            // Calculate TTL in seconds, with a 5-minute safety buffer
+            const ttlSeconds = Math.max(1, Math.floor((tokenExpiry.getTime() - now.getTime()) / 1000) - 300);
+            appCache.set('los_auth_token', tokenValue, ttlSeconds);
+            
+            logger.info(`[LOS AUTH] Successfully retrieved new token. Expires: ${tokenExpiry.toISOString()} (TTL: ${ttlSeconds}s)`);
+            return tokenValue;
         } else {
             logger.error('[LOS AUTH] Token response received but no token field found:', JSON.stringify(response.data));
             throw new Error(`Invalid token response from LOS. Response: ${JSON.stringify(response.data)}`);
@@ -83,8 +86,7 @@ const getLosToken = async () => {
  * Force clear the token (e.g. if we get a 401 Unauthorized)
  */
 const invalidateToken = () => {
-    cachedToken = null;
-    tokenExpiry = null;
+    appCache.del('los_auth_token');
     logger.info('[LOS AUTH] Token cache invalidated');
 };
 

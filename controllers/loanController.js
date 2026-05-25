@@ -10,11 +10,7 @@ const axios = require('axios');
 const https = require('https');
 const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const s3Client = require('../utils/s3Client');
-
-// Free in-memory Bounded Cache Hack for S3 Base64 Files
-// Speeds up repeated exports instantly
-const S3_BASE64_CACHE = new Map();
-const MAX_CACHE_SIZE = 10; // Reduced to 10 documents to prevent severe OOM crashes on constrained environments
+const { getFromDiskCache, setToDiskCache } = require('../utils/diskCache');
 
 const s3AxiosInstance = axios.create({
     httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 })
@@ -300,9 +296,10 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                     }
 
                     // Check Cache FIRST
-                    if (s3Key && S3_BASE64_CACHE.has(s3Key)) {
-                        logger.info(`[LOAN EXPORT] Serving S3 Document from Memory Cache: ${s3Key}`);
-                        return [S3_BASE64_CACHE.get(s3Key), docName];
+                    const cachedDoc = s3Key ? getFromDiskCache(s3Key) : null;
+                    if (cachedDoc) {
+                        logger.info(`[LOAN EXPORT] Serving S3 Document from Disk Cache: ${s3Key}`);
+                        return [cachedDoc, docName];
                     }
 
                     if (s3Key) {
@@ -323,13 +320,10 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                             
                             const b64 = buffer.toString('base64');
                             
-                            // Save to Bounded Cache
-                            if (S3_BASE64_CACHE.size >= MAX_CACHE_SIZE) {
-                                // Delete the oldest item (Map preserves insertion order)
-                                const oldestKey = S3_BASE64_CACHE.keys().next().value;
-                                S3_BASE64_CACHE.delete(oldestKey);
+                            // Save to Local Disk Cache
+                            if (s3Key) {
+                                setToDiskCache(s3Key, b64);
                             }
-                            S3_BASE64_CACHE.set(s3Key, b64);
                             
                             return [b64, docName];
                         } catch (err) {
