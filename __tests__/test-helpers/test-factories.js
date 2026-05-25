@@ -9,7 +9,7 @@ class TestFactories {
    * Generate a test phone number
    */
   static phone() {
-    return `+91${faker.phone.phoneNumber('##########')}`;
+    return `+91000${faker.phone.phoneNumber('#######')}`;
   }
 
   /**

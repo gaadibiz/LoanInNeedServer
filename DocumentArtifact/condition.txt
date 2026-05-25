@@ -1,0 +1,822 @@
+# LOANINNEED BACKEND - COMPLETE TECHNICAL SYNTHESIS
+
+## 1. PROJECT OVERVIEW
+
+**Project Name:** LoanInNeed Backend API
+**Technology Stack:** Node.js, Express.js, PostgreSQL, Prisma ORM
+**Architecture Pattern:** MVC (Model-View-Controller) with Service Layer
+**Description:** Digital lending platform backend providing secure and scalable services including user authentication, KYC verification, document management, loan applications, credit score evaluation, and visitor analytics.
+
+---
+
+## 2. TECHNOLOGY STACK & DEPENDENCIES
+
+### Core Framework
+- **Express.js v5.1.0** - Web application framework
+- **Node.js** - Runtime environment
+
+### Database & ORM
+- **PostgreSQL** - Relational database
+- **Prisma v6.16.1** - ORM for database management
+- **@prisma/client** - Prisma client for database queries
+
+### Authentication & Security
+- **jsonwebtoken v9.0.2** - JWT token generation and verification
+- **bcryptjs v3.0.2** - Password hashing
+- **helmet v8.1.0** - HTTP security headers
+- **cors v2.8.5** - Cross-origin resource sharing
+
+### External Services Integration
+- **Twilio v4.23.0** - SMS OTP service for phone verification
+- **@supabase/supabase-js v2.76.1** - Cloud storage for document uploads
+
+### File Upload
+- **multer v2.0.2** - Multipart/form-data handling for file uploads
+
+### Logging & Monitoring
+- **winston v3.17.0** - Enterprise-grade logging
+- **winston-daily-rotate-file v5.0.0** - Daily log file rotation
+- **morgan v1.10.1** - HTTP request logger
+
+### Utilities
+- **dotenv v17.2.2** - Environment variable management
+- **express-async-handler v1.2.0** - Async error handling wrapper
+
+### Testing
+- **Jest v29.7.0** - Testing framework
+- **Supertest v7.1.4** - HTTP assertion library
+- **jest-html-reporters v3.1.7** - HTML test reports
+
+---
+
+## 3. PROJECT ARCHITECTURE
+
+### 3.1 Directory Structure
+```
+Backend/
+├── config/              # Configuration files (DB, Supabase)
+├── controllers/         # Request handlers (business logic entry points)
+├── routes/              # API route definitions
+├── services/            # Business logic layer
+├── models/              # Data access layer (Prisma model wrappers)
+├── middleware/          # Express middleware (auth, upload, logging)
+├── utils/               # Utility functions (JWT, hashing, logging, OTP)
+├── GlobalExceptionHandler/  # Error handling and custom exceptions
+├── prisma/              # Prisma schema and migrations
+├── generated/prisma/    # Generated Prisma client
+├── uploads/temp/        # Temporary file storage
+├── logs/                # Application logs (error, info, debug, http, warn)
+└── server.js            # Application entry point
+```
+
+### 3.2 Architecture Pattern
+**Layered Architecture:**
+1. **Routes Layer** (`routes/`) - Defines API endpoints and HTTP methods
+2. **Controller Layer** (`controllers/`) - Handles HTTP requests/responses, input validation
+3. **Service Layer** (`services/`) - Contains business logic, orchestrates data operations
+4. **Model Layer** (`models/`) - Data access abstraction, Prisma query wrappers
+5. **Database Layer** - PostgreSQL via Prisma ORM
+
+### 3.3 Request Flow
+```
+Client Request → Express Middleware → Route → Controller → Service → Model → Database
+                                                                    ↓
+Client Response ← Express Middleware ← Route ← Controller ← Service ← Model ← Database
+```
+
+---
+
+## 4. API ENDPOINTS
+
+### 4.1 Authentication Endpoints (`/api/auth`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/auth/phone/request-otp` | Request OTP for phone verification | No |
+| POST | `/api/auth/phone/verify-otp` | Verify OTP and get JWT token | No |
+
+### 4.2 User Endpoints (`/api/users`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/users/register` | Complete user registration (name, email, DOB, gender, password) | Yes (JWT) |
+| POST | `/api/users/login` | Login via phone + DOB, sends OTP | No |
+| GET | `/api/users/me` | Get authenticated user profile | Yes (JWT) |
+
+### 4.3 KYC Endpoints (`/api/kyc`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/kyc` | Submit full KYC (Employment + Address + Loan Application) | Yes (JWT) |
+
+### 4.4 Document Verification Endpoints (`/api/document`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/document/submit` | Upload bank statements and salary slips (multipart/form-data) | Yes (JWT) |
+| GET | `/api/document/status` | Get document verification status | Yes (JWT) |
+
+### 4.5 Selfie Upload Endpoints (`/api/selfie`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/selfie/upload` | Upload selfie for identity verification | Yes (JWT) |
+| GET | `/api/selfie/status` | Get selfie upload status | Yes (JWT) |
+
+### 4.6 Health Check
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | Health check endpoint | No |
+
+---
+
+## 5. DATABASE SCHEMA (PRISMA)
+
+### 5.1 Core Models
+
+#### User Model
+- **Primary Key:** `id` (Int, auto-increment)
+- **Unique Fields:** `customUserId`, `email`, `phone`
+- **Fields:**
+  - `customUserId` (String, unique) - Format: LIN001, LIN002, etc.
+  - `name` (String, optional)
+  - `email` (String, unique, optional)
+  - `phone` (String, unique, required)
+  - `password` (String, hashed, optional)
+  - `phoneVerified` (Boolean, default: false)
+  - `phoneVerifiedAt` (DateTime, optional)
+  - `dob` (DateTime, optional)
+  - `gender` (Gender enum)
+  - `role` (UserRole enum, default: CUSTOMER)
+  - `verificationStatus` (VerificationStatus enum, default: PENDING)
+  - `createdAt`, `updatedAt` (DateTime)
+
+#### Relations:
+- One-to-One: `aadhaarVerification`, `panVerification`, `employment`, `address`, `status`
+- One-to-Many: `otps`, `loans`, `loanApplications`, `documents`, `locations`
+
+#### AadhaarVerification Model
+- **Fields:** `id`, `aadhaarNumber` (unique, masked), `verified` (Boolean), `verifiedAt`, `userId` (unique)
+- **Relation:** One-to-One with User
+
+#### PanVerification Model
+- **Fields:** `id`, `panNumber` (unique, masked), `verified` (Boolean), `verifiedAt`, `userId` (unique)
+- **Relation:** One-to-One with User
+
+#### EmploymentDetail Model
+- **Fields:** `id`, `userId` (unique), `employmentType` (enum), `employerName`, `companyAddress`, `monthlyIncome` (Float), `stability` (JobStability enum)
+- **Relation:** One-to-One with User, One-to-Many with LoanApplication
+
+#### AddressDetail Model
+- **Fields:** `id`, `userId` (unique), `currentAddress`, `permanentAddress`, `city`, `state`, `postalCode`, `currentAddressType` (enum), `currentAddressProof`
+- **Relation:** One-to-One with User
+
+#### OtpVerification Model
+- **Fields:** `id`, `otpCode`, `expiresAt`, `verified` (Boolean), `userId`, `createdAt`
+- **Relation:** Many-to-One with User
+
+#### Loan Model
+- **Fields:** `id`, `loanAmount` (Float), `purposeOfLoan`, `interestRate` (Float), `termMonths` (Int), `startDate`, `status` (LoanStatus enum), `userId`, `createdAt`, `updatedAt`
+- **Relation:** Many-to-One with User
+
+#### LoanApplication Model
+- **Fields:** `id`, `userId`, `employmentDetailId` (optional), `loanType` (enum), `loanAmount` (Float), `otpVerified` (Boolean), `status` (LoanStatus enum), `createdAt`, `updatedAt`
+- **Relations:** Many-to-One with User, Optional Many-to-One with EmploymentDetail
+
+#### UserDocument Model
+- **Fields:** `id`, `userId`, `docType` (DocumentType enum), `filePath` (Supabase path), `fileUrl`, `fileName`, `mimeType`, `size`, `checksum` (SHA256), `status` (DocumentUploadStatus enum), `verified` (Boolean), `verifiedBy`, `verifiedAt`, `notes`, `uploadedAt`
+- **Index:** Composite index on `[userId, docType]`
+- **Relation:** Many-to-One with User
+
+#### UserLocation Model
+- **Fields:** `id`, `userId`, `latitude`, `longitude`, `accuracy`, `locality`, `city`, `state`, `country`, `postalCode`, `placeName`, `capturedAt`
+- **Relation:** Many-to-One with User
+
+#### UserDocumentStatus Model
+- **Fields:** `id`, `userId` (unique), `status` (String, default: "PENDING_UPLOAD"), `latitude`, `longitude`, `updatedAt`
+- **Relation:** One-to-One with User
+
+### 5.2 Enums
+
+**VerificationStatus:** PENDING, VERIFIED, REJECTED
+**UserRole:** CUSTOMER, DSA, AFFILIATE, ADMIN, SUPER_ADMIN
+**Gender:** MALE, FEMALE, PREFER_NOT_TO_SAY
+**JobStability:** VERY_UNSTABLE, SOMEWHAT_UNSTABLE, NEUTRAL, STABLE, VERY_STABLE
+**AddressType:** OWNER, RENTED, RESIDENTIAL
+**LoanStatus:** PENDING, APPROVED, REJECTED, CLOSED
+**EmploymentType:** SALARIED, SELF_EMPLOYED, STUDENT, UNEMPLOYED, OTHER
+**LoanType:** PERSONAL, HOME, EDUCATION, BUSINESS, AUTO, CREDIT_CARD, OTHER
+**DocumentType:** AADHAAR, PAN, PAY_SLIP, BANK_STATEMENT, PHOTO, SIGNATURE
+**DocumentUploadStatus:** PENDING_UPLOAD, SUBMITTED, VERIFIED, REJECTED
+
+---
+
+## 6. AUTHENTICATION & AUTHORIZATION
+
+### 6.1 Authentication Flow
+
+#### Phone OTP Verification Flow:
+1. User requests OTP via `/api/auth/phone/request-otp` with phone number
+2. System sends OTP via Twilio SMS
+3. User submits OTP via `/api/auth/phone/verify-otp`
+4. System verifies OTP with Twilio
+5. If valid:
+   - Creates new user (if not exists) with `customUserId` (LIN001, LIN002, etc.)
+   - Marks phone as verified
+   - Generates JWT token
+   - Returns token and user info
+
+#### Registration Flow:
+1. User must have verified phone (JWT from OTP verification)
+2. User calls `/api/users/register` with JWT token
+3. System validates JWT via `authenticate` middleware
+4. User provides: name, email, DOB, gender, password
+5. System hashes password and updates user record
+
+#### Login Flow:
+1. User calls `/api/users/login` with phone + DOB
+2. System validates credentials
+3. System sends OTP to verified phone
+4. User verifies OTP (separate endpoint - uses same `/api/auth/phone/verify-otp`)
+
+### 6.2 JWT Token Structure
+- **Payload:** `{ id: user.id, email, phone, role }`
+- **Expiration:** Configurable via `JWT_EXPIRES_IN` (default: 3 days)
+- **Secret:** Stored in `JWT_SECRET` environment variable
+- **Header Format:** `Authorization: Bearer <token>`
+
+### 6.3 Authentication Middleware
+**File:** `middleware/authMiddleware.js`
+- Extracts JWT from `Authorization` header
+- Verifies token signature and expiration
+- Fetches user from database
+- Attaches `req.user` object with: `{ id, customUserId, email, phone }`
+- Throws `UnauthorizedError` on failure
+
+---
+
+## 7. MIDDLEWARE
+
+### 7.1 Global Middleware (server.js)
+1. **express.json()** - Parse JSON request bodies
+2. **express.urlencoded()** - Parse URL-encoded bodies
+3. **helmet()** - Security headers (XSS protection, content security policy, etc.)
+4. **cors()** - Enable CORS for all origins
+5. **morgan()** - HTTP request logging (combined format, integrated with Winston)
+6. **Custom Request Logger** - Logs incoming requests with method, URL, IP
+7. **Global Error Handler** - Catches all unhandled errors
+
+### 7.2 Route-Specific Middleware
+
+#### Authentication Middleware (`middleware/authMiddleware.js`)
+- **Function:** `authenticate`
+- **Purpose:** Verify JWT token and attach user to request
+- **Usage:** Applied to protected routes
+
+#### Upload Middleware (`middleware/uploadMiddleware.js`)
+- **Library:** Multer
+- **Storage:** Disk storage in `uploads/temp/`
+- **File Filter:** Only allows PDF, JPEG, JPG, PNG
+- **Size Limit:** 10 MB per file
+- **Naming:** `{timestamp}-{fieldname}{extension}`
+- **Usage:** Applied to document upload routes
+
+#### Request Logger Middleware (`middleware/requestLogger.js`)
+- Currently empty file (logging handled globally)
+
+---
+
+## 8. SERVICES LAYER
+
+### 8.1 AuthService (`services/authService.js`)
+**Functions:**
+- `requestPhoneOtp(phone)` - Sends OTP via Twilio
+- `verifyPhoneOtp(phone, code)` - Verifies OTP, creates/updates user, returns JWT
+
+**Features:**
+- Supports test phone number override via `TEST_PHONE_NUMBER` env var
+- Auto-generates `customUserId` (LIN001, LIN002, etc.)
+- Creates user if not exists, updates verification status if exists
+
+### 8.2 UserService (`services/userServices.js`)
+**Functions:**
+- `registerUser(userId, data)` - Completes user registration with personal details
+- `loginViaPhoneAndDob(phone, dob)` - Validates credentials and sends login OTP
+- `getProfile(userId)` - Fetches user profile
+
+**Features:**
+- Password hashing with bcryptjs
+- Email uniqueness validation
+- Phone verification check before registration
+
+### 8.3 KYCService (`services/kycService.js`)
+**Functions:**
+- `saveFullKYC(userId, data)` - Saves employment, address, and loan application in single transaction
+
+**Features:**
+- Transactional operation (50s timeout)
+- Validates employment data (companyName, companyAddress, monthlyIncome, stability)
+- Validates address data (currentAddress, permanentAddress, currentAddressType)
+- Validates loan data (loanAmount, purpose)
+- Creates or updates existing records
+
+### 8.4 DocumentVerificationService (`services/documentService.js`)
+**Functions:**
+- `submitDocuments(userId, files)` - Uploads bank statements and salary slips
+- `storeFile(file, userId, filePath, type, tx)` - Stores file in Supabase and saves metadata
+- `getDocumentStatus(userId)` - Retrieves document upload status
+
+**Features:**
+- Uploads to Supabase storage bucket
+- Generates SHA256 checksum for file integrity
+- Stores metadata in `UserDocument` table
+- Sends OTP after document upload for selfie verification
+- Deletes temporary files after upload
+- Supports multiple files per type (bank statements, salary slips)
+
+### 8.5 SelfieService (`services/selfieService.js`)
+**Functions:**
+- `saveSelfie(userId, fileUrl)` - Saves selfie document
+- `getSelfieStatus(userId)` - Gets selfie upload status
+
+**Features:**
+- Stores selfie as `PHOTO` document type
+- Updates user KYC step to "SELFIE_UPLOADED"
+
+### 8.6 OtpService (`services/otpService.js`)
+**Functions:**
+- `sendOtp(userId)` - Sends OTP to user's registered phone
+- `verifyOtp(userId, code)` - Verifies OTP code
+
+**Features:**
+- Uses Twilio Verify API
+- Fetches phone number from user record
+
+### 8.7 AadhaarService (`services/aadharService.js`)
+**Functions:**
+- `submitAadhaar(userId, number)` - Submits and masks Aadhaar number
+- `getAadhaarStatus(userId)` - Gets verification status
+- `verifyAadhaar(userId)` - Marks Aadhaar as verified (admin)
+- `getAadhaarDetails(userId)` - Gets full details (admin)
+
+**Features:**
+- Validates Aadhaar format (12 digits, starts with 2-9)
+- Masks Aadhaar (shows only last 4 digits: ********9012)
+- Stores masked value in database
+
+### 8.8 PanService (`services/panService.js`)
+**Functions:**
+- `submitPAN(userId, number)` - Submits and masks PAN number
+- `getPanStatus(userId)` - Gets verification status
+- `verifyPAN(userId)` - Marks PAN as verified (admin)
+- `getPanDetails(userId)` - Gets full details (admin)
+
+**Features:**
+- Validates PAN format (5 letters + 4 digits + 1 letter: ABCDE1234F)
+- Masks PAN (shows only last 4 characters: ****E1234F)
+- Stores masked value in database
+
+### 8.9 LocationService (`services/locationService.js`)
+- Currently empty file (placeholder for future location tracking)
+
+---
+
+## 9. MODELS LAYER
+
+### 9.1 Purpose
+Models act as data access layer wrappers around Prisma queries, providing:
+- Transaction support
+- Consistent query patterns
+- Abstraction from Prisma client
+
+### 9.2 Key Models
+
+#### UserModel (`models/userModel.js`)
+- `createUser(data)`
+- `findUserByEmail(email)`
+- `findUserByPhone(phone)`
+- `findUserById(id)`
+- `updateUser(id, updates, tx)`
+- `deleteUser(where)`
+
+#### DocumentModel (`models/documentModel.js`)
+- `createDocument(userId, payload, tx)`
+- `getDocumentsByUserId(userId, tx)`
+- `getDocumentById(id, tx)`
+- `updateDocument(id, updates, tx)`
+- `deleteDocument(id, tx)`
+
+#### EmploymentModel (`models/employmentModel.js`)
+- Employment detail CRUD operations
+
+#### AddressModel (`models/adressModel.js`)
+- Address detail CRUD operations
+
+#### LoanModel (`models/loanModel.js`)
+- Loan CRUD operations
+
+#### AadhaarModel (`models/aadhaarModel.js`)
+- Aadhaar verification CRUD operations
+
+#### PanModel (`models/panModel.js`)
+- PAN verification CRUD operations
+
+#### OtpModel (`models/otpModel.js`)
+- OTP verification CRUD operations
+
+---
+
+## 10. ERROR HANDLING
+
+### 10.1 Custom Exception Classes (`GlobalExceptionHandler/exception.js`)
+- **AppError** - Base error class
+- **BadRequestError** (400) - Invalid request data
+- **NotFoundError** (404) - Resource not found
+- **UnauthorizedError** (401) - Authentication failure
+- **ForbiddenError** (403) - Authorization failure
+- **ConflictError** (409) - Resource conflict
+- **InternalServerError** (500) - Server errors
+- **ValidationError** (422) - Validation failures
+
+### 10.2 Global Error Handler (`GlobalExceptionHandler/errorHandler.js`)
+- Catches all unhandled errors
+- Returns operational errors with status code and message
+- Returns generic message for unknown errors (500)
+- Logs error stack traces
+
+### 10.3 Error Handling Pattern
+- Controllers use `express-async-handler` for automatic error catching
+- Services throw custom exceptions
+- Middleware catches and forwards errors
+- Global handler formats and sends error response
+
+---
+
+## 11. LOGGING SYSTEM
+
+### 11.1 Logger Configuration (`utils/logger.js`)
+**Technology:** Winston with daily rotation
+
+**Log Levels:**
+- `error` - Error logs
+- `warn` - Warning logs
+- `info` - Information logs
+- `http` - HTTP request logs
+- `debug` - Debug logs
+
+**Features:**
+- Daily rotating log files per level
+- Automatic file compression (gzip)
+- Max file size: 20MB
+- Retention: 30 days
+- JSON format for file logs
+- Colorized console output with emojis
+- Contextual logging (service, userId, requestId)
+- Optional remote integrations (Loki, Elasticsearch, CloudWatch)
+
+**Log Directories:**
+- `logs/error/` - Error logs
+- `logs/warn/` - Warning logs
+- `logs/info/` - Info logs
+- `logs/http/` - HTTP logs
+- `logs/debug/` - Debug logs
+
+**Log Format:**
+- Console: `[TIMESTAMP] LEVEL | SERVICE | CONTEXT → MESSAGE`
+- File: JSON format with timestamp, level, message, stack, metadata
+
+---
+
+## 12. FILE UPLOAD & STORAGE
+
+### 12.1 Upload Process
+1. Files received via `multipart/form-data`
+2. Multer middleware validates and saves to `uploads/temp/`
+3. Service reads file buffer
+4. File uploaded to Supabase storage bucket
+5. Public URL generated
+6. SHA256 checksum calculated
+7. Metadata saved to `UserDocument` table
+8. Temporary file deleted
+
+### 12.2 File Validation
+- **Allowed Types:** PDF, JPEG, JPG, PNG
+- **Size Limit:** 10 MB per file
+- **Storage:** Supabase cloud storage
+- **Path Structure:** `KycDocs/{type}/{userId}/{timestamp}_{filename}`
+
+### 12.3 Document Types
+- `BANK_STATEMENT` - Bank statements
+- `PAY_SLIP` - Salary slips
+- `PHOTO` - Selfie/photo
+- `AADHAAR` - Aadhaar document
+- `PAN` - PAN document
+- `SIGNATURE` - Signature document
+
+---
+
+## 13. EXTERNAL INTEGRATIONS
+
+### 13.1 Twilio Integration
+**Purpose:** SMS OTP verification
+**Service:** Twilio Verify API v2
+**Configuration:**
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_SERVICE_SID`
+
+**Endpoints Used:**
+- `verifications.create()` - Send OTP
+- `verificationChecks.create()` - Verify OTP
+
+### 13.2 Supabase Integration
+**Purpose:** Cloud file storage
+**Service:** Supabase Storage
+**Configuration:**
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_KEY`
+- `SUPABASE_BUCKET`
+
+**Operations:**
+- File upload to bucket
+- Public URL generation
+- File retrieval
+
+---
+
+## 14. SECURITY FEATURES
+
+### 14.1 Authentication Security
+- JWT tokens with expiration
+- Password hashing with bcryptjs
+- Phone number verification via OTP
+- Token-based API access
+
+### 14.2 Data Security
+- Sensitive data masking (Aadhaar, PAN)
+- SHA256 checksums for file integrity
+- Secure file storage in Supabase
+- Environment variable management
+
+### 14.3 HTTP Security
+- Helmet.js for security headers
+- CORS configuration
+- Input validation
+- SQL injection prevention (Prisma parameterized queries)
+
+### 14.4 Error Security
+- Generic error messages for unknown errors
+- Stack traces not exposed to clients
+- Operational errors properly categorized
+
+---
+
+## 15. TESTING
+
+### 15.1 Test Framework
+- **Framework:** Jest
+- **HTTP Testing:** Supertest
+- **Reports:** jest-html-reporters
+
+### 15.2 Test Structure
+```
+__tests__/
+├── integration/     # Integration tests
+│   ├── auth.phone.spec.js
+│   └── user.basic.spec.js
+├── unit/            # Unit tests
+│   ├── hash.spec.js
+│   ├── jwt.spec.js
+│   └── kycService.spec.js
+└── test-helpers/    # Test utilities
+    ├── mockTwilio.js
+    ├── setup.js
+    └── teardown.js
+```
+
+### 15.3 Test Configuration
+- Test environment: Node
+- HTML reports generated in `reports/test-report.html`
+- Test execution: `npm test`
+
+---
+
+## 16. CONFIGURATION
+
+### 16.1 Environment Variables
+Required environment variables:
+- `PORT` - Server port (default: 5000)
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - JWT signing secret
+- `JWT_EXPIRES_IN` - JWT expiration (default: 3d)
+- `TWILIO_ACCOUNT_SID` - Twilio account SID
+- `TWILIO_AUTH_TOKEN` - Twilio auth token
+- `TWILIO_SERVICE_SID` - Twilio Verify service SID
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_SERVICE_KEY` - Supabase service role key
+- `SUPABASE_BUCKET` - Supabase storage bucket name
+- `TEST_PHONE_NUMBER` - Optional test phone override
+- `LOG_LEVEL` - Logging level (default: debug)
+
+### 16.2 Database Configuration
+- **Provider:** PostgreSQL
+- **ORM:** Prisma
+- **Connection:** Via `DATABASE_URL` environment variable
+- **Migrations:** Stored in `prisma/migrations/`
+
+---
+
+## 17. API REQUEST/RESPONSE PATTERNS
+
+### 17.1 Success Response Format
+```json
+{
+  "message": "Success message",
+  "data": { ... },
+  "user": { ... }
+}
+```
+
+### 17.2 Error Response Format
+```json
+{
+  "status": "error",
+  "message": "Error message"
+}
+```
+
+### 17.3 Authentication Header
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+### 17.4 File Upload Format
+- Content-Type: `multipart/form-data`
+- Fields: `salarySlips[]`, `bankStatements[]`, `selfie`
+
+---
+
+## 18. BUSINESS LOGIC FLOWS
+
+### 18.1 User Onboarding Flow
+1. User requests phone OTP → `/api/auth/phone/request-otp`
+2. User verifies OTP → `/api/auth/phone/verify-otp` → Receives JWT
+3. User completes registration → `/api/users/register` (with JWT)
+4. User submits KYC → `/api/kyc` (with JWT)
+5. User uploads documents → `/api/document/submit` (with JWT)
+6. System sends OTP for selfie verification
+7. User uploads selfie → `/api/selfie/upload` (with JWT)
+
+### 18.2 Login Flow
+1. User submits phone + DOB → `/api/users/login`
+2. System validates and sends OTP
+3. User verifies OTP → `/api/auth/phone/verify-otp`
+4. System returns JWT token
+
+### 18.3 KYC Submission Flow
+1. User submits employment details (type, employer, income, stability)
+2. User submits address details (current, permanent, type)
+3. User submits loan application (type, amount, purpose)
+4. All saved in single database transaction
+
+### 18.4 Document Verification Flow
+1. User uploads bank statements (multiple files)
+2. User uploads salary slips (multiple files)
+3. Files stored in Supabase
+4. Metadata saved in database
+5. OTP sent for selfie verification
+6. User uploads selfie
+7. Selfie stored and linked to user
+
+---
+
+## 19. DATA VALIDATION
+
+### 19.1 Phone Number Validation
+- Must include country code (e.g., +919830069363)
+- Format: `+[country code][number]`
+
+### 19.2 Aadhaar Validation
+- Format: 12 digits starting with 2-9
+- Regex: `/^[2-9]{1}[0-9]{11}$/`
+- Masked before storage
+
+### 19.3 PAN Validation
+- Format: 5 letters + 4 digits + 1 letter
+- Regex: `/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/`
+- Masked before storage
+
+### 19.4 File Validation
+- MIME types: `application/pdf`, `image/jpeg`, `image/jpg`, `image/png`
+- Size limit: 10 MB per file
+
+### 19.5 Registration Validation
+- Required: name, dob, gender, password
+- Email uniqueness check
+- Phone verification required
+
+---
+
+## 20. TRANSACTION MANAGEMENT
+
+### 20.1 Prisma Transactions
+- Used for atomic operations (KYC submission, document uploads)
+- Timeout: 50 seconds (configurable)
+- Pattern: `prisma.$transaction(async (tx) => { ... }, { timeout: 50000 })`
+
+### 20.2 Transaction Usage
+- KYC submission (employment + address + loan)
+- Document uploads (multiple files)
+- User creation with verification
+
+---
+
+## 21. UTILITY FUNCTIONS
+
+### 21.1 JWT Utilities (`utils/jwt.js`)
+- `generateToken(user)` - Creates JWT with user data
+- `verifyToken(token)` - Verifies and decodes JWT
+
+### 21.2 Hashing Utilities (`utils/hash.js`)
+- Password hashing with bcryptjs
+
+### 21.3 OTP Utilities (`utils/twilioOtp.js`)
+- `sendOtp(phone)` - Sends OTP via Twilio
+- `verifyOtp(phone, code)` - Verifies OTP via Twilio
+
+### 21.4 Validator Utilities (`utils/validator.js`)
+- Input validation functions
+
+### 21.5 Crypto Utilities (`utils/crypto.js`)
+- Cryptographic operations
+
+---
+
+## 22. DEPLOYMENT CONSIDERATIONS
+
+### 22.1 Server Configuration
+- Port: Configurable via `PORT` env var (default: 5000)
+- Process management: Handles uncaught exceptions and unhandled rejections
+- Graceful shutdown: Logs errors before exit
+
+### 22.2 Logging
+- Daily log rotation
+- Automatic compression
+- 30-day retention
+- Separate files per log level
+
+### 22.3 File Storage
+- Temporary files in `uploads/temp/`
+- Permanent storage in Supabase
+- Automatic cleanup of temp files
+
+### 22.4 Database
+- Prisma migrations for schema management
+- Connection pooling via Prisma
+- Transaction support
+
+---
+
+## 23. API VERSIONING
+- Currently no versioning in place
+- All endpoints under `/api/{resource}`
+
+---
+
+## 24. RATE LIMITING
+- Currently not implemented
+- Can be added via middleware (e.g., express-rate-limit)
+
+---
+
+## 25. CACHING
+- Currently not implemented
+- Can be added for frequently accessed data
+
+---
+
+## 26. SUMMARY OF KEY FEATURES
+
+1. **Multi-step Authentication:** Phone OTP → Registration → Login with DOB + OTP
+2. **Comprehensive KYC:** Employment, Address, Loan Application in single transaction
+3. **Document Management:** Secure file uploads to Supabase with metadata tracking
+4. **Identity Verification:** Aadhaar and PAN submission with masking
+5. **Selfie Verification:** Photo upload with OTP verification flow
+6. **Role-Based Access:** User roles (CUSTOMER, DSA, AFFILIATE, ADMIN, SUPER_ADMIN)
+7. **Enterprise Logging:** Winston with daily rotation and multiple transports
+8. **Error Handling:** Custom exception classes with global error handler
+9. **Transaction Safety:** Prisma transactions for atomic operations
+10. **Security:** JWT authentication, password hashing, data masking, secure file storage
+
+---
+
+## 27. FUTURE ENHANCEMENTS (PLACEHOLDERS)
+
+- Loan management endpoints (routes exist but empty)
+- Blog management endpoints (routes exist but empty)
+- CIBIL score integration (routes exist but empty)
+- Analytics endpoints (routes exist but empty)
+- Page management endpoints (routes exist but empty)
+- Location tracking service (service exists but empty)
+
+---
+
+## END OF TECHNICAL SYNTHESIS
+
+This document provides a complete overview of the LoanInNeed Backend architecture, endpoints, data models, services, and implementation details for audit report preparation.
+

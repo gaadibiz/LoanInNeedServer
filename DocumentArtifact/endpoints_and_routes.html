@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>LoanInNeed API Documentation</title>
+	<!-- Tailwind CSS for styling -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+			background-color: #fafafa;
+		}
+
+		.method-get {
+			@apply bg-blue-100 border-blue-400 text-blue-700;
+		}
+
+		.method-get-badge {
+			@apply bg-blue-600 text-white;
+		}
+
+		.method-post {
+			@apply bg-emerald-100 border-emerald-400 text-emerald-700;
+		}
+
+		.method-post-badge {
+			@apply bg-emerald-600 text-white;
+		}
+
+		.method-put {
+			@apply bg-amber-100 border-amber-400 text-amber-700;
+		}
+
+		.method-put-badge {
+			@apply bg-amber-600 text-white;
+		}
+
+		.endpoint-row {
+			@apply border rounded-md mb-2 overflow-hidden shadow-sm;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.endpoint-header {
+			@apply flex items-center p-2 hover:bg-opacity-80;
+		}
+
+		.endpoint-badge {
+			@apply font-bold rounded px-3 py-1 text-sm mr-4 min-w-[80px] text-center uppercase shadow-sm;
+		}
+
+		.endpoint-path {
+			@apply font-mono text-base font-bold text-gray-800;
+		}
+
+		.endpoint-desc {
+			@apply ml-auto text-sm text-gray-600 hidden md:block;
+		}
+
+		.endpoint-body {
+			@apply hidden p-4 bg-white border-t border-gray-200;
+		}
+
+		.open .endpoint-body {
+			@apply block;
+		}
+
+		.code-block {
+			@apply bg-gray-900 text-gray-100 p-3 rounded-md font-mono text-sm overflow-x-auto;
+		}
+
+		.section-title {
+			@apply text-2xl font-bold mt-8 mb-4 pb-2 border-b-2 border-gray-300 text-gray-800;
+		}
+
+		.group-title {
+			@apply text-xl font-semibold mt-6 mb-3 text-gray-700;
+		}
+
+		.route-link {
+			@apply block py-2 px-3 hover:bg-gray-100 rounded text-blue-600 hover:text-blue-800 transition-colors;
+		}
+	</style>
+	<script>
+		function toggleEndpoint(element) {
+			const row = element.closest('.endpoint-row');
+			row.classList.toggle('open');
+		}
+	</script>
+</head>
+
+<body class="text-gray-800">
+
+	<div class="max-w-6xl mx-auto p-6">
+		<div class="mb-10 text-center">
+			<h1 class="text-4xl font-extrabold text-gray-900 mb-2">LoanInNeed API Documentation</h1>
+			<p class="text-gray-500">Interactive API documentation mapping backend endpoints and frontend routes.</p>
+		</div>
+
+		<!-- API SECTION -->
+		<h2 class="section-title">1. Backend API Endpoints (Express.js)</h2>
+
+		<!-- USERS -->
+		<h3 class="group-title">Users</h3>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/users/register</span>
+				<span class="endpoint-desc">Register new user</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"attribution": { "partnerId": "...", "timestamp": "...", "signature": "..." },
+					"firstName": "...",
+					"lastName": "...",
+					"...": "other_user_details"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "Registration completed successfully.",
+					"user": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-put" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-put-badge">PUT</span>
+				<span class="endpoint-path">/api/users/profile</span>
+				<span class="endpoint-desc">Update profile</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"attribution": { "partnerId": "...", "timestamp": "...", "signature": "..." },
+					"...": "other_user_details"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "Registration completed successfully.",
+					"user": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/users/login</span>
+				<span class="endpoint-desc">User login</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"phone": "9876543210",
+					"dob": "1990-01-01"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "OTP sent for login. Please verify to continue.",
+					"phone": "9876543210"
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/users/admin-login</span>
+				<span class="endpoint-desc">Admin login</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"email": "admin@example.com",
+					"password": "securepassword"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"token": "eyJhbGciOi...",
+					"admin": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/users/me</span>
+				<span class="endpoint-desc">Get current user profile</span>
+			</div>
+			<div class="endpoint-body">
+				<p class="mb-4 text-sm text-gray-600">No Request Body.</p>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "Profile fetched successfully.",
+					"user": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/users/profile/complete</span>
+				<span class="endpoint-desc">Get complete profile (with KYC)</span>
+			</div>
+			<div class="endpoint-body">
+				<p class="mb-4 text-sm text-gray-600">No Request Body.</p>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "Complete profile fetched successfully.",
+					"profile": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/users/dashboard</span>
+				<span class="endpoint-desc">Get user dashboard (Alias to /profile/complete)</span>
+			</div>
+			<div class="endpoint-body">
+				<p class="mb-4 text-sm text-gray-600">No Request Body.</p>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "Complete profile fetched successfully.",
+					"profile": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/users/location</span>
+				<span class="endpoint-desc">Submit user location</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"latitude": "19.0760",
+					"longitude": "72.8777",
+					"address": "Mumbai, Maharashtra",
+					"...": "..."
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "Location saved successfully",
+					"location": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/users/location</span>
+				<span class="endpoint-desc">Get latest user location</span>
+			</div>
+			<div class="endpoint-body">
+				<p class="mb-4 text-sm text-gray-600">No Request Body.</p>
+				<h4 class="font-bold mb-2">Response (200 OK)</h4>
+				<div class="code-block mb-4">{
+					"location": { ... }
+					}</div>
+				<h4 class="font-bold mb-2">Response (404 Not Found)</h4>
+				<div class="code-block">{
+					"message": "No location found"
+					}</div>
+			</div>
+		</div>
+
+
+		<!-- AUTHENTICATION -->
+		<h3 class="group-title">Authentication</h3>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/auth/phone/request-otp</span>
+				<span class="endpoint-desc">Request OTP via phone</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"phone": "9876543210"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "OTP sent"
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/auth/phone/verify-otp</span>
+				<span class="endpoint-desc">Verify OTP via phone</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"phone": "9876543210",
+					"code": "123456"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"token": "eyJhbG...",
+					"user": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/auth/aadhaar/request-otp</span>
+				<span class="endpoint-desc">Request Aadhaar OTP</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{ }
+					<!-- Typically empty or requires aadhaar base identifier based on implementation -->
+				</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "OTP sent successfully"
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/auth/aadhaar/verify-otp</span>
+				<span class="endpoint-desc">Verify Aadhaar OTP</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"otp": "123456"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "Aadhaar verified successfully"
+					}</div>
+			</div>
+		</div>
+
+
+		<!-- KYC -->
+		<h3 class="group-title">KYC</h3>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/kyc/</span>
+				<span class="endpoint-desc">Submit complete KYC details</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"employment": { ... },
+					"address": { ... },
+					"loan": { ... }
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "Full KYC details saved successfully ✔️",
+					"data": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/kyc/</span>
+				<span class="endpoint-desc">Get existing KYC details</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "KYC details not implemented yet"
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/kyc/verify-pan</span>
+				<span class="endpoint-desc">Verify PAN details</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request (multipart/form-data)</h4>
+				<div class="code-block mb-4">- panNumber: "ABCDE1234F" (Text)
+					- panImage: File</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "PAN verified successfully (Bypass) ✔️",
+					"data": {
+					"panNumber": "ABCDE1234F",
+					"isVerified": true
+					}
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-put" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-put-badge">PUT</span>
+				<span class="endpoint-path">/api/kyc/employment</span>
+				<span class="endpoint-desc">Update employment info</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"employmentType": "Salaried",
+					"companyName": "Tech Corp",
+					"companyAddress": "123 Business Rd",
+					"monthlyIncome": 50000,
+					"stability": "Stable"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "Employment details updated",
+					"data": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-put" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-put-badge">PUT</span>
+				<span class="endpoint-path">/api/kyc/address</span>
+				<span class="endpoint-desc">Update address info</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"currentAddress": "Flat 101, Galaxy Apts",
+					"permanentAddress": "House 12, Main St",
+					"city": "Mumbai",
+					"state": "Maharashtra",
+					"postalCode": "400001",
+					"currentAddressType": "Rented"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "Address details updated",
+					"data": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<!-- DOCUMENT VERIFICATION -->
+		<h3 class="group-title">Document Verification</h3>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/document/submit</span>
+				<span class="endpoint-desc">Submit all KYC Documents</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request (multipart/form-data)</h4>
+				<div class="code-block mb-4">- salarySlips: File (Up to 5)
+					- bankStatements: File (Up to 5)
+					- selfie: File (Up to 1)</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Array or object of upload results / S3 locations
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/document/upload/:type</span>
+				<span class="endpoint-desc">Upload specific document</span>
+			</div>
+			<div class="endpoint-body">
+				<p class="text-sm mb-2 text-gray-700"><strong>:type</strong> parameter can be `AADHAAR`, `PAN`, etc.</p>
+				<h4 class="font-bold mb-2">Request (multipart/form-data)</h4>
+				<div class="code-block mb-4">- file: File</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "AADHAAR uploaded successfully",
+					"document": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/document/status</span>
+				<span class="endpoint-desc">Get document verification status</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Document status object
+					}</div>
+			</div>
+		</div>
+
+
+		<!-- SELFIE -->
+		<h3 class="group-title">Selfie Verification</h3>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/selfie/upload</span>
+				<span class="endpoint-desc">Upload selfie image</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request (multipart/form-data)</h4>
+				<div class="code-block mb-4">- selfie: File</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Selfie result object
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/selfie/status</span>
+				<span class="endpoint-desc">Get selfie upload status</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Selfie status wrapper
+					}</div>
+			</div>
+		</div>
+
+
+		<!-- PARTNERS -->
+		<h3 class="group-title">Partners</h3>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/partners/register</span>
+				<span class="endpoint-desc">Register new partner (SuperAdmin required)</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"name": "Partner LLC",
+					"email": "partner@example.com",
+					"phone": "9988776655",
+					"businessType": "DSA"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Registered partner details
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/partners/login</span>
+				<span class="endpoint-desc">Partner login</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"identifier": "partner@example.com", // OR "email": "..."
+					"password": "mypassword"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Token and partner representation
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/partners/dashboard</span>
+				<span class="endpoint-desc">Get partner dashboard stats</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Dashboard numbers & stats
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/partners/earnings</span>
+				<span class="endpoint-desc">Get partner earnings</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"success": true,
+					"message": "Earnings fetched successfully",
+					"data": { ... }
+					}</div>
+			</div>
+		</div>
+
+		<div class="endpoint-row method-get" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-get-badge">GET</span>
+				<span class="endpoint-path">/api/partners/link</span>
+				<span class="endpoint-desc">Generate referral link</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					// Referral URL and configuration details
+					}</div>
+			</div>
+		</div>
+
+
+		<!-- LOANS -->
+		<h3 class="group-title">Loans</h3>
+
+		<div class="endpoint-row method-post" onclick="toggleEndpoint(this)">
+			<div class="endpoint-header">
+				<span class="endpoint-badge method-post-badge">POST</span>
+				<span class="endpoint-path">/api/loans/apply</span>
+				<span class="endpoint-desc">Apply for a new loan</span>
+			</div>
+			<div class="endpoint-body">
+				<h4 class="font-bold mb-2">Request Body</h4>
+				<div class="code-block mb-4">{
+					"loanAmount": 50000,
+					"purposeOfLoan": "Medical",
+					"loanType": "PERSONAL"
+					}</div>
+				<h4 class="font-bold mb-2">Response</h4>
+				<div class="code-block">{
+					"message": "Loan application submitted successfully.",
+					"applicationId": "12345",
+					"attribution": "Partner 99"
+					}</div>
+			</div>
+		</div>
+
+
+		<!-- FRONTEND SECTION -->
+		<h2 class="section-title mt-16">2. Frontend Routes (Next.js Application)</h2>
+		<div class="bg-white p-6 rounded-lg border shadow-sm">
+
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+				<div>
+					<h3 class="font-bold text-lg mb-3 border-b pb-2 text-indigo-700">Authentication & Identification
+					</h3>
+					<ul class="space-y-1 text-sm">
+						<li><a href="#" class="route-link">/login</a></li>
+						<li><a href="#" class="route-link">/signup</a></li>
+						<li><a href="#" class="route-link">/login-agent</a></li>
+						<li><a href="#" class="route-link">/register-agent</a></li>
+						<li><a href="#" class="route-link">/partners/login</a></li>
+					</ul>
+
+					<h3 class="font-bold text-lg mt-6 mb-3 border-b pb-2 text-indigo-700">Application Dashboards</h3>
+					<ul class="space-y-1 text-sm">
+						<li><a href="#" class="route-link">/dashboard</a></li>
+						<li><a href="#" class="route-link">/affiliate-dashboard</a></li>
+						<li><a href="#" class="route-link">/bc-dashboard</a></li>
+						<li><a href="#" class="route-link">/dsa-dashboard</a></li>
+					</ul>
+
+					<h3 class="font-bold text-lg mt-6 mb-3 border-b pb-2 text-indigo-700">Main Pages & Info</h3>
+					<ul class="space-y-1 text-sm">
+						<li><a href="#" class="route-link">/</a> (Home)</li>
+						<li><a href="#" class="route-link">/about-us</a></li>
+						<li><a href="#" class="route-link">/contact-us</a></li>
+						<li><a href="#" class="route-link">/enquire-now</a></li>
+						<li><a href="#" class="route-link">/apply-now</a></li>
+						<li><a href="#" class="route-link">/news</a></li>
+						<li><a href="#" class="route-link">/track-loan</a></li>
+						<li><a href="#" class="route-link">/personal-loan</a></li>
+						<li><a href="#" class="route-link">/business-consultant</a></li>
+						<li><a href="#" class="route-link">/direct-sales-agent</a></li>
+						<li><a href="#" class="route-link">/affiliate-program</a></li>
+					</ul>
+
+					<h3 class="font-bold text-lg mt-6 mb-3 border-b pb-2 text-indigo-700">Admin / Studio</h3>
+					<ul class="space-y-1 text-sm">
+						<li><a href="#" class="route-link">/studio/[[...tool]]</a></li>
+					</ul>
+				</div>
+
+				<div>
+					<h3 class="font-bold text-lg mb-3 border-b pb-2 text-indigo-700">Calculators & Tools</h3>
+					<ul class="space-y-1 text-sm">
+						<li><a href="#" class="route-link">/loan-calculators/personal-emi-calculator</a></li>
+						<li><a href="#" class="route-link">/loan-calculators/loan-comparison-calculator</a></li>
+						<li><a href="#" class="route-link">/loan-calculators/eligibility-loan-calculator</a></li>
+						<li><a href="#" class="route-link">/loan-calculators/cibil-score-checker</a></li>
+					</ul>
+
+					<h3 class="font-bold text-lg mt-6 mb-3 border-b pb-2 text-indigo-700">Specialized Loan Segments</h3>
+					<ul class="space-y-1 text-sm">
+						<li><a href="#" class="route-link">/personal-loan/insta-loan</a></li>
+						<li><a href="#" class="route-link">/personal-loan/40000-salary-loan</a></li>
+						<li><a href="#" class="route-link">/personal-loan/50000-salary-loan</a></li>
+						<li><a href="#" class="route-link">/personal-loan/80000-salary-loan</a></li>
+						<li><a href="#" class="route-link">/personal-loan/100000-salary-loan</a></li>
+					</ul>
+
+					<h3 class="font-bold text-lg mt-6 mb-3 border-b pb-2 text-indigo-700">Usecases (Purpose-driven)</h3>
+					<ul class="space-y-1 text-sm">
+						<li><a href="#" class="route-link">/utility-bill-loan</a></li>
+						<li><a href="#" class="route-link">/medical-emergency-loan</a></li>
+						<li><a href="#" class="route-link">/house-rent-loan</a></li>
+						<li><a href="#" class="route-link">/education-purpose-loan</a></li>
+					</ul>
+
+					<h3 class="font-bold text-lg mt-6 mb-3 border-b pb-2 text-indigo-700">Location Pages (SEO)</h3>
+					<p class="text-xs text-gray-500 mb-2">Example Cities:</p>
+					<ul class="space-y-1 text-sm text-gray-700 ml-4 mb-4 list-disc marker:text-gray-400">
+						<li>/cities/payday-loan-in-pune</li>
+						<li>/cities/payday-loan-in-mumbai</li>
+						<li>... etc</li>
+					</ul>
+					<p class="text-xs text-gray-500 mb-2">Example States:</p>
+					<ul class="space-y-1 text-sm text-gray-700 ml-4 list-disc marker:text-gray-400">
+						<li>/states/payday-loan-in-west-bengal</li>
+						<li>/states/payday-loan-in-punjab</li>
+						<li>... etc</li>
+					</ul>
+				</div>
+			</div>
+
+		</div>
+
+		<div class="mt-12 text-center text-sm text-gray-500 pb-12">
+			Generated for LoanInNeed Documentation
+		</div>
+	</div>
+
+</body>
+
+</html>

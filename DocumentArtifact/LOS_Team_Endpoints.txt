@@ -1,0 +1,94 @@
+=========================================================
+LoanInNeed - Ready-to-Hit Endpoints for LOS Team
+=========================================================
+
+* IMPORTANT: Every request below absolutely requires this header to work:
+Header Key: Authorization
+Header Value: Key paromita$432
+
+(You can paste these directly into Postman and add the Authorization header)
+
+
+=========================================================
+1. FULL EXPORT OF LOAN APPLICATIONS (Detailed Data)
+=========================================================
+To get the full dataset with KYC, Documents, and Employment info for all dates:
+
+Live Production URL:
+https://lionfish-app-mg3te.ondigitalocean.app/api/loans/export?from=2024-01-01&to=2026-12-31
+
+Local Dev URL:
+http://localhost:5000/api/loans/export?from=2024-01-01&to=2026-12-31
+
+
+=========================================================
+2. GET BASIC LOAN STATUS LIST
+=========================================================
+To get a lightweight list of applications and their status:
+
+Live Production URL:
+https://lionfish-app-mg3te.ondigitalocean.app/api/loans/status
+
+Local Dev URL:
+http://localhost:5000/api/loans/status
+
+
+=========================================================
+3. GET TARGET LOS QUEUE APPLICATIONS
+=========================================================
+To get the specific queue of applications meant for LOS sync:
+
+Live Production URL:
+https://lionfish-app-mg3te.ondigitalocean.app/api/los/applications?status=PENDING
+
+Local Dev URL:
+http://localhost:5000/api/los/applications?status=PENDING
+
+
+=========================================================
+4. UPDATE LOS INTEGRATION STATUS (WEBHOOK)
+=========================================================
+To update the backend when your LOS completes syncing:
+
+Type: PUT
+
+Live Production URL:
+https://lionfish-app-mg3te.ondigitalocean.app/api/los/applications/YOUR_APP_ID_HERE/status
+
+Local Dev URL:
+http://localhost:5000/api/los/applications/YOUR_APP_ID_HERE/status
+
+JSON Body (Example):
+{
+  "status": "COMPLETED",
+  "losApplicationId": "LOS-912",
+  "losCaseNumber": "CASE-123",
+  "losKycId": "KYC-099",
+  "lastError": ""
+}
+
+
+=========================================================
+5. UPDATE ACTUAL LOAN STATUS (FINAL DECISION)
+=========================================================
+To update the core Loan Application status (e.g., APPROVED, REJECTED) along with the loan account number and processing employee details:
+
+Type: PUT
+
+Live Production URL:
+https://lionfish-app-mg3te.ondigitalocean.app/api/loans/update-status
+
+Local Dev URL:
+http://localhost:5000/api/loans/update-status
+
+JSON Body (Example):
+{
+  "id": "LIN-12345", 
+  "status": "APPROVED",
+  "reason": "Meets all criteria",
+  "employeeId": "EMP-909",
+  "employeeName": "John Doe",
+  "loanNo": "LOAN-ACC-001",
+  "applicationNumber": "LOS-APP-888"
+}
+* Note: The "id" field can be either the Loan Application integer ID or the User's LIN ID.

@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="SwaggerUI" />
+    <title>LoanInNeed Swagger UI</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js" crossorigin></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js" crossorigin></script>
+
+    <!-- We embed the swagger spec as a JS object directly to avoid CORS/Fetch local file issues -->
+    <script>
+        const spec = {
+            "openapi": "3.0.0",
+            "info": {
+                "title": "LoanInNeed API",
+                "description": "API documentation for LoanInNeed Backend",
+                "version": "1.0.0"
+            },
+            "servers": [
+                {
+                    "url": "/api",
+                    "description": "Base API Path"
+                }
+            ],
+            "components": {
+                "securitySchemes": {
+                    "bearerAuth": {
+                        "type": "http",
+                        "scheme": "bearer",
+                        "bearerFormat": "JWT"
+                    }
+                }
+            },
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "paths": {
+                "/users/register": {
+                    "post": {
+                        "summary": "Register new user",
+                        "tags": [
+                            "Users"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "attribution": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Registration completed successfully"
+                            }
+                        }
+                    }
+                },
+                "/users/profile": {
+                    "put": {
+                        "summary": "Update user profile",
+                        "tags": [
+                            "Users"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Profile updated successfully"
+                            }
+                        }
+                    }
+                },
+                "/users/login": {
+                    "post": {
+                        "summary": "User login",
+                        "tags": [
+                            "Users"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "phone": {
+                                                "type": "string"
+                                            },
+                                            "dob": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "OTP sent for login. Please verify to continue."
+                            }
+                        }
+                    }
+                },
+                "/users/admin-login": {
+                    "post": {
+                        "summary": "Admin login",
+                        "tags": [
+                            "Users"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "email": {
+                                                "type": "string"
+                                            },
+                                            "password": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Login successful"
+                            }
+                        }
+                    }
+                },
+                "/users/me": {
+                    "get": {
+                        "summary": "Get current user profile",
+                        "tags": [
+                            "Users"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Profile fetched successfully"
+                            }
+                        }
+                    }
+                },
+                "/users/profile/complete": {
+                    "get": {
+                        "summary": "Get complete profile with KYC",
+                        "tags": [
+                            "Users"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Complete profile fetched successfully"
+                            }
+                        }
+                    }
+                },
+                "/users/location": {
+                    "post": {
+                        "summary": "Submit user location",
+                        "tags": [
+                            "Users"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "string"
+                                            },
+                                            "longitude": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Location saved successfully"
+                            }
+                        }
+                    },
+                    "get": {
+                        "summary": "Get user location",
+                        "tags": [
+                            "Users"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "User location object returned"
+                            },
+                            "404": {
+                                "description": "No location found"
+                            }
+                        }
+                    }
+                },
+                "/auth/phone/request-otp": {
+                    "post": {
+                        "summary": "Request OTP via phone",
+                        "tags": [
+                            "Authentication"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "phone": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "OTP sent successfully"
+                            }
+                        }
+                    }
+                },
+                "/auth/phone/verify-otp": {
+                    "post": {
+                        "summary": "Verify OTP via phone",
+                        "tags": [
+                            "Authentication"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "phone": {
+                                                "type": "string"
+                                            },
+                                            "code": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Verification successful, returns token"
+                            }
+                        }
+                    }
+                },
+                "/auth/aadhaar/request-otp": {
+                    "post": {
+                        "summary": "Request Aadhaar OTP",
+                        "tags": [
+                            "Authentication"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Aadhaar OTP sent"
+                            }
+                        }
+                    }
+                },
+                "/auth/aadhaar/verify-otp": {
+                    "post": {
+                        "summary": "Verify Aadhaar OTP (Bypass)",
+                        "tags": [
+                            "Authentication"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "otp": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Aadhaar verified successfully"
+                            }
+                        }
+                    }
+                },
+                "/kyc/": {
+                    "post": {
+                        "summary": "Submit full KYC details",
+                        "tags": [
+                            "KYC"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "employment": {
+                                                "type": "object"
+                                            },
+                                            "address": {
+                                                "type": "object"
+                                            },
+                                            "loan": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Full KYC details saved successfully"
+                            }
+                        }
+                    },
+                    "get": {
+                        "summary": "Get existing KYC details",
+                        "tags": [
+                            "KYC"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "KYC details returned"
+                            }
+                        }
+                    }
+                },
+                "/kyc/verify-pan": {
+                    "post": {
+                        "summary": "Verify PAN details",
+                        "tags": [
+                            "KYC"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "multipart/form-data": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "panNumber": {
+                                                "type": "string"
+                                            },
+                                            "panImage": {
+                                                "type": "string",
+                                                "format": "binary"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "PAN verified successfully"
+                            }
+                        }
+                    }
+                },
+                "/kyc/employment": {
+                    "put": {
+                        "summary": "Update employment info",
+                        "tags": [
+                            "KYC"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "employmentType": {
+                                                "type": "string"
+                                            },
+                                            "companyName": {
+                                                "type": "string"
+                                            },
+                                            "monthlyIncome": {
+                                                "type": "number"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Employment details updated"
+                            }
+                        }
+                    }
+                },
+                "/kyc/address": {
+                    "put": {
+                        "summary": "Update address info",
+                        "tags": [
+                            "KYC"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "currentAddress": {
+                                                "type": "string"
+                                            },
+                                            "city": {
+                                                "type": "string"
+                                            },
+                                            "state": {
+                                                "type": "string"
+                                            },
+                                            "postalCode": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Address details updated"
+                            }
+                        }
+                    }
+                },
+                "/document/submit": {
+                    "post": {
+                        "summary": "Submit KYC Documents",
+                        "tags": [
+                            "Document Verification"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "multipart/form-data": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "salarySlips": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "format": "binary"
+                                                }
+                                            },
+                                            "bankStatements": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "format": "binary"
+                                                }
+                                            },
+                                            "selfie": {
+                                                "type": "string",
+                                                "format": "binary"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Documents uploaded successfully"
+                            }
+                        }
+                    }
+                },
+                "/document/upload/{type}": {
+                    "post": {
+                        "summary": "Upload a single document by type",
+                        "tags": [
+                            "Document Verification"
+                        ],
+                        "parameters": [
+                            {
+                                "in": "path",
+                                "name": "type",
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "description": "Document type (e.g. AADHAAR, PAN)"
+                            }
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "multipart/form-data": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "file": {
+                                                "type": "string",
+                                                "format": "binary"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Document uploaded successfully"
+                            }
+                        }
+                    }
+                },
+                "/document/status": {
+                    "get": {
+                        "summary": "Get document verification status",
+                        "tags": [
+                            "Document Verification"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Verification status object"
+                            }
+                        }
+                    }
+                },
+                "/selfie/upload": {
+                    "post": {
+                        "summary": "Upload selfie",
+                        "tags": [
+                            "Selfie"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "multipart/form-data": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "selfie": {
+                                                "type": "string",
+                                                "format": "binary"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Selfie uploaded successfully"
+                            }
+                        }
+                    }
+                },
+                "/selfie/status": {
+                    "get": {
+                        "summary": "Get selfie status",
+                        "tags": [
+                            "Selfie"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Selfie status object"
+                            }
+                        }
+                    }
+                },
+                "/partners/register": {
+                    "post": {
+                        "summary": "Register new partner",
+                        "tags": [
+                            "Partners"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "email": {
+                                                "type": "string"
+                                            },
+                                            "phone": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "201": {
+                                "description": "Partner registered"
+                            }
+                        }
+                    }
+                },
+                "/partners/login": {
+                    "post": {
+                        "summary": "Partner login",
+                        "tags": [
+                            "Partners"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "identifier": {
+                                                "type": "string"
+                                            },
+                                            "password": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Login successful"
+                            }
+                        }
+                    }
+                },
+                "/partners/dashboard": {
+                    "get": {
+                        "summary": "Get partner dashboard",
+                        "tags": [
+                            "Partners"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Dashboard statistics"
+                            }
+                        }
+                    }
+                },
+                "/partners/earnings": {
+                    "get": {
+                        "summary": "Get partner earnings",
+                        "tags": [
+                            "Partners"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Earnings details"
+                            }
+                        }
+                    }
+                },
+                "/partners/link": {
+                    "get": {
+                        "summary": "Generate referral link",
+                        "tags": [
+                            "Partners"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Referral link details"
+                            }
+                        }
+                    }
+                },
+                "/loans/apply": {
+                    "post": {
+                        "summary": "Apply for a loan",
+                        "tags": [
+                            "Loans"
+                        ],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "loanAmount": {
+                                                "type": "number"
+                                            },
+                                            "purposeOfLoan": {
+                                                "type": "string"
+                                            },
+                                            "loanType": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "201": {
+                                "description": "Loan application submitted successfully"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        window.onload = () => {
+            window.ui = SwaggerUIBundle({
+                spec: spec,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout"
+            });
+        };
+    </script>
+</body>
+
+</html>

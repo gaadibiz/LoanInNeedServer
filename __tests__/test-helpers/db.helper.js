@@ -24,7 +24,7 @@ class DbHelper {
       await prisma.userLocation.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -32,7 +32,7 @@ class DbHelper {
       await prisma.userDocument.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -40,7 +40,7 @@ class DbHelper {
       await prisma.losIntegrationJob.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -48,7 +48,7 @@ class DbHelper {
       await prisma.loanApplication.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -56,7 +56,7 @@ class DbHelper {
       await prisma.employmentDetail.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -64,7 +64,7 @@ class DbHelper {
       await prisma.addressDetail.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -72,7 +72,7 @@ class DbHelper {
       await prisma.aadhaarVerification.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -80,7 +80,7 @@ class DbHelper {
       await prisma.panVerification.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -88,7 +88,7 @@ class DbHelper {
       await prisma.otpVerification.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
@@ -96,14 +96,14 @@ class DbHelper {
       await prisma.loan.deleteMany({
         where: {
           user: {
-            phone: { startsWith: '+91' },
+            phone: { startsWith: '+91000' },
           },
         },
       });
 
       await prisma.user.deleteMany({
         where: {
-          phone: { startsWith: '+91' },
+          phone: { startsWith: '+91000' },
         },
       });
     } catch (error) {
