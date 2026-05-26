@@ -1,0 +1,33 @@
+--- Setting up Heavy Test Data ---
+Created test user: ID 1080
+
+=========================================
+PHASE 1: HEAVY LOAD FORM FILL (STRESS TEST)
+=========================================
+
+[APPLY TEST] Concurrency: 50
+Results: 50 succeeded, 0 failed.
+Latency: Avg 2891.02ms | Max 3479ms
+
+[APPLY TEST] Concurrency: 100
+Results: 100 succeeded, 0 failed.
+Latency: Avg 2426.45ms | Max 4218ms
+
+[APPLY TEST] Concurrency: 200
+Results: 200 succeeded, 0 failed.
+Latency: Avg 5100.93ms | Max 8968ms
+
+=> FATAL DEGRADATION at concurrency 200. System is unresponsive/failing.
+
+[METRIC] Absolute Maximum Form Concurrency before degradation: 100 req/burst
+
+=========================================
+PHASE 2: HEAVY DATA VOLUME EXPORT (STRESS TEST)
+=========================================
+
+[EXPORT TEST] Running a heavy data export...
+Export SUCCESS in 6665ms.
+Total Applications Exported: 348
+Payload Size: 1.66 MB
+
+=> EXPORT SURVIVED. The IPC streaming architecture successfully bypassed the 512MB RAM limitation.

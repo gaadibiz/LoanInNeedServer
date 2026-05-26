@@ -6,29 +6,38 @@ const path = require('path');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
 
 // Maximum times a job will be attempted before marking as permanently FAILED
-const MAX_FAILURES = 3;
+const MAX_FAILURES = 7;
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
  * Core processor run by the cron worker (losWorker.js)
  * Picks up PENDING jobs and FAILED jobs that are still under the retry limit.
+ * Uses Exponential Backoff to prevent spamming the LOS during an outage.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 const processPendingIntegrations = async () => {
     logger.info('[LOS WORKER] Checking for pending LOS integration jobs...');
 
+    const now = new Date();
+    const minus5m = new Date(now.getTime() - 5 * 60 * 1000);
+    const minus30m = new Date(now.getTime() - 30 * 60 * 1000);
+    const minus2h = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const minus12h = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+    const minus24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
     const jobs = await prisma.losIntegrationJob.findMany({
         where: {
             OR: [
                 { status: 'PENDING' },
-                {
-                    status: 'FAILED',
-                    retryCount: { lt: MAX_FAILURES }
-                }
+                { status: 'FAILED', retryCount: 1, updatedAt: { lte: minus5m } },
+                { status: 'FAILED', retryCount: 2, updatedAt: { lte: minus30m } },
+                { status: 'FAILED', retryCount: 3, updatedAt: { lte: minus2h } },
+                { status: 'FAILED', retryCount: 4, updatedAt: { lte: minus12h } },
+                { status: 'FAILED', retryCount: { gte: 5, lt: MAX_FAILURES }, updatedAt: { lte: minus24h } }
             ]
         },
         orderBy: { createdAt: 'asc' }, // oldest first
-        take: 10                        // process in batches of 10
+        take: 50                        // process in batches of 50 to catch up efficiently
     });
 
     if (jobs.length === 0) {
@@ -36,11 +45,14 @@ const processPendingIntegrations = async () => {
         return;
     }
 
-    logger.info(`[LOS WORKER] Found ${jobs.length} job(s). Processing...`);
+    logger.info(`[LOS WORKER] Found ${jobs.length} job(s). Processing with 500ms pacing...`);
 
     for (const job of jobs) {
         try {
             await processSingleJob(job);
+            
+            // Pacing: 500ms delay between requests to avoid DDoSing System B (Thundering Herd Protection)
+            await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
             logger.error(`[LOS WORKER] Uncaught error processing job ${job.id}: ${error.message}`);
             await markJobFailed(job, error.message);
