@@ -115,7 +115,9 @@ const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
-  const numCPUs = Math.min(os.cpus().length, 4); // Limit to 4 to prevent heavy memory usage on DO app platform
+  const cpus = os.cpus();
+  const cpuCount = (cpus && cpus.length) ? cpus.length : 1;
+  const numCPUs = Math.max(1, Math.min(cpuCount, 4)); // Force at least 1 worker
   logger.info(`Primary ${process.pid} is running. Forking ${numCPUs} workers for Load Balancing...`);
 
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
