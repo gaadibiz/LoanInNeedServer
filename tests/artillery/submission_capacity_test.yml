@@ -1,0 +1,69 @@
+config:
+  target: "https://be.loaninneed.in"
+  environments:
+    dev:
+      target: "http://localhost:5000"
+    uat:
+      target: "https://be.loaninneed.in"
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  processor: "./processor.js"
+  
+  phases:
+    - duration: 30
+      arrivalRate: 5
+      name: "Phase 1: Safe Ramp Up"
+    - duration: 30
+      arrivalRate: 15
+      name: "Phase 2: Moderate Load"
+    - duration: 30
+      arrivalRate: 50
+      name: "Phase 3: High Load Stress"
+    - duration: 20
+      arrivalRate: 100
+      name: "Phase 4: Breaking Point Analysis"
+      
+scenarios:
+  - name: "User Submitting Loan Application"
+    flow:
+      # Step 1: Generate Phone Number
+      - function: "generateAuthPayload"
+      
+      # Step 2: Request OTP (Creates User)
+      - post:
+          url: "/api/auth/phone/request-otp"
+          json:
+            phone: "{{ phoneNumber }}"
+          afterResponse: "logErrors"
+          expect:
+            - statusCode: 200
+
+      # Step 3: Verify OTP (Gets Token)
+      - post:
+          url: "/api/auth/phone/verify-otp"
+          json:
+            phone: "{{ phoneNumber }}"
+            otp: "{{ otp }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          afterResponse: "logErrors"
+          expect:
+            - statusCode: 200
+
+      # Step 4: Generate Loan Data
+      - function: "generateLoanPayload"
+            
+      # Step 5: Apply for Loan
+      - post:
+          url: "/api/loans/apply"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            loanAmount: "{{ loanAmount }}"
+            purposeOfLoan: "BUSINESS"
+            loanType: "BUSINESS_LOAN"
+          afterResponse: "logErrors"
+          expect:
+            - statusCode: [201, 429] # 429 will be expected once we add the limiter

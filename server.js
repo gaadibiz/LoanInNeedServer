@@ -121,45 +121,37 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
   startLosWorker();
 
-  // --- IPC Global Traffic Controller for Heavy Exports ---
-  let globalActiveExports = 0;
-  const MAX_GLOBAL_EXPORTS = 2; // Strict absolute limit across ALL workers globally
+  // --- Dynamic IPC Global Traffic Controller ---
+  const globalActiveTasks = new Map();
+
+  const handleIpcMessage = (worker, msg) => {
+    if (msg.cmd && msg.cmd.startsWith('request') && msg.cmd.endsWith('Slot')) {
+        const action = msg.cmd.replace('request', '').replace('Slot', '');
+        const maxLimit = msg.maxLimit || 10;
+        const current = globalActiveTasks.get(action) || 0;
+        
+        if (current < maxLimit) {
+            globalActiveTasks.set(action, current + 1);
+            worker.send({ cmd: `${action}SlotGranted`, reqId: msg.reqId });
+        } else {
+            worker.send({ cmd: `${action}SlotDenied`, reqId: msg.reqId });
+        }
+    } else if (msg.cmd && msg.cmd.startsWith('release') && msg.cmd.endsWith('Slot')) {
+        const action = msg.cmd.replace('release', '').replace('Slot', '');
+        const current = globalActiveTasks.get(action) || 0;
+        globalActiveTasks.set(action, Math.max(0, current - 1));
+    }
+  };
 
   for (let i = 0; i < numCPUs; i++) {
     const worker = cluster.fork();
-    
-    // Listen for IPC messages from this worker
-    worker.on('message', (msg) => {
-      if (msg.cmd === 'requestExportSlot') {
-        if (globalActiveExports < MAX_GLOBAL_EXPORTS) {
-          globalActiveExports++;
-          worker.send({ cmd: 'exportSlotGranted', reqId: msg.reqId });
-        } else {
-          worker.send({ cmd: 'exportSlotDenied', reqId: msg.reqId });
-        }
-      } else if (msg.cmd === 'releaseExportSlot') {
-        globalActiveExports = Math.max(0, globalActiveExports - 1);
-      }
-    });
+    worker.on('message', (msg) => handleIpcMessage(worker, msg));
   }
 
   cluster.on('exit', (worker, code, signal) => {
     logger.error(`Worker ${worker.process.pid} died with code: ${code}. Forking a replacement...`);
     const newWorker = cluster.fork();
-    
-    // Attach IPC listener to the new replacement worker
-    newWorker.on('message', (msg) => {
-      if (msg.cmd === 'requestExportSlot') {
-        if (globalActiveExports < MAX_GLOBAL_EXPORTS) {
-          globalActiveExports++;
-          newWorker.send({ cmd: 'exportSlotGranted', reqId: msg.reqId });
-        } else {
-          newWorker.send({ cmd: 'exportSlotDenied', reqId: msg.reqId });
-        }
-      } else if (msg.cmd === 'releaseExportSlot') {
-        globalActiveExports = Math.max(0, globalActiveExports - 1);
-      }
-    });
+    newWorker.on('message', (msg) => handleIpcMessage(newWorker, msg));
   });
 } else {
   // Worker process or Test environment

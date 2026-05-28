@@ -1,0 +1,31 @@
+config:
+  target: "https://be.loaninneed.in"
+  environments:
+    dev:
+      target: "http://localhost:5000"
+    uat:
+      target: "https://be.loaninneed.in"
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  processor: "./processor.js"
+  
+  phases:
+    - duration: 30
+      arrivalRate: 2
+      name: "Phase 1: Concurrent Exports"
+    - duration: 30
+      arrivalRate: 5
+      name: "Phase 2: Aggressive Export Spam (Testing Rate Limiter)"
+      
+scenarios:
+  - name: "Admin Exporting Loan Data"
+    flow:
+      - get:
+          url: "/api/loans/export?from=2024-01-01T00:00:00.000Z&to=2026-12-31T23:59:59.000Z&filterIncomplete=false"
+          headers:
+            Authorization: "Key paromita$432"
+          afterResponse: ["logErrors", "countExportedLoans"]
+          expect:
+            # We expect either a successful stream (200) or the concurrency limiter (429)
+            - statusCode: [200, 429]

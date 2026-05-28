@@ -1,7 +1,8 @@
 module.exports = {
   generateAuthPayload,
   generateLoanPayload,
-  logErrors
+  logErrors,
+  countExportedLoans
 };
 
 const crypto = require('crypto');
@@ -39,6 +40,21 @@ function logErrors(requestParams, response, userContext, events, done) {
       errorDetail = `HTTP ${response.statusCode}`;
     }
     events.emit('counter', `backend_error: ${errorDetail}`, 1);
+  }
+  return done();
+}
+
+// Counts the number of loans successfully exported
+function countExportedLoans(requestParams, response, userContext, events, done) {
+  if (response.statusCode === 200) {
+    try {
+      const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
+      if (body && body.data && Array.isArray(body.data)) {
+        events.emit('counter', 'loan_applications_exported', body.data.length);
+      }
+    } catch (e) {
+      events.emit('counter', 'export_json_parse_error', 1);
+    }
   }
   return done();
 }

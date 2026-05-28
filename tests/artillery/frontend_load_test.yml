@@ -1,0 +1,19 @@
+config:
+  target: "https://test.loaninneed.in"
+  engines:
+    playwright: {}
+  processor: "./frontend_journey.js"
+  
+  phases:
+    # A lightweight phase because opening real Chrome browsers is very heavy!
+    - duration: 30
+      arrivalRate: 1
+      rampTo: 3
+      name: "Phase 1: Warm Up Browsers"
+    - duration: 60
+      arrivalRate: 5
+      name: "Phase 2: UI Load Testing (Max 5 Concurrent Browsers)"
+
+scenarios:
+  - engine: playwright
+    testFunction: "frontendUserJourney"

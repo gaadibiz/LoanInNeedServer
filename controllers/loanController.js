@@ -4,29 +4,18 @@ const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { generateApplicationPdf, formatApplicationNumber } = require('../services/pdfService');
 const path = require('path');
-const fs = require('fs');
-const { encodeFileToBase64 } = require('../utils/base64Encoder');
-const axios = require('axios');
-const https = require('https');
-const { GetObjectCommand } = require('@aws-sdk/client-s3');
-const s3Client = require('../utils/s3Client');
-const { getFromDiskCache, setToDiskCache } = require('../utils/diskCache');
+const { streamJsonArray } = require('../utils/streamExporter');
+const { createLoanApplication } = require('../services/loanService');
+const { formatApplicationData } = require('../services/exportService');
 
-const s3AxiosInstance = axios.create({
-    httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 })
-});
+let localActiveSubmissions = 0;
+const MAX_CONCURRENT_SUBMISSIONS = process.env.MAX_CONCURRENT_SUBMISSIONS ? parseInt(process.env.MAX_CONCURRENT_SUBMISSIONS) : 10;
+const ENABLE_SUBMISSION_LOAD_SHEDDING = process.env.ENABLE_SUBMISSION_LOAD_SHEDDING === 'true';
 
-const crypto = require('crypto');
-
-// Load Shedding (Concurrency Limiter) variables
-let localActiveExports = 0;
-const MAX_CONCURRENT_EXPORTS = 2;
-
-async function requestGlobalSlot() {
+async function requestSubmissionSlot() {
     if (!process.send) {
-        // Fallback for non-cluster / test mode
-        if (localActiveExports >= MAX_CONCURRENT_EXPORTS) return false;
-        localActiveExports++;
+        if (localActiveSubmissions >= MAX_CONCURRENT_SUBMISSIONS) return false;
+        localActiveSubmissions++;
         return true;
     }
     return new Promise(resolve => {
@@ -34,21 +23,22 @@ async function requestGlobalSlot() {
         const handler = (msg) => {
             if (msg.reqId === reqId) {
                 process.removeListener('message', handler);
-                resolve(msg.cmd === 'exportSlotGranted');
+                resolve(msg.cmd === 'submissionSlotGranted');
             }
         };
         process.on('message', handler);
-        process.send({ cmd: 'requestExportSlot', reqId });
+        process.send({ cmd: 'requestSubmissionSlot', reqId });
     });
 }
 
-function releaseGlobalSlot() {
+function releaseSubmissionSlot() {
     if (!process.send) {
-        localActiveExports = Math.max(0, localActiveExports - 1);
+        localActiveSubmissions = Math.max(0, localActiveSubmissions - 1);
     } else {
-        process.send({ cmd: 'releaseExportSlot' });
+        process.send({ cmd: 'releaseSubmissionSlot' });
     }
 }
+
 
 /**
  * @desc    Apply for a Loan
@@ -59,80 +49,12 @@ const applyForLoan = asyncHandler(async (req, res) => {
     const { loanAmount, purposeOfLoan, loanType } = req.body;
     const userId = req.user.id;
 
-    // --- ATTRIBUTION LOGIC ---
-    let partnerId = null;
-    let attributionSource = 'ORGANIC';
-
-    // 1. Check Locked Attribution on User (First-touch wins)
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (user.attributedPartnerId) {
-        partnerId = user.attributedPartnerId;
-        attributionSource = user.attributionType || 'EXISTING_LOCK';
-        logger.info(`[LOAN] Using locked attribution for User ${userId}: Partner ${partnerId}`);
-    }
-    // 2. Check Session Attribution (if not locked)
-    else if (req.attribution?.partnerId) {
-        partnerId = req.attribution.partnerId;
-        attributionSource = req.attribution.source;
-        logger.info(`[LOAN] Using session attribution for User ${userId}: Partner ${partnerId}`);
-
-        // Lock it now if not already locked (redundant check but safe)
-        if (!user.attributedPartnerId) {
-            await prisma.user.update({
-                where: { id: userId },
-                data: {
-                    attributedPartnerId: partnerId,
-                    attributionType: 'ONLINE_LINK', // Assuming session comes from link
-                    attributionDate: new Date()
-                }
-            });
-        }
-    }
-
-    // 3. Create Application with Attribution
-    const application = await prisma.loanApplication.create({
-        data: {
-            userId,
-            loanAmount: parseFloat(loanAmount),
-            loanType: loanType || 'OTHER',
-            status: 'PENDING',
-            attributedPartnerId: partnerId,
-            attributionSource: attributionSource
-        }
-    });
-
-    // --- LOS INTEGRATION QUEUE ---
-    // Push a new pending job to completely decouple the external API from UI
-    try {
-        await prisma.losIntegrationJob.create({
-            data: {
-                userId,
-                applicationId: application.id,
-                status: 'PENDING'
-            }
-        });
-        logger.info(`[LOAN] Created LOS Integration Job for Application ${application.id}`);
-    } catch (error) {
-        // We log but DO NOT fail the loan creation since it's just an integration failure
-        logger.error(`[LOAN] Failed to queue LOS Integration Job for App ${application.id}: ${error.message}`);
-    }
-
-    // 4. Log Event
-    if (partnerId) {
-        await prisma.attributionLog.create({
-            data: {
-                partnerId: parseInt(partnerId),
-                userId: userId,
-                action: 'APPLICATION_CREATED',
-                metadata: JSON.stringify({ applicationId: application.id, amount: loanAmount })
-            }
-        });
-    }
+    const result = await createLoanApplication(userId, loanAmount, loanType, req.attribution);
 
     res.status(201).json({
         message: 'Loan application submitted successfully.',
-        applicationId: application.id,
-        attribution: partnerId ? `Partner ${partnerId}` : 'Organic'
+        applicationId: result.applicationId,
+        attribution: result.partnerId ? `Partner ${result.partnerId}` : 'Organic'
     });
 });
 
@@ -189,9 +111,7 @@ const getLoanStatus = asyncHandler(async (req, res) => {
 const exportLoanApplications = asyncHandler(async (req, res) => {
     const { from, to, filterIncomplete } = req.query;
 
-    if (!from || !to) {
-        throw new BadRequestError('Both "from" and "to" query parameters are required in ISO format.');
-    }
+    if (!from || !to) throw new BadRequestError('Both "from" and "to" query parameters are required in ISO format.');
 
     const fromDate = new Date(from);
     const toDate = new Date(to);
@@ -200,309 +120,37 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
          throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
     }
 
-    const slotGranted = await requestGlobalSlot();
-    if (!slotGranted) {
-        res.status(429).json({ error: "System is at maximum capacity processing other heavy exports. Please wait a moment and try again." });
-        return;
-    }
-
-    try {
-        // 1. Fetch only IDs to prevent Out Of Memory (OOM) crashes and DB strain
     const applicationIds = await prisma.loanApplication.findMany({
-        where: {
-            createdAt: {
-                gte: fromDate,
-                lte: toDate
-            }
-        },
+        where: { createdAt: { gte: fromDate, lte: toDate } },
         select: { id: true }
     });
 
-    // Set streaming headers immediately to bypass DigitalOcean 60s timeout
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200);
-    res.write('{"data":[');
-
-    let isFirstApp = true;
-    let totalProcessed = 0;
-    const CHUNK_SIZE = 1; // Strict 1 to completely prevent Out-Of-Memory (OOM) crashes on 512MB RAM
-
-    for (let i = 0; i < applicationIds.length; i += CHUNK_SIZE) {
-        const chunkIds = applicationIds.slice(i, i + CHUNK_SIZE).map(a => a.id);
-        
-        // 2. Fetch full data ONLY for this chunk
+    const CHUNK_SIZE = 1;
+    const fetchChunkFn = async (chunkIds) => {
         const chunkApps = await prisma.loanApplication.findMany({
             where: { id: { in: chunkIds } },
             include: {
                 user: {
-                    include: {
-                        address: true,
-                        employment: true,
-                        business: true,
-                        locations: true,
-                        documents: true,
-                        aadhaarVerification: true,
-                        panVerification: true
-                    }
+                    include: { address: true, employment: true, business: true, locations: true, documents: true, aadhaarVerification: true, panVerification: true }
                 }
             }
         });
 
-        // 3. Filter the chunk
         let validChunk = chunkApps;
         if (filterIncomplete !== 'false') {
             validChunk = chunkApps.filter(app => {
                 const u = app.user;
-                if (!u) return false;
-
-                if (!u.name) return false;
-                const nameParts = u.name.trim().split(/\s+/).filter(Boolean);
-                if (nameParts.length < 2) return false;
-
-                const panNumber = u.panVerification?.panNumber;
-                const aadhaarNumber = u.aadhaarVerification?.aadhaarNumber;
-                if (!panNumber || !aadhaarNumber) return false;
-
-                const isComplete = u.panVerification?.verified === true && u.aadhaarVerification?.verified === true;
+                if (!u || !u.name || !u.panVerification?.panNumber || !u.aadhaarVerification?.aadhaarNumber) return false;
+                const isComplete = u.panVerification.verified === true && u.aadhaarVerification.verified === true;
                 if (!isComplete) return false;
-
-                const docTypes = (u.documents || []).map(d => d.docType);
-                return docTypes.includes('BANK_STATEMENT');
+                return (u.documents || []).some(d => d.docType === 'BANK_STATEMENT');
             });
         }
-
-        if (validChunk.length === 0) continue;
         
-        const chunkResults = await Promise.all(validChunk.map(async app => {
-        try {
-        const u = app.user;
-        const emp = u?.employment || {};
-        const addr = u?.address || {};
-        const loc = u?.locations?.[0] || {};
-        const aadh = u?.aadhaarVerification || {};
-        const pan = u?.panVerification || {};
+        return Promise.all(validChunk.map(formatApplicationData));
+    };
 
-        // Read file from local disk or S3 and return [base64, filename] or null
-        const getBase64Safe = async (doc) => {
-            if (!doc) return null;
-            const docName = doc.fileName || (doc.filePath ? path.basename(doc.filePath) : (doc.docType ? `${doc.docType}.jpg` : 'document.jpg'));
-            const DUMMY_PDF_BASE64 = 'JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgb3V0cHV0Pj4Kc3RyZWFtCgplbmRzdHJlYW0KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZSAvUGFnZS9QYXJlbnQgMSAwIFIvTWVkaWFCb3hbMCAwIDU5NSA4NDJdL1Jlc291cmNlczw8Pj4vQ29udGVudHMgMiAwIFI+PgplbmRvYmoKMSAwIG9iago8PC9UeXBlIC9QYWdlcy9LaWRzWzQgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjUgMCBvYmoKPDwvVHlwZSAvQ2F0YWxvZy9QYWdlcyAxIDAgUj4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAxODcgMDAwMDAgbiAKMDAwMDAwMDAxOSAwMDAwMCBuIAowMDAwMDAwMDAwIGYgCjAwMDAwMDAwNzggMDAwMDAgbiAKMDAwMDAwMDAyNDAgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDYvUm9vdCA1IDAgUj4+CnN0YXJ0eHJlZgoyODgKJSVFT0Y=';
-            try {
-                if (!doc.filePath && !doc.fileUrl) {
-                    return [DUMMY_PDF_BASE64, docName];
-                }
-                
-                // Fetch from S3 if configured
-                if (process.env.STORAGE_PROVIDER === 's3') {
-                    let s3Key = null;
-                    
-                    if (doc.fileUrl && doc.fileUrl.includes(process.env.DO_SPACES_BUCKET)) {
-                        try {
-                            const urlObj = new URL(doc.fileUrl);
-                            s3Key = decodeURIComponent(urlObj.pathname.substring(1));
-                        } catch (e) {
-                            // ignore parse error
-                        }
-                    } else if (doc.filePath) {
-                        s3Key = doc.filePath.replace(/\\/g, '/'); // Ensure forward slashes
-                    }
-
-                    // Check Cache FIRST
-                    const cachedDoc = s3Key ? getFromDiskCache(s3Key) : null;
-                    if (cachedDoc) {
-                        logger.info(`[LOAN EXPORT] Serving S3 Document from Disk Cache: ${s3Key}`);
-                        return [cachedDoc, docName];
-                    }
-
-                    if (s3Key) {
-                        try {
-                            const command = new GetObjectCommand({
-                                Bucket: process.env.DO_SPACES_BUCKET,
-                                Key: s3Key
-                            });
-                            
-                            const s3Response = await s3Client.send(command);
-                            
-                            const buffer = await new Promise((resolve, reject) => {
-                                const chunks = [];
-                                s3Response.Body.on('data', (chunk) => chunks.push(chunk));
-                                s3Response.Body.on('end', () => resolve(Buffer.concat(chunks)));
-                                s3Response.Body.on('error', reject);
-                            });
-                            
-                            const b64 = buffer.toString('base64');
-                            
-                            // Save to Local Disk Cache
-                            if (s3Key) {
-                                setToDiskCache(s3Key, b64);
-                            }
-                            
-                            return [b64, docName];
-                        } catch (err) {
-                            logger.warn(`[LOAN EXPORT] Error fetching from S3 Key: ${s3Key} | AWS Error: ${err.name} - ${err.message}`);
-                        }
-                    }
-                }
-
-                // Clean fallback: If S3 fails or is not configured, silently return the Dummy PDF.
-                // No local disk searching, no DB flagging. Pure and seamless.
-                return [DUMMY_PDF_BASE64, docName];
-            } catch (err) {
-                logger.error(`[LOAN EXPORT] Critical error encoding doc: ${err.message}`);
-                return [DUMMY_PDF_BASE64, docName];
-            }
-        };
-
-        // Get documents by type
-        const getDocsByType = async (type) => {
-            if (!u?.documents) return null;
-            const docs = u.documents.filter(d => d.docType === type);
-            if (docs.length === 0) return null;
-            if (['ADDRESS', 'PAY_SLIP', 'BANK_STATEMENT'].includes(type)) {
-                const results = await Promise.all(docs.map(d => getBase64Safe(d)));
-                const filtered = results.filter(Boolean);
-                return filtered.length > 0 ? filtered : null;
-            }
-            return await getBase64Safe(docs[0]);
-        };
-
-        // Fetch all document types concurrently to drastically reduce waiting time
-        const [
-            aadhaarFront,
-            addressDocument,
-            profilePicture,
-            panCard,
-            salarySlips,
-            bankStatements
-        ] = await Promise.all([
-            getDocsByType('AADHAAR'),
-            getDocsByType('ADDRESS'),
-            getDocsByType('PHOTO'),
-            getDocsByType('PAN'),
-            getDocsByType('PAY_SLIP'),
-            getDocsByType('BANK_STATEMENT')
-        ]);
-        
-        const aadhaarBack = null;
-        const employmentProofDocument = (bankStatements && bankStatements.length > 0) ? bankStatements[0] : null;
-
-        return {
-            id: u?.customUserId || app.id.toString(),
-            name: u?.name || null,
-            fatherName: null,
-            dob: u?.dob || null,
-            gender: u?.gender || null,
-            mobileNo: u?.phone || null,
-            isMobileOtpVerified: u?.phoneVerified || false,
-            personalEmail: u?.email || null,
-            isPersonalEmailOtpVerified: true,
-            incomeType: emp.employmentType || null,
-            designation: emp.employerName || null,
-            monthlyIncome: emp.monthlyIncome || null,
-            workingYears: null,
-            loanAmount: app.loanAmount || null,
-            loanPeriod: null,
-            loanPurpose: app.loanType || null,
-            preferredEmiDate: null,
-            bankAccountNo: null,
-            ifscCode: null,
-            bankName: null,
-            address1: addr.currentAddress || null,
-            address2: addr.permanentAddress || null,
-            landmark: null,
-            pinCode: addr.postalCode || null,
-            area: addr.city || null,
-            district: addr.city || null,
-            state: addr.state || null,
-            geolocation: {
-                latitude: loc.latitude || null,
-                longitude: loc.longitude || null
-            },
-            addressDocument,
-            aadhaarNo: aadh.aadhaarNumber
-                ? aadh.aadhaarNumber.replace(/_DUP_\d+$/, '').trim() || null
-                : null,
-            panNo: pan.panNumber || null,
-            profilePicture,
-            aadhaarFront,
-            aadhaarBack,
-            panCard,
-            termsAccepted: true,
-            organizationName: emp.employerName || null,
-            officeEmail: null,
-            isOfficeEmailVerified: false,
-            salarySlips,
-            bankStatements,
-            employmentProofDocument,
-            createdAt: app.createdAt,
-            updatedAt: app.updatedAt,
-            isFullyFilled: true,
-            isContinueApplicationLinkSent: true,
-            stepsCompleted: 7,
-            status: app.status,
-            applicationNumber: app.id,
-            loanAccountNumber: null,
-            reason: null,
-            employeeName: null
-        };
-        } catch (appFormatError) {
-            logger.error(`[LOAN EXPORT] Fallback triggered. Failed to load Application ID ${app.id}: ${appFormatError.message}`);
-            return {
-                applicationNumber: app.id,
-                status: 'DATA_ERROR',
-                reason: 'System fallback: Corrupted record skipped due to missing or invalid data files.',
-                error: true
-            };
-        }
-        }));
-
-        // Stream this chunk of applications instantly with strict TCP backpressure
-        for (const app of chunkResults) {
-            // If the client disconnects or network drops, stop processing immediately
-            if (res.destroyed) break;
-
-            if (!isFirstApp) {
-                if (!res.write(',')) {
-                    await new Promise(resolve => {
-                        if (res.destroyed) return resolve();
-                        res.once('drain', resolve);
-                        res.once('close', resolve);
-                        res.once('error', resolve);
-                    });
-                }
-            }
-            if (res.destroyed) break;
-
-            if (!res.write(JSON.stringify(app))) {
-                await new Promise(resolve => {
-                    if (res.destroyed) return resolve();
-                    res.once('drain', resolve);
-                    res.once('close', resolve);
-                    res.once('error', resolve);
-                });
-            }
-            isFirstApp = false;
-        }
-        
-        if (res.destroyed) {
-            logger.warn(`[LOAN EXPORT] Client disconnected mid-stream. Halting export.`);
-            break;
-        }
-
-        totalProcessed += chunkResults.length;
-
-        // Force Event Loop to yield so V8 Garbage Collector can clean up massive Base64 strings
-        await new Promise(resolve => setImmediate(resolve));
-    }
-
-    // End JSON array and response
-    res.write(']}');
-    res.end();
-    
-    logger.info(`Export Stream Completed Successfully for ${totalProcessed} records.`);
-    } finally {
-        releaseGlobalSlot();
-    }
+    await streamJsonArray(res, applicationIds.map(a => a.id), CHUNK_SIZE, fetchChunkFn);
 });
 
 /**
