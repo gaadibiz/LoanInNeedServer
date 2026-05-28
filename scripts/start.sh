@@ -71,23 +71,12 @@ echo "===================================================================="
 if [ -z "$DATABASE_URL" ]; then
   echo "⚠️  WARNING: DATABASE_URL not set — skipping all Prisma migrations."
 else
-
-  echo "▶️  Checking Prisma connection:"
+  echo "▶️  Skipping Prisma migrations on boot to speed up startup time."
   echo "------------------------------------------------------------"
-  npx prisma migrate status || echo "⚠️  migrate status failed"
-  echo ""
-
-  echo "▶️  Running prisma migrate deploy (with debug output):"
-  echo "------------------------------------------------------------"
-  npx prisma migrate deploy --schema=/app/prisma/schema.prisma || {
-    echo "❌ Prisma migrate deploy FAILED"
-    echo "======================================================="
-    echo "FULL PRISMA CLIENT DEBUG OUTPUT"
-    echo "======================================================="
-    export DEBUG="*"
-    npx prisma migrate deploy --schema=/app/prisma/schema.prisma
-    echo "-------------------------------------------------------"
-  }
+  # npx prisma migrate status || echo "⚠️  migrate status failed"
+  # npx prisma migrate deploy --schema=/app/prisma/schema.prisma || {
+  #   echo "❌ Prisma migrate deploy FAILED"
+  # }
 fi
 
 echo ""
