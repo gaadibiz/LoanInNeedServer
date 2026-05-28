@@ -8,7 +8,7 @@
 const http = require('http');
 
 const PORT = process.env.PORT || process.argv[2] || 5000;
-const HOST = 'localhost';
+const HOST = '127.0.0.1';
 
 const options = {
   hostname: HOST,
