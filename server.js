@@ -117,7 +117,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
   const cpus = os.cpus();
   const cpuCount = (cpus && cpus.length) ? cpus.length : 1;
-  const numCPUs = Math.max(1, Math.min(cpuCount, 4)); // Force at least 1 worker
+  // Limit to 2 workers max to prevent heavy memory usage (Prisma Query Engine) on DO app platform
+  const numCPUs = Math.max(1, Math.min(cpuCount, 2)); 
   logger.info(`Primary ${process.pid} is running. Forking ${numCPUs} workers for Load Balancing...`);
 
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
