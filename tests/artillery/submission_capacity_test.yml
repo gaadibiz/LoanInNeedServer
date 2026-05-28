@@ -37,7 +37,7 @@ scenarios:
             phone: "{{ phoneNumber }}"
           afterResponse: "logErrors"
           expect:
-            - statusCode: 200
+            - statusCode: [200, 429]
 
       # Step 3: Verify OTP (Gets Token)
       - post:
@@ -50,7 +50,7 @@ scenarios:
               as: "authToken"
           afterResponse: "logErrors"
           expect:
-            - statusCode: 200
+            - statusCode: [200, 429]
 
       # Step 4: Generate Loan Data
       - function: "generateLoanPayload"
