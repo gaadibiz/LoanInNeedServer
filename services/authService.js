@@ -71,14 +71,9 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
   }
 
   if (!user) {
-    // Generate custom user ID
-    const lastUser = await prisma.user.findFirst({ orderBy: { id: 'desc' } });
-    const nextNumber = ((lastUser?.id || 0) + 1).toString().padStart(3, '0');
-    const customUserId = `LIN${nextNumber}`;
-
+    // ✅ Fixed Concurrency Bug: Let Postgres generate the unique ID first, then update customUserId
     user = await prisma.user.create({
       data: {
-        customUserId,
         phone: targetPhone,
         phoneVerified: true,
         phoneVerifiedAt: new Date(),
@@ -89,6 +84,12 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
         attributionDate: attribution ? new Date() : null,
         attributionType: attribution ? 'ONLINE_LINK' : null
       }
+    });
+
+    const customUserId = `LIN${user.id.toString().padStart(3, '0')}`;
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { customUserId }
     });
 
     logger.info('New user created and verified: %s (customId=%s)', targetPhone, customUserId);

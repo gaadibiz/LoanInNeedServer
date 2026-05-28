@@ -1,0 +1,105 @@
+config:
+  target: "https://be.loaninneed.in"
+  environments:
+    dev:
+      target: "http://localhost:5000"
+    uat:
+      target: "https://be.loaninneed.in"
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  processor: "./processor.js"
+  
+  # Stress Test Phases: Push to breaking point
+  phases:
+    - duration: 30
+      arrivalRate: 5
+      rampTo: 50
+      name: "Stress Phase 1: Rapid Ramp Up"
+    - duration: 60
+      arrivalRate: 50
+      name: "Stress Phase 2: High Sustained Load"
+    - duration: 30
+      arrivalRate: 150
+      name: "Stress Phase 3: Extreme Spike (Breaking Point)"
+      
+  ensure:
+    # We expect failures in an extreme stress test, so we set thresholds very high
+    maxErrorRate: 50 
+    p99: 8000
+
+scenarios:
+  - name: "Unified User Journey: Auth -> Loan Apply -> Doc Upload"
+    weight: 10
+    flow:
+      - function: "generateAuthPayload"
+      
+      - post:
+          url: "/api/auth/phone/request-otp"
+          afterResponse: "logErrors"
+          json:
+            phone: "{{ phoneNumber }}"
+          expect:
+            - statusCode: 200
+            
+      - post:
+          url: "/api/auth/phone/verify-otp"
+          afterResponse: "logErrors"
+          json:
+            phone: "{{ phoneNumber }}"
+            code: "{{ otp }}"
+            deviceId: "stress-test-device"
+            deviceName: "Artillery Virtual Device"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+            - json: "$.user._id"
+              as: "userId"
+          expect:
+            - statusCode: 200
+            
+      - post:
+          url: "/api/loans/check-eligibility"
+          afterResponse: "logErrors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            phone: "{{ phoneNumber }}"
+          expect:
+            - statusCode: [200, 400]
+            
+      - function: "generateLoanPayload"
+      - post:
+          url: "/api/loans/apply"
+          afterResponse: "logErrors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            personalDetails:
+              firstName: "{{ firstName }}"
+              lastName: "{{ lastName }}"
+              email: "{{ email }}"
+              panNumber: "{{ pan }}"
+              aadhaarNumber: "{{ aadhaar }}"
+              dob: "1990-01-01"
+              gender: "MALE"
+            loanDetails:
+              amountRequested: "{{ loanAmount }}"
+              purpose: "MEDICAL"
+              tenureMonths: 12
+          expect:
+            - statusCode: [200, 201]
+          capture:
+            - json: "$.application._id"
+              as: "applicationId"
+
+      - post:
+          url: "/api/document/upload/AADHAAR"
+          afterResponse: "logErrors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          formData:
+            file:
+              fromFile: "./dummy.pdf"
+          expect:
+            - statusCode: [200, 201]

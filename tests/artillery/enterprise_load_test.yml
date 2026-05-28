@@ -1,0 +1,107 @@
+config:
+  target: "https://be.loaninneed.in"
+  environments:
+    dev:
+      target: "http://localhost:5000"
+    uat:
+      target: "https://be.loaninneed.in"
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  processor: "./processor.js"
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      rampTo: 10
+      name: "Phase 1: Warm Up"
+    - duration: 180
+      arrivalRate: 20
+      name: "Phase 2: Sustained Load"
+    - duration: 30
+      arrivalRate: 50
+      name: "Phase 3: Sudden Spike"
+  ensure:
+    maxErrorRate: 25 # Increased threshold to 25% for a spike stress test
+    p99: 4000 # Server will naturally slow during spikes
+
+scenarios:
+  - name: "Unified User Journey: Auth -> Loan Apply -> Doc Upload"
+    weight: 10
+    flow:
+      # Step 1: Generate Phone
+      - function: "generateAuthPayload"
+      
+      # Step 2: Request OTP
+      - post:
+          url: "/api/auth/phone/request-otp"
+          afterResponse: "logErrors"
+          json:
+            phone: "{{ phoneNumber }}"
+          expect:
+            - statusCode: 200
+      
+      # Step 3: Verify OTP (Bypass) and capture token
+      - post:
+          url: "/api/auth/phone/verify-otp"
+          afterResponse: "logErrors"
+          json:
+            phone: "{{ phoneNumber }}"
+            code: "{{ otp }}"
+            deviceId: "artillery-load-test"
+            deviceName: "Artillery Virtual Device"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+            - json: "$.user._id"
+              as: "userId"
+          expect:
+            - statusCode: 200
+      
+      # Step 4: Check Eligibility
+      - post:
+          url: "/api/loans/check-eligibility"
+          afterResponse: "logErrors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            phone: "{{ phoneNumber }}"
+          expect:
+            - statusCode: [200, 400] # It might be 400 if user doesn't exist, which is fine
+      
+      # Step 5: Submit Loan App (Simulated Payload)
+      - function: "generateLoanPayload"
+      - post:
+          url: "/api/loans/apply"
+          afterResponse: "logErrors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            personalDetails:
+              firstName: "{{ firstName }}"
+              lastName: "{{ lastName }}"
+              email: "{{ email }}"
+              panNumber: "{{ pan }}"
+              aadhaarNumber: "{{ aadhaar }}"
+              dob: "1990-01-01"
+              gender: "MALE"
+            loanDetails:
+              amountRequested: "{{ loanAmount }}"
+              purpose: "MEDICAL"
+              tenureMonths: 12
+          expect:
+            - statusCode: [200, 201]
+          capture:
+            - json: "$.application._id"
+              as: "applicationId"
+
+      # Step 6: Upload Documents (Multipart)
+      - post:
+          url: "/api/document/upload/AADHAAR"
+          afterResponse: "logErrors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          formData:
+            file:
+              fromFile: "./dummy.pdf"
+          expect:
+            - statusCode: [200, 201]

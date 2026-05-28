@@ -1,0 +1,19 @@
+config:
+  target: "https://be.loaninneed.in"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 50
+      name: "TC-LOAD-001: Warm up phase"
+    - duration: 120
+      arrivalRate: 50
+      name: "TC-LOAD-001: Sustained load"
+  plugins:
+    expect: {}
+scenarios:
+  - name: "Health Check and Base API Load"
+    flow:
+      - get:
+          url: "/"
+          expect:
+            - statusCode: 200

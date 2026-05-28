@@ -13,6 +13,10 @@
     "test:unit": "jest --testPathPattern=__tests__/unit",
     "test:integration": "jest --testPathPattern=__tests__/integration",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:clinic": "clinic doctor -- node server.js",
+    "test:zap": "docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py -t https://be.loaninneed.in",
+    "test:enterprise": "npx artillery run tests/artillery/enterprise_load_test.yml --record --key a9_aihl5m29zais7aj25hmmp5by2vavfpxn",
+    "test:system": "node tests/system_design_test.js",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "start": "node server.js",
     "dev": "nodemon server.js",
@@ -59,6 +63,9 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "artillery": "^2.0.32",
+    "artillery-plugin-metrics-by-endpoint": "^1.26.0",
+    "clinic": "^13.0.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",

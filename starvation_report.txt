@@ -1,0 +1,43 @@
+========================================================
+    INFRASTRUCTURE STARVATION ANALYSIS TEST
+========================================================
+
+This test calculates the "Starvation Multiplier" by comparing
+baseline ideal traffic (10 reqs) vs heavy traffic (300 reqs).
+A healthy system (e.g., 4 vCPU) degrades by ~1.5x to 3x.
+A starving system (1 vCPU) degrades by 20x or more.
+
+
+--- Testing Layer: Pure Network (Health) ---
+Running Baseline (Concurrency: 10)...
+  Baseline Latency: 317.60ms
+Running Stress (Concurrency: 300)...
+  Stress Latency: 1991.04ms | Failures: 0
+  => Starvation Multiplier: 6.27x
+
+--- Testing Layer: CPU Bound (Logic) ---
+Running Baseline (Concurrency: 10)...
+  Baseline Latency: 146.90ms
+Running Stress (Concurrency: 300)...
+  Stress Latency: 1539.15ms | Failures: 0
+  => Starvation Multiplier: 10.48x
+
+--- Testing Layer: DB Read Heavy (Loan Status) ---
+Running Baseline (Concurrency: 10)...
+  Baseline Latency: 1326.00ms
+Running Stress (Concurrency: 300)...
+  Stress Latency: 3609.80ms | Failures: 0
+  => Starvation Multiplier: 2.72x
+
+--- Testing Layer: DB Write Heavy (Apply Loan) ---
+Running Baseline (Concurrency: 10)...
+  Baseline Latency: 0.00ms
+Running Stress (Concurrency: 300)...
+  Stress Latency: 0.00ms | Failures: 300
+  => Starvation Multiplier: 30.00x
+
+========================================================
+                 FINAL STARVATION GRADE                 
+========================================================
+Average Starvation Multiplier: 12.37x
+Grade: C (System is straining under load, minor upgrades needed)

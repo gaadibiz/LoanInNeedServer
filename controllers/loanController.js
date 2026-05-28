@@ -144,6 +144,18 @@ const applyForLoan = asyncHandler(async (req, res) => {
 const getLoanStatus = asyncHandler(async (req, res) => {
     const { linId } = req.query;
 
+    if (linId) {
+        // Strict input validation: Allow only alphanumeric, dash, and underscore
+        // This explicitly rejects SQL injection payloads like "SELECT * FROM"
+        const isValidFormat = /^[a-zA-Z0-9_-]+$/.test(linId);
+        if (!isValidFormat) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid linId format. SQL Injection payloads or special characters are not allowed."
+            });
+        }
+    }
+
     let filter = {};
     if (linId) {
         filter = {

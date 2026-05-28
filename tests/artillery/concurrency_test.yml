@@ -1,0 +1,14 @@
+config:
+  target: "https://be.loaninneed.in"
+  phases:
+    - duration: 10
+      arrivalRate: 100
+      name: "TC-CONC-002: Concurrent user logins / operations"
+scenarios:
+  - name: "Concurrent API hits"
+    flow:
+      - post:
+          url: "/api/users/login"
+          json:
+            email: "testuser@example.com"
+            password: "password123"

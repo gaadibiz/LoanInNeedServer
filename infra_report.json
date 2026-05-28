@@ -1,0 +1,6 @@
+[
+  {
+    "test": "TC-INF-001",
+    "status": "PASSED (System handles client timeout gracefully)"
+  }
+]
