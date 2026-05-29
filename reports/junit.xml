@@ -1,23 +1,3 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="LoanInNeed Backend Tests" tests="5" failures="1" errors="0" time="10.48">
-  <testsuite name="__tests__\integration\functional.test.js" errors="0" failures="1" skipped="0" timestamp="2026-05-28T08:02:09" time="6.192" tests="3">
-    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-001: Should reject invalid user registration payloads" time="0.255">
-    </testcase>
-    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-004: Should validate bad inputs for loan application" time="0.213">
-    </testcase>
-    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-005: Role-Based Access Control (RBAC) Enforcement" time="0.241">
-      <failure>Error: expect(received).toBe(expected) // Object.is equality
-
-Expected: 401
-Received: 404
-    at Object.toBe (D:\Project\LoanInNeedServer2\Backend\__tests__\integration\functional.test.js:33:33)
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
-    </testcase>
-  </testsuite>
-  <testsuite name="__tests__\integration\database.test.js" errors="0" failures="0" skipped="0" timestamp="2026-05-28T08:02:15" time="3.993" tests="2">
-    <testcase classname="Database Testing Suite (TC-DB)" name="TC-DB-001: Should rollback transactions on failure" time="0.966">
-    </testcase>
-    <testcase classname="Database Testing Suite (TC-DB)" name="TC-DB-002: Query by indexed field (email) should be fast" time="0.068">
-    </testcase>
-  </testsuite>
+<testsuites name="LoanInNeed Backend Tests" tests="0" failures="0" errors="0" time="3.072">
 </testsuites>

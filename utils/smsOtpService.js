@@ -1,6 +1,12 @@
 const axios = require('axios');
 const prisma = require('./prismaClient');
 const logger = require('./logger');
+const { createCircuitBreaker } = require('./circuitBreaker');
+
+const smsBreaker = createCircuitBreaker(
+    (url, body, config) => axios.post(url, body, config),
+    'SMS Gateway API'
+);
 
 // SMS API Configuration
 const SMS_API_URL = process.env.SMS_API_URL || 'https://omc.speqtrainnov.in/api/json/sendsms/';
@@ -95,12 +101,12 @@ async function sendOtp(phone) {
         };
 
         // Send SMS via API
-        const response = await axios.post(SMS_API_URL, requestBody, {
+        const response = await smsBreaker.fire(SMS_API_URL, requestBody, {
             headers: {
                 'key': SMS_API_KEY,
                 'content-type': 'application/json'
             },
-            timeout: 10000 // 10 second timeout
+            timeout: parseInt(process.env.SMS_GATEWAY_TIMEOUT_MS) || 10000 // Configurable SMS timeout
         });
 
         // 🔍 Log full raw response so we can detect if gateway generates its own OTP

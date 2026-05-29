@@ -10,6 +10,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const compression = require('compression');
 const dotenv = require('dotenv');
+const rateLimit = require('express-rate-limit');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const kycRoutes = require('./routes/kycRoutes'); // ✅ Added KYC routes
@@ -30,6 +31,22 @@ app.use(compression());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false })); // Adjust helmet to allow local static files
+
+// Trust proxy (required if running behind DO Load Balancer / Reverse Proxy)
+app.set('trust proxy', 1);
+
+// Global Rate Limiting
+const rateLimitWindowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000; // 15 mins
+const rateLimitMax = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100;
+const globalLimiter = rateLimit({
+  windowMs: rateLimitWindowMs,
+  max: rateLimitMax,
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', globalLimiter); // Apply to all API routes
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Enable CORS with specific options
 const allowedOrigins = [
@@ -90,6 +107,9 @@ app.get('/', (req, res) => {
   });
 });
 
+// ✅ Idempotency Middleware (Interprets Idempotency-Key headers before routing)
+app.use(require('./middleware/idempotencyMiddleware'));
+
 // ✅ Route handlers
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -117,8 +137,9 @@ const HOST = process.env.HOST || '0.0.0.0';
 if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
   const cpus = os.cpus();
   const cpuCount = (cpus && cpus.length) ? cpus.length : 1;
-  // Limit to 2 workers max to prevent heavy memory usage (Prisma Query Engine) on DO app platform
-  const numCPUs = Math.max(1, Math.min(cpuCount, 2)); 
+  // Set max workers based on environment variable (or default to 2 to prevent heavy memory usage on DO app platform)
+  const maxWorkers = parseInt(process.env.MAX_CLUSTER_WORKERS) || 2;
+  const numCPUs = Math.max(1, Math.min(cpuCount, maxWorkers)); 
   logger.info(`Primary ${process.pid} is running. Forking ${numCPUs} workers for Load Balancing...`);
 
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
@@ -159,19 +180,52 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
 } else {
   // Worker process or Test environment
   // Start the server and log startup
-  app.listen(PORT, HOST, () => {
+  const server = app.listen(PORT, HOST, () => {
     logger.info(`Worker ${process.pid} started and listening on ${HOST}:${PORT}`);
   });
+
+  const prisma = require('./utils/prismaClient');
+
+  const gracefulShutdown = (signal) => {
+    logger.info(`Worker ${process.pid} received ${signal}. Initiating graceful shutdown...`);
+    
+    // Stop accepting new connections
+    server.close(async (err) => {
+      if (err) {
+        logger.error(`Error closing HTTP server: ${err.message}`);
+      } else {
+        logger.info(`Worker ${process.pid} HTTP server closed.`);
+      }
+      
+      try {
+        await prisma.$disconnect();
+        logger.info(`Worker ${process.pid} Prisma disconnected successfully.`);
+        process.exit(0);
+      } catch (dbErr) {
+        logger.error(`Worker ${process.pid} Error disconnecting Prisma: ${dbErr.message}`);
+        process.exit(1);
+      }
+    });
+
+    // Force close after 10 seconds if connections are hanging
+    setTimeout(() => {
+      logger.error(`Worker ${process.pid} forcefully terminating after 10s timeout.`);
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
   // Handle unexpected errors gracefully
   process.on('uncaughtException', (err) => {
     logger.error(`Worker ${process.pid} - Uncaught Exception: %s`, err.stack || err.message);
-    process.exit(1); // Optional: exit after logging
+    gracefulShutdown('uncaughtException');
   });
 
   process.on('unhandledRejection', (reason, promise) => {
     logger.error(`Worker ${process.pid} - Unhandled Rejection at: %s, reason: %s`, promise, reason);
-    // Optionally exit process or handle appropriately
+    gracefulShutdown('unhandledRejection');
   });
 }
 

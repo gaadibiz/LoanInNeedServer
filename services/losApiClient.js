@@ -1,6 +1,7 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
 const { getLosToken, invalidateToken } = require('./losAuthService');
+const { createCircuitBreaker } = require('../utils/circuitBreaker');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LOS API Endpoint Configuration
@@ -8,7 +9,25 @@ const { getLosToken, invalidateToken } = require('./losAuthService');
 // Credentials confirmed by LOS team on 2026-04-07 (live public endpoints)
 const LOS_SAVE_URL    = process.env.LOS_SAVE_URL    || 'http://59.95.101.93:7021/api/NewApplicationAPI/SaveNewApplication';
 const LOS_KYC_DOC_URL = process.env.LOS_KYC_DOC_URL || 'http://59.95.101.93:7021/api/ChatBotKYCProof/SaveChatBotKYCProof';
-const LOS_TIMEOUT_MS  = 30000; // 30-second timeout
+const LOS_TIMEOUT_MS  = parseInt(process.env.LOS_API_TIMEOUT_MS) || 30000; // Configurable timeout
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Circuit Breakers
+// ─────────────────────────────────────────────────────────────────────────────
+const losSaveBreaker = createCircuitBreaker(
+  (payload, config) => axios.post(LOS_SAVE_URL, payload, config),
+  'LOS Save Application API'
+);
+
+const losKycBreaker = createCircuitBreaker(
+  (payload, config) => axios.post(LOS_KYC_DOC_URL, payload, config),
+  'LOS Save KYC API'
+);
+
+const losStatusBreaker = createCircuitBreaker(
+  (url, payload, config) => axios.put(url, payload, config),
+  'LOS Status API'
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: build auth headers using a fresh (or cached) LOS Bearer token
@@ -46,7 +65,7 @@ const createLosApplication = async (payload) => {
     }
 
     try {
-        const response = await axios.post(LOS_SAVE_URL, payload, {
+        const response = await losSaveBreaker.fire(payload, {
             headers,
             timeout: LOS_TIMEOUT_MS
         });
@@ -144,7 +163,7 @@ const pushKycDocumentToLos = async (docPayload) => {
     }
 
     try {
-        const response = await axios.post(LOS_KYC_DOC_URL, normalisedPayload, {
+        const response = await losKycBreaker.fire(normalisedPayload, {
             headers,
             timeout: LOS_TIMEOUT_MS
         });
@@ -217,7 +236,7 @@ const pushLoanStatusToLos = async (losReferenceId, newStatus, meta = {}) => {
     logger.info(`[LOS API] Pushing status "${newStatus}" for referenceId "${losReferenceId}" to LOS...`);
 
     try {
-        const response = await axios.put(
+        const response = await losStatusBreaker.fire(
             `${LOS_STATUS_URL}/${losReferenceId}/status`,
             { status: newStatus, ...meta, timestamp: new Date().toISOString() },
             { headers, timeout: LOS_TIMEOUT_MS }

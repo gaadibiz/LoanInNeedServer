@@ -1,0 +1,17 @@
+config:
+  target: 'https://lionfish-app-mg3te.ondigitalocean.app'
+  phases:
+    - duration: 10
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 20
+      arrivalRate: 20
+      name: "Sustained load"
+    - duration: 10
+      arrivalRate: 50
+      name: "Stress test"
+scenarios:
+  - name: "Health check ping"
+    flow:
+      - get:
+          url: "/"

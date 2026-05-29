@@ -1,0 +1,20 @@
+config:
+  target: 'https://lionfish-app-mg3te.ondigitalocean.app'
+  phases:
+    - duration: 10
+      arrivalRate: 50
+      name: "Warm up (50 users/sec)"
+    - duration: 20
+      arrivalRate: 200
+      name: "Heavy sustained load (200 users/sec)"
+    - duration: 10
+      arrivalRate: 500
+      name: "Spike test (500 users/sec)"
+scenarios:
+  - name: "Heavy Load Scenario"
+    flow:
+      - get:
+          url: "/"
+      - think: 1
+      - get:
+          url: "/"

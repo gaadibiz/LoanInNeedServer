@@ -1,6 +1,7 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
+const { createCircuitBreaker } = require('../utils/circuitBreaker');
 
 const SUREPASS_BASE_URL = process.env.SUREPASS_BASE_URL || 'https://sandbox.surepass.app';
 const SUREPASS_TOKEN = process.env.SUREPASS_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NDQxNjUyNSwianRpIjoiNjU1ZGMwMTgtOWZlOC00MTdkLTgyZjItZDA1NDhmYjgyODIxIiwidHlwZSI6ImFjY2VzcyIsImlkZW50aXR5IjoiZGV2LmJ1bWN1bWZpbnNlcnZlQHN1cmVwYXNzLmlvIiwibmJmIjoxNzc0NDE2NTI1LCJleHAiOjE3NzcwMDg1MjUsImVtYWlsIjoiYnVtY3VtZmluc2VydmVAc3VyZXBhc3MuaW8iLCJ0ZW5hbnRfaWQiOiJtYWluIiwidXNlcl9jbGFpbXMiOnsic2NvcGVzIjpbInVzZXIiXX19.-KnhmxDe-pBm8vWSvFJ764VspfwM2kHu-Zf0z4sw8fI';
@@ -14,6 +15,16 @@ class SurepassService {
         'Authorization': `Bearer ${SUREPASS_TOKEN}`
       }
     });
+
+    this.panBreaker = createCircuitBreaker(
+      (data) => this.client.post('/api/v1/pan/pan-comprehensive', data),
+      'Surepass PAN API'
+    );
+
+    this.aadhaarBreaker = createCircuitBreaker(
+      (data) => this.client.post('/api/v1/aadhaar-validation/aadhaar-validation', data),
+      'Surepass Aadhaar API'
+    );
   }
 
   /**
@@ -35,7 +46,7 @@ class SurepassService {
     }
 
     try {
-      const response = await this.client.post('/api/v1/pan/pan-comprehensive', {
+      const response = await this.panBreaker.fire({
         id_number: panNumber
       });
 
@@ -70,7 +81,7 @@ class SurepassService {
     }
 
     try {
-      const response = await this.client.post('/api/v1/aadhaar-validation/aadhaar-validation', {
+      const response = await this.aadhaarBreaker.fire({
         id_number: aadhaarNumber
       });
 

@@ -179,7 +179,7 @@ async function saveFullKYC(userId, data) {
       // ---------- Return ----------
       return { user, employment, addressDetail, loan, application };
     },
-    { timeout: 50000 } // 30 seconds timeout
+    { timeout: parseInt(process.env.DB_TRANSACTION_TIMEOUT_MS) || 50000 } // Configurable timeout
   );
 }
 
