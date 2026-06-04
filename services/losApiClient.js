@@ -45,7 +45,7 @@ const getAuthHeaders = async () => {
  *
  * Endpoint  : POST /api/NewApplicationAPI/SaveNewApplication
  * Auth      : Bearer <LOS token>
- * Payload   : Full LOS v1 payload (buildLosPayload from losMapping.js)
+ * Payload   : New LOS contract payload (buildNewLosPayload from losMapping.js)
  *
  * @param   {object} payload  - Built by buildLosPayload()
  * @returns {object}          - { success, applicationId, caseNumber, rawData }

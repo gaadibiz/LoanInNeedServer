@@ -1,6 +1,6 @@
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
-const { buildLosPayload } = require('../config/losMapping');
+const { buildNewLosPayload } = require('../config/losMapping');
 const { createLosApplication, pushKycDocumentToLos } = require('./losApiClient');
 const path = require('path');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
@@ -107,9 +107,10 @@ const processSingleJob = async (job) => {
     const kycEmployment = user.employment || null;
     const kycAddress    = user.address || null;
     const panVerification = user.panVerification || null;
+    const aadhaarVerification = user.aadhaarVerification || null;
 
-    // ── 4. Build the full LOS v1 payload ────────────────────────────────────
-    const payload = buildLosPayload(application, user, kycEmployment, kycAddress, panVerification);
+    // ── 4. Build the new LOS payload (confirmed contract, June 2026) ─────
+    const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification);
 
     logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}`, {
         customer: `${payload.FirstName} ${payload.LastName}`,
