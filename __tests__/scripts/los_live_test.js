@@ -108,34 +108,24 @@ async function main() {
         FirstName:           'Rahul',
         MiddleName:          '',
         LastName:            'Sharma',
-        DateOfBirth:         new Date('1990-01-15').toISOString(),
-        Gender:              1,
-        MobileNo:            '9876543210',
-        EmploymentTypeID:    342,
-        NationalityID:       104,
-        CitizenshipID:       'India',
-        Pan:                 'ABCDE1234F',
-        AdharDrivingNo:      '',
-        LoanAmountRequired:  50000,
-        Tenure:              12,
-        InterestRate:        0,
-        PayCheckAmt:         65000,
-        PaydayDate:          paydayDate.toISOString(),
-        AddressTypeID:       335,
-        AddressLine1:        '123 Test Street Apt 4B',   // No commas - LOS SQL parser fails on commas
-        AddressLine2:        '',
-        DistrictName:        'Mumbai',
-        TalukaName:          '',
-        CityName:            'Mumbai',
-        StateID:             1109,
-        State:               'Maharashtra',
-        PinZipCode:          '400001',
-        ResidentType:        319,
-        IsCorrespondenceAddress: true,
-        CreatedBy:           1
+        DateOfBirth:        new Date('1990-01-15').toISOString(),
+
+        MobileNo:           '9876543210',
+        Email:              'rahul.test@loaninneed.com',
+        PanSSN:             'ABCDE1234F',
+        AdharDrivingNo:     '123456789012',
+
+        Address: {
+            AddressTypeID: 335,     // Current Address
+            ResidentType:  319,     // Owner (Self or Family)
+            AddressLine1:  '123 Test Street Apt 4B',   // No commas - LOS SQL parser fails on commas
+            StateID:       1109,    // Maharashtra
+            PinZipCode:    '400001',
+            PhoneNo:       '9876543210'
+        }
     };
 
-    log('  Payload (summary): FirstName=' + appPayload.FirstName + ', Loan=' + appPayload.LoanAmountRequired + ', Pan=' + appPayload.Pan);
+    log('  Payload (summary): FirstName=' + appPayload.FirstName + ', Loan=' + appPayload.LoanAmountRequired + ', PanSSN=' + appPayload.PanSSN);
     let appData = null;
     let step2Pass = false;
     try {
