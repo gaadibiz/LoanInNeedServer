@@ -4,6 +4,14 @@
  * Tests the new LOS payload builder against the confirmed contract (June 2026).
  */
 
+// Mock the logger so tests don't require winston
+jest.mock('../../utils/logger', () => ({
+    info:  jest.fn(),
+    warn:  jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn()
+}));
+
 const {
     employmentMap,
     salutationMap,

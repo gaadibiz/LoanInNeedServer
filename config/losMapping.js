@@ -5,6 +5,8 @@
  * See: LOS Integration Documentation § "New SaveNewApplication Payload"
  */
 
+const logger = require('../utils/logger');
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. Employment Type Mapping  (Confirmed by LOS team)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,6 +141,31 @@ const calculateAge = (dobString) => {
  * @returns {object}                  - LOS-ready payload
  */
 const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification) => {
+    const appId = application?.id || 'UNKNOWN';
+    logger.info(`[LOS MAPPING] Building payload for applicationId: ${appId}`);
+
+    // ── Log input data availability ─────────────────────────────────────
+    logger.info(`[LOS MAPPING] Input data status:`, {
+        applicationId:      appId,
+        hasUser:            !!user,
+        userName:           user?.name || 'MISSING',
+        userGender:         user?.gender || 'MISSING',
+        userPhone:          user?.phone || 'MISSING',
+        userEmail:          user?.email || 'MISSING',
+        userDob:            user?.dob ? 'present' : 'MISSING',
+        hasEmployment:      !!kycEmployment,
+        employmentType:     kycEmployment?.employmentType || 'MISSING',
+        hasAddress:         !!kycAddress,
+        addressState:       kycAddress?.state || 'MISSING',
+        addressType:        kycAddress?.currentAddressType || 'MISSING',
+        hasPan:             !!panVerification,
+        panNumber:          panVerification?.panNumber ? `${panVerification.panNumber.substring(0, 4)}****` : 'MISSING',
+        hasAadhaar:         !!aadhaarVerification,
+        aadhaarNumber:      aadhaarVerification?.aadhaarNumber ? `****${aadhaarVerification.aadhaarNumber.slice(-4)}` : 'MISSING',
+        loanType:           application?.loanType || 'MISSING',
+        loanAmount:         application?.loanAmount || 'MISSING'
+    });
+
     // ── Name extraction (3-part split: First / Middle / Last) ────────────
     const nameParts = (user.name || '').trim().split(/\s+/);
     let firstName, middleName, lastName;
@@ -151,14 +178,19 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         firstName  = nameParts[0];
         middleName = 'NA';
         lastName   = nameParts[1];
+        logger.warn(`[LOS MAPPING] appId=${appId} — 2-part name detected, MiddleName defaulted to 'NA'. Name: "${user.name}"`);
     } else {
         firstName  = nameParts[0] || 'Unknown';
         middleName = 'NA';
         lastName   = 'Unknown';
+        logger.warn(`[LOS MAPPING] appId=${appId} — Single/empty name detected. FirstName="${firstName}", LastName defaulted to 'Unknown'. Raw name: "${user.name}"`);
     }
 
     // ── Date fields ─────────────────────────────────────────────────────
     const DateOfBirth = user.dob ? new Date(user.dob).toISOString() : '1997-01-20T10:38:43.468Z';
+    if (!user.dob) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — DOB is missing, using hardcoded default: 1997-01-20`);
+    }
 
     const paydayDate = new Date();
     paydayDate.setDate(paydayDate.getDate() + 30);
@@ -169,18 +201,36 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         ? kycEmployment.employmentType
         : 'OTHER';
     const EmploymentTypeID = employmentMap[employmentType] || employmentMap.OTHER;
+    if (!kycEmployment || !kycEmployment.employmentType) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Employment data missing, defaulting EmploymentTypeID to ${EmploymentTypeID} (OTHER→SALARIED)`);
+    } else if (!employmentMap[employmentType]) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Unknown employmentType "${employmentType}", defaulting EmploymentTypeID to ${EmploymentTypeID}`);
+    }
 
     const gender = user.gender || 'PREFER_NOT_TO_SAY';
     const SalutationID = salutationMap[gender] || salutationMap.PREFER_NOT_TO_SAY;
     const Gender = genderMap[gender] || genderMap.PREFER_NOT_TO_SAY;
+    if (!user.gender) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Gender missing, defaulting SalutationID=${SalutationID}, Gender=${Gender}`);
+    }
 
     const loanType = application.loanType || 'OTHER';
     const PurposeOfLoanID = purposeOfLoanMap[loanType] || purposeOfLoanMap.OTHER;
+    if (!application.loanType) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — loanType missing, defaulting PurposeOfLoanID to ${PurposeOfLoanID} (OTHER)`);
+    } else if (!purposeOfLoanMap[loanType]) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Unknown loanType "${loanType}", defaulting PurposeOfLoanID to ${PurposeOfLoanID}`);
+    }
 
     // ── Address lookups ─────────────────────────────────────────────────
     const StateCode = kycAddress && kycAddress.state
         ? (stateMap[kycAddress.state] || 1059)
         : 1059;
+    if (!kycAddress || !kycAddress.state) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Address state missing, defaulting StateID to 1059`);
+    } else if (!stateMap[kycAddress.state]) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Unknown state "${kycAddress.state}", defaulting StateID to 1059. Check stateMap.`);
+    }
 
     const addressType = kycAddress && kycAddress.currentAddressType
         ? kycAddress.currentAddressType
@@ -188,9 +238,29 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
     const ResidentType = addressType
         ? (residentTypeMap[addressType] || residentTypeMap.OWNER_SELF_OR_FAMILY)
         : residentTypeMap.OWNER_SELF_OR_FAMILY;
+    if (!addressType) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — currentAddressType missing, defaulting ResidentType to ${ResidentType} (OWNER)`);
+    }
+
+    // ── KYC field logging ───────────────────────────────────────────────
+    if (!panVerification || !panVerification.panNumber) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — PAN not verified, PanSSN will be 'NA'`);
+    }
+    if (!aadhaarVerification || !aadhaarVerification.aadhaarNumber) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Aadhaar not verified, AdharDrivingNo will be 'NA'`);
+    }
+    if (!user.phone) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Phone missing, MobileNo will be '0000000000'`);
+    }
+    if (!user.email) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — Email missing, will use phone-based fallback email`);
+    }
+    if (!application.loanAmount) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — loanAmount missing, defaulting to 5000`);
+    }
 
     // ── Build payload ───────────────────────────────────────────────────
-    return {
+    const payload = {
         ProductID:          13,
         LoanAmountRequired: application.loanAmount || 5000,
         PayDayDate:         PayDayDateString,
@@ -222,6 +292,18 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
             PhoneNo:       user.phone || '0000000000'
         }
     };
+
+    // ── Log the complete outgoing payload (sanitized) ────────────────────
+    logger.info(`[LOS MAPPING] ✅ Payload built successfully for appId=${appId}`, {
+        payload: {
+            ...payload,
+            PanSSN:         payload.PanSSN !== 'NA' ? `${payload.PanSSN.substring(0, 4)}******` : 'NA',
+            AdharDrivingNo: payload.AdharDrivingNo !== 'NA' ? `********${payload.AdharDrivingNo.slice(-4)}` : 'NA',
+            MobileNo:       `******${payload.MobileNo.slice(-4)}`
+        }
+    });
+
+    return payload;
 };
 
 /**
