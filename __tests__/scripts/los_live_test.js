@@ -89,24 +89,16 @@ async function main() {
     paydayDate.setDate(paydayDate.getDate() + 30);
 
     const appPayload = {
-        OrganizationID:      1,
-        ProfileType:         'I',
-        ProductCategoryCode: 'Unsecured',
-        LoanTypeID:          16,
-        ProductID:           13,
-        ProductName:         'PayDay Loan',
-        ProductSchemeID:     1006,
-        ProductSchemeName:   'PayDay Loan Scheme',
-        LoanCategoryCode:    'RLT',
-        Age:                 34,
-        Email:               'rahul.test@loaninneed.com',
-        QualificationID:     null,
-        EligibleLoanAmount:  50000,
-        IsFormerAddress:     false,
-        IsJointApplication:  false,
-        IsCoBorrower:        false,
-        FirstName:           'Rahul',
-        MiddleName:          '',
+        ProductID:          13,
+        LoanAmountRequired: 50000,
+        PayDayDate:         paydayDate.toISOString(),
+
+        PurposeOfLoanID:    49,     // Medical Emergency
+        EmploymentTypeID:   342,    // Salaried
+        SalutationID:       273,    // Mr.
+
+        FirstName:          'Rahul',
+        MiddleName:         'Kumar',
         LastName:            'Sharma',
         DateOfBirth:        new Date('1990-01-15').toISOString(),
 
