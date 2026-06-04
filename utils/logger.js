@@ -60,6 +60,7 @@ const consoleFormat = format.combine(
   format.colorize({ all: true }),
   format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   format.errors({ stack: true }),
+  format.splat(),  // Required for printf-style %s/%d/%j interpolation
   format.printf(({ timestamp, level, message, service, context, requestId, userId, stack }) => {
     const emoji = levelEmojis[level] || '';
     const svc = service ? `📦 ${service}` : '';
@@ -75,6 +76,7 @@ const consoleFormat = format.combine(
 const fileFormat = format.combine(
   format.timestamp(),
   format.errors({ stack: true }),
+  format.splat(),  // Required for printf-style %s/%d/%j interpolation
   format.json()
 );
 

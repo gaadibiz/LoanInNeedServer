@@ -54,7 +54,11 @@ const processPendingIntegrations = async () => {
             // Pacing: 500ms delay between requests to avoid DDoSing System B (Thundering Herd Protection)
             await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
-            logger.error(`[LOS WORKER] Uncaught error processing job ${job.id}: ${error.message}`);
+            logger.error(`[LOS WORKER] Uncaught error processing job ${job.id}: ${error.message}`, {
+                jobId: job.id,
+                userId: job.userId,
+                applicationId: job.applicationId
+            });
             await markJobFailed(job, error.message);
         }
     }

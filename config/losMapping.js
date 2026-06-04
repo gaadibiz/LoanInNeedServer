@@ -115,8 +115,41 @@ const calculateAge = (dobString) => {
     return Math.abs(ageDt.getUTCFullYear() - 1970);
 };
 
-// Helper: strip commas from strings — LOS SQL parser chokes on them
-const losClean = (str) => str ? str.replace(/,/g, ' ').replace(/\s+/g, ' ').trim() : str;
+// Helper: strip commas and SQL-dangerous chars — LOS SQL parser chokes on them
+const losClean = (str) => {
+    if (!str) return str;
+    return String(str)
+        .replace(/,/g, ' ')       // Commas → spaces (LOS SQL injection)
+        .replace(/'/g, '')        // Single quotes (SQL string delimiter)
+        .replace(/\s+/g, ' ')     // Collapse whitespace
+        .trim();
+};
+
+// Helper: normalize phone for LOS — strip country code prefix, keep only digits
+const losPhone = (phone) => {
+    if (!phone) return '0000000000';
+    return phone.replace(/^\+91/, '').replace(/[^0-9]/g, '') || '0000000000';
+};
+
+// Helper: validate final payload has no SQL-dangerous characters in any string field
+const validatePayload = (payload, appId) => {
+    const issues = [];
+    const check = (obj, path = '') => {
+        for (const [key, val] of Object.entries(obj)) {
+            const fp = path ? `${path}.${key}` : key;
+            if (typeof val === 'string' && /[,';]/.test(val)) {
+                issues.push(`${fp}="${val}"`);
+            } else if (val && typeof val === 'object' && !Array.isArray(val)) {
+                check(val, fp);
+            }
+        }
+    };
+    check(payload);
+    if (issues.length > 0) {
+        logger.error(`[LOS MAPPING] ⚠️ DANGEROUS CHARS detected in payload for appId=${appId}: ${issues.join(', ')}`);
+    }
+    return issues;
+};
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -279,20 +312,20 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         LastName:     losClean(lastName)   || 'Unknown',
         DateOfBirth,
 
-        MobileNo:       user.phone || '0000000000',
-        Email:          losClean(user.email) || `${user.phone}@noemail.com`,
-        PanSSN:         panVerification && panVerification.panNumber ? panVerification.panNumber : 'NA',
+        MobileNo:       losPhone(user.phone),
+        Email:          losClean(user.email) || `${losPhone(user.phone)}@noemail.com`,
+        PanSSN:         panVerification && panVerification.panNumber ? losClean(panVerification.panNumber) : 'NA',
         AdharDrivingNo: aadhaarVerification && aadhaarVerification.aadhaarNumber
-            ? aadhaarVerification.aadhaarNumber
+            ? losClean(aadhaarVerification.aadhaarNumber)
             : 'NA',
 
         Address: {
-            AddressTypeID: addressTypeMap.CURRENT,   // 335 — we always send current address
+            AddressTypeID: addressTypeMap.COMMUNICATION,   // 334 — LOS expects COMMUNICATION type
             ResidentType,
             AddressLine1:  kycAddress && kycAddress.currentAddress ? losClean(kycAddress.currentAddress) : 'NA',
             StateID:       StateCode,
-            PinZipCode:    kycAddress && kycAddress.postalCode ? kycAddress.postalCode : '000000',
-            PhoneNo:       user.phone || '0000000000'
+            PinZipCode:    kycAddress && kycAddress.postalCode ? losClean(kycAddress.postalCode) : '000000',
+            PhoneNo:       losPhone(user.phone)
         }
     };
 
@@ -305,6 +338,9 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
             MobileNo:       `******${payload.MobileNo.slice(-4)}`
         }
     });
+
+    // Validate payload before sending — log any dangerous characters that slipped through
+    validatePayload(payload, appId);
 
     return payload;
 };
@@ -387,6 +423,8 @@ module.exports = {
     QUALIFICATION_ID,
     calculateAge,
     losClean,
+    losPhone,
+    validatePayload,
     buildNewLosPayload,       // New LOS contract (active)
     buildLosPayloadLegacy     // v1 legacy (kept for rollback)
 };

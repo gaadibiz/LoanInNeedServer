@@ -22,7 +22,10 @@ const {
     stateMap,
     QUALIFICATION_ID,
     buildNewLosPayload,
-    buildLosPayloadLegacy
+    buildLosPayloadLegacy,
+    losClean,
+    losPhone,
+    validatePayload
 } = require('../../config/losMapping');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,7 +255,7 @@ describe('buildNewLosPayload', () => {
         });
 
         // ── Contact fields ──────────────────────────────────────────────
-        it('should set MobileNo from user.phone', () => {
+        it('should set MobileNo from user.phone (stripped of +91)', () => {
             expect(payload.MobileNo).toBe('7721815360');
         });
 
@@ -273,8 +276,8 @@ describe('buildNewLosPayload', () => {
         });
 
         // ── Address block ───────────────────────────────────────────────
-        it('should set Address.AddressTypeID to 335 (Current Address)', () => {
-            expect(payload.Address.AddressTypeID).toBe(335);
+        it('should set Address.AddressTypeID to 334 (Communication)', () => {
+            expect(payload.Address.AddressTypeID).toBe(334);
         });
 
         it('should set Address.ResidentType from currentAddressType', () => {
@@ -537,5 +540,118 @@ describe('buildLosPayloadLegacy', () => {
         expect(payload.IsJointApplication).toBe(true);
         expect(payload.IsCoBorrower).toBe(true);
         expect(payload.ProductSchemeName).toBe('PayDay Loan Scheme');
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// losPhone helper tests
+// ─────────────────────────────────────────────────────────────────────────────
+describe('losPhone', () => {
+    it('should strip +91 prefix from Indian phone numbers', () => {
+        expect(losPhone('+919434493996')).toBe('9434493996');
+    });
+
+    it('should return bare number unchanged', () => {
+        expect(losPhone('7721815360')).toBe('7721815360');
+    });
+
+    it('should return default for null/undefined', () => {
+        expect(losPhone(null)).toBe('0000000000');
+        expect(losPhone(undefined)).toBe('0000000000');
+    });
+
+    it('should strip non-digit characters', () => {
+        expect(losPhone('+91-943-449-3996')).toBe('9434493996');
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// losClean helper tests
+// ─────────────────────────────────────────────────────────────────────────────
+describe('losClean', () => {
+    it('should strip commas from strings', () => {
+        expect(losClean('Flat 2, Sunrise Apartments, MG Road')).toBe('Flat 2 Sunrise Apartments MG Road');
+    });
+
+    it('should strip single quotes', () => {
+        expect(losClean("O'Brien")).toBe('OBrien');
+    });
+
+    it('should collapse whitespace', () => {
+        expect(losClean('  hello   world  ')).toBe('hello world');
+    });
+
+    it('should return null/undefined unchanged', () => {
+        expect(losClean(null)).toBe(null);
+        expect(losClean(undefined)).toBe(undefined);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Comma safety — production regression tests
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Payload comma safety', () => {
+    it('should strip commas from address with commas', () => {
+        const payload = buildNewLosPayload(
+            makeApplication(), makeUser(), makeEmployment(),
+            makeAddress({ currentAddress: 'Flat 2, Sunrise Apartments, MG Road, Pune' }),
+            makePan(), makeAadhaar()
+        );
+        expect(payload.Address.AddressLine1).toBe('Flat 2 Sunrise Apartments MG Road Pune');
+        expect(payload.Address.AddressLine1).not.toContain(',');
+    });
+
+    it('should strip +91 from MobileNo in payload', () => {
+        const payload = buildNewLosPayload(
+            makeApplication(), makeUser({ phone: '+919434493996' }),
+            makeEmployment(), makeAddress(), makePan(), makeAadhaar()
+        );
+        expect(payload.MobileNo).toBe('9434493996');
+        expect(payload.Address.PhoneNo).toBe('9434493996');
+    });
+
+    it('should have NO commas in any string field of the payload', () => {
+        const payload = buildNewLosPayload(
+            makeApplication(),
+            makeUser({ name: "Ram, Kumar O'Brien", email: 'test,user@gmail.com', phone: '+919434493996' }),
+            makeEmployment(),
+            makeAddress({ currentAddress: 'Flat 1, Building 2, Road 3', postalCode: '444,607' }),
+            makePan(), makeAadhaar()
+        );
+
+        const checkNoCommas = (obj, path = '') => {
+            for (const [key, val] of Object.entries(obj)) {
+                const fp = path ? `${path}.${key}` : key;
+                if (typeof val === 'string') {
+                    expect({ field: fp, value: val, hasComma: val.includes(',') })
+                        .toEqual({ field: fp, value: val, hasComma: false });
+                } else if (val && typeof val === 'object') {
+                    checkNoCommas(val, fp);
+                }
+            }
+        };
+        checkNoCommas(payload);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// validatePayload tests
+// ─────────────────────────────────────────────────────────────────────────────
+describe('validatePayload', () => {
+    it('should return empty array for clean payload', () => {
+        const issues = validatePayload({ FirstName: 'John', Address: { City: 'Pune' } }, 'test');
+        expect(issues).toEqual([]);
+    });
+
+    it('should detect commas in flat fields', () => {
+        const issues = validatePayload({ FirstName: 'John, Doe' }, 'test');
+        expect(issues.length).toBe(1);
+        expect(issues[0]).toContain('FirstName');
+    });
+
+    it('should detect commas in nested fields', () => {
+        const issues = validatePayload({ Address: { AddressLine1: 'Flat 2, Road' } }, 'test');
+        expect(issues.length).toBe(1);
+        expect(issues[0]).toContain('Address.AddressLine1');
     });
 });
