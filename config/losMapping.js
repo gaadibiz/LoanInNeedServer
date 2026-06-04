@@ -181,12 +181,12 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         firstName  = nameParts[0];
         middleName = 'NA';
         lastName   = nameParts[1];
-        logger.warn(`[LOS MAPPING] appId=${appId} — 2-part name detected, MiddleName defaulted to 'NA'. Name: "${user.name}"`);
+        logger.warn(`[LOS MAPPING] appId=${appId} — 2-part name detected, MiddleName defaulted to 'NA'. Name: "${user.name?.charAt(0)}***"`);
     } else {
         firstName  = nameParts[0] || 'Unknown';
         middleName = 'NA';
         lastName   = 'Unknown';
-        logger.warn(`[LOS MAPPING] appId=${appId} — Single/empty name detected. FirstName="${firstName}", LastName defaulted to 'Unknown'. Raw name: "${user.name}"`);
+        logger.warn(`[LOS MAPPING] appId=${appId} — Single/empty name detected. FirstName="${firstName?.charAt(0)}***", LastName defaulted to 'Unknown'.`);
     }
 
     // ── Date fields ─────────────────────────────────────────────────────
