@@ -148,10 +148,10 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
     logger.info(`[LOS MAPPING] Input data status:`, {
         applicationId:      appId,
         hasUser:            !!user,
-        userName:           user?.name || 'MISSING',
+        userName:           user?.name ? `${user.name.charAt(0)}***` : 'MISSING',
         userGender:         user?.gender || 'MISSING',
-        userPhone:          user?.phone || 'MISSING',
-        userEmail:          user?.email || 'MISSING',
+        userPhone:          user?.phone ? `******${user.phone.slice(-4)}` : 'MISSING',
+        userEmail:          user?.email ? `***@${user.email.split('@')[1] || '***'}` : 'MISSING',
         userDob:            user?.dob ? 'present' : 'MISSING',
         hasEmployment:      !!kycEmployment,
         employmentType:     kycEmployment?.employmentType || 'MISSING',
@@ -286,7 +286,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         Address: {
             AddressTypeID: addressTypeMap.CURRENT,   // 335 — we always send current address
             ResidentType,
-            AddressLine1:  kycAddress && kycAddress.currentAddress ? kycAddress.currentAddress : 'NA',
+            AddressLine1:  kycAddress && kycAddress.currentAddress ? kycAddress.currentAddress.replace(/,/g, ' ').replace(/\s+/g, ' ').trim() : 'NA',
             StateID:       StateCode,
             PinZipCode:    kycAddress && kycAddress.postalCode ? kycAddress.postalCode : '000000',
             PhoneNo:       user.phone || '0000000000'
