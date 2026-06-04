@@ -7,10 +7,12 @@
 const {
     employmentMap,
     salutationMap,
+    genderMap,
     purposeOfLoanMap,
     addressTypeMap,
     residentTypeMap,
     stateMap,
+    QUALIFICATION_ID,
     buildNewLosPayload,
     buildLosPayloadLegacy
 } = require('../../config/losMapping');
@@ -104,8 +106,24 @@ describe('LOS Mapping Tables', () => {
             expect(purposeOfLoanMap.MEDICAL_EMERGENCY).toBe(49);
         });
 
+        it('should map EDUCATION to 48', () => {
+            expect(purposeOfLoanMap.EDUCATION).toBe(48);
+        });
+
         it('should map HOME_RENOVATION to 51', () => {
             expect(purposeOfLoanMap.HOME_RENOVATION).toBe(51);
+        });
+
+        it('should map DEBT_CONSOLIDATION to 50', () => {
+            expect(purposeOfLoanMap.DEBT_CONSOLIDATION).toBe(50);
+        });
+
+        it('should map WEDDING to 101', () => {
+            expect(purposeOfLoanMap.WEDDING).toBe(101);
+        });
+
+        it('should map BUSINESS to 102', () => {
+            expect(purposeOfLoanMap.BUSINESS).toBe(102);
         });
 
         it('should map TRAVEL to 52', () => {
@@ -115,12 +133,19 @@ describe('LOS Mapping Tables', () => {
         it('should map OTHER to 53', () => {
             expect(purposeOfLoanMap.OTHER).toBe(53);
         });
+    });
 
-        it('should default unmapped types to 53 (OTHER)', () => {
-            expect(purposeOfLoanMap.EDUCATION).toBe(53);
-            expect(purposeOfLoanMap.DEBT_CONSOLIDATION).toBe(53);
-            expect(purposeOfLoanMap.WEDDING).toBe(53);
-            expect(purposeOfLoanMap.BUSINESS).toBe(53);
+    describe('genderMap', () => {
+        it('should map MALE to 45', () => {
+            expect(genderMap.MALE).toBe(45);
+        });
+
+        it('should map FEMALE to 46', () => {
+            expect(genderMap.FEMALE).toBe(46);
+        });
+
+        it('should map PREFER_NOT_TO_SAY to 45 (default to MALE)', () => {
+            expect(genderMap.PREFER_NOT_TO_SAY).toBe(45);
         });
     });
 
@@ -197,6 +222,14 @@ describe('buildNewLosPayload', () => {
             expect(payload.SalutationID).toBe(273); // MALE → Mr.
         });
 
+        it('should set Gender from gender', () => {
+            expect(payload.Gender).toBe(45); // MALE
+        });
+
+        it('should set QualificationID to static 314', () => {
+            expect(payload.QualificationID).toBe(314);
+        });
+
         // ── Name extraction ─────────────────────────────────────────────
         it('should extract FirstName from 3-part name', () => {
             expect(payload.FirstName).toBe('Sourabh');
@@ -271,14 +304,6 @@ describe('buildNewLosPayload', () => {
 
         it('should NOT include IsCoBorrower', () => {
             expect(payload.IsCoBorrower).toBeUndefined();
-        });
-
-        it('should NOT include Gender', () => {
-            expect(payload.Gender).toBeUndefined();
-        });
-
-        it('should NOT include QualificationID', () => {
-            expect(payload.QualificationID).toBeUndefined();
         });
 
         it('should NOT include Tenure', () => {
@@ -404,12 +429,44 @@ describe('buildNewLosPayload', () => {
             expect(payload.LoanAmountRequired).toBe(5000);
         });
 
-        it('should default PurposeOfLoanID to 53 (OTHER) for unmapped types', () => {
+        it('should map PurposeOfLoanID for EDUCATION to 48', () => {
             const payload = buildNewLosPayload(
                 makeApplication({ loanType: 'EDUCATION' }), makeUser(),
                 null, null, null, null
             );
+            expect(payload.PurposeOfLoanID).toBe(48);
+        });
+
+        it('should default PurposeOfLoanID to 53 (OTHER) for unknown types', () => {
+            const payload = buildNewLosPayload(
+                makeApplication({ loanType: 'UNKNOWN_TYPE' }), makeUser(),
+                null, null, null, null
+            );
             expect(payload.PurposeOfLoanID).toBe(53);
+        });
+
+        it('should set Gender to 46 for FEMALE', () => {
+            const payload = buildNewLosPayload(
+                makeApplication(), makeUser({ gender: 'FEMALE' }),
+                null, null, null, null
+            );
+            expect(payload.Gender).toBe(46);
+        });
+
+        it('should default Gender to 45 when gender is missing', () => {
+            const payload = buildNewLosPayload(
+                makeApplication(), makeUser({ gender: null }),
+                null, null, null, null
+            );
+            expect(payload.Gender).toBe(45);
+        });
+
+        it('should always set QualificationID to 314', () => {
+            const payload = buildNewLosPayload(
+                makeApplication(), makeUser(),
+                null, null, null, null
+            );
+            expect(payload.QualificationID).toBe(314);
         });
 
         it('should map RENTED address type to ResidentType 318', () => {
@@ -432,6 +489,7 @@ describe('buildNewLosPayload', () => {
             const expectedKeys = [
                 'ProductID', 'LoanAmountRequired', 'PayDayDate',
                 'PurposeOfLoanID', 'EmploymentTypeID', 'SalutationID',
+                'Gender', 'QualificationID',
                 'FirstName', 'MiddleName', 'LastName', 'DateOfBirth',
                 'MobileNo', 'Email', 'PanSSN', 'AdharDrivingNo',
                 'Address'

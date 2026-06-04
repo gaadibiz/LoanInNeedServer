@@ -17,8 +17,8 @@ const employmentMap = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. Salutation Mapping  (Confirmed by LOS team — replaces old genderMap)
-//    Derived from user's gender. No separate Gender field in the new contract.
+// 2. Salutation Mapping  (Confirmed by LOS team)
+//    Derived from user's gender.
 //    FEMALE has multiple options (274=Mrs., 275=Miss, 276=Ms.);
 //    we default to 274 since we don't collect marital status.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,18 +29,25 @@ const salutationMap = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. Purpose of Loan Mapping  (Partially confirmed by LOS team)
-//    4 of 8 values mapped. Unmapped types default to OTHER (53).
-//    TODO: Update once LOS provides IDs for EDUCATION, DEBT_CONSOLIDATION,
-//          WEDDING, and BUSINESS.
+// 2b. Gender Mapping  (Confirmed by LOS team)
+//     Separate from SalutationID — uses different IDs.
+// ─────────────────────────────────────────────────────────────────────────────
+const genderMap = {
+    MALE:              45,
+    FEMALE:            46,
+    PREFER_NOT_TO_SAY: 45     // Defaulting to MALE
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. Purpose of Loan Mapping  (All 8 values confirmed by LOS team)
 // ─────────────────────────────────────────────────────────────────────────────
 const purposeOfLoanMap = {
     MEDICAL_EMERGENCY:  49,
-    EDUCATION:          53,   // Not yet mapped by LOS — defaulting to OTHER
+    EDUCATION:          48,
     HOME_RENOVATION:    51,
-    DEBT_CONSOLIDATION: 53,   // Not yet mapped by LOS — defaulting to OTHER
-    WEDDING:            53,   // Not yet mapped by LOS — defaulting to OTHER
-    BUSINESS:           53,   // Not yet mapped by LOS — defaulting to OTHER
+    DEBT_CONSOLIDATION: 50,
+    WEDDING:            101,
+    BUSINESS:           102,
     TRAVEL:             52,
     OTHER:              53
 };
@@ -62,6 +69,12 @@ const residentTypeMap = {
     OWNER_SELF_OR_FAMILY: 319,
     RENTED:               318
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. Qualification ID  (Static — we do not collect this data)
+//    Hardcoded per client instruction. Update this value if LOS changes it.
+// ─────────────────────────────────────────────────────────────────────────────
+const QUALIFICATION_ID = 314;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. State Mapping (From table — unchanged)
@@ -110,11 +123,11 @@ const calculateAge = (dobString) => {
  * Changes from legacy (v1):
  *   - Removed: OrganizationID, LoanTypeID, ProductSchemeName, LoanCategoryCode,
  *              ProductCategoryCode, ProductName, Tenure, InterestRate, PayCheckAmt,
- *              Address.CityName, KYC_Individual, IsJointApplication, IsCoBorrower,
- *              Gender, QualificationID
- *   - Added:   PurposeOfLoanID, EmploymentTypeID, SalutationID,
- *              Address.AddressTypeID, Address.ResidentType
+ *              Address.CityName, KYC_Individual, IsJointApplication, IsCoBorrower
+ *   - Added:   PurposeOfLoanID, EmploymentTypeID, SalutationID, Gender,
+ *              QualificationID, Address.AddressTypeID, Address.ResidentType
  *   - Changed: MiddleName now extracted from user.name (was hardcoded "NA")
+ *              Gender now uses LOS IDs (45/46) instead of old 1/2
  *              AdharDrivingNo now from aadhaarVerification (was hardcoded "NA")
  *
  * @param {object} application        - Prisma LoanApplication record
@@ -159,6 +172,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
 
     const gender = user.gender || 'PREFER_NOT_TO_SAY';
     const SalutationID = salutationMap[gender] || salutationMap.PREFER_NOT_TO_SAY;
+    const Gender = genderMap[gender] || genderMap.PREFER_NOT_TO_SAY;
 
     const loanType = application.loanType || 'OTHER';
     const PurposeOfLoanID = purposeOfLoanMap[loanType] || purposeOfLoanMap.OTHER;
@@ -184,6 +198,8 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         PurposeOfLoanID,
         EmploymentTypeID,
         SalutationID,
+        Gender,
+        QualificationID: QUALIFICATION_ID,
 
         FirstName:    firstName  || 'Unknown',
         MiddleName:   middleName || 'NA',
@@ -278,10 +294,12 @@ const buildLosPayloadLegacy = (application, user, kycEmployment, kycAddress, pan
 module.exports = {
     employmentMap,
     salutationMap,
+    genderMap,
     purposeOfLoanMap,
     addressTypeMap,
     residentTypeMap,
     stateMap,
+    QUALIFICATION_ID,
     calculateAge,
     buildNewLosPayload,       // New LOS contract (active)
     buildLosPayloadLegacy     // v1 legacy (kept for rollback)

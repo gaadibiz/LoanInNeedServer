@@ -96,6 +96,8 @@ async function main() {
         PurposeOfLoanID:    49,     // Medical Emergency
         EmploymentTypeID:   342,    // Salaried
         SalutationID:       273,    // Mr.
+        Gender:             45,     // Male
+        QualificationID:    314,    // Static default
 
         FirstName:          'Rahul',
         MiddleName:         'Kumar',
