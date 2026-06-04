@@ -115,6 +115,9 @@ const calculateAge = (dobString) => {
     return Math.abs(ageDt.getUTCFullYear() - 1970);
 };
 
+// Helper: strip commas from strings — LOS SQL parser chokes on them
+const losClean = (str) => str ? str.replace(/,/g, ' ').replace(/\s+/g, ' ').trim() : str;
+
 /**
  * ─────────────────────────────────────────────────────────────────────────────
  * NEW LOS PAYLOAD BUILDER — Confirmed LOS Contract (June 2026)
@@ -148,10 +151,10 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
     logger.info(`[LOS MAPPING] Input data status:`, {
         applicationId:      appId,
         hasUser:            !!user,
-        userName:           user?.name || 'MISSING',
+        userName:           user?.name ? `${user.name.charAt(0)}***` : 'MISSING',
         userGender:         user?.gender || 'MISSING',
-        userPhone:          user?.phone || 'MISSING',
-        userEmail:          user?.email || 'MISSING',
+        userPhone:          user?.phone ? `******${user.phone.slice(-4)}` : 'MISSING',
+        userEmail:          user?.email ? `***@${user.email.split('@')[1] || '***'}` : 'MISSING',
         userDob:            user?.dob ? 'present' : 'MISSING',
         hasEmployment:      !!kycEmployment,
         employmentType:     kycEmployment?.employmentType || 'MISSING',
@@ -178,12 +181,12 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         firstName  = nameParts[0];
         middleName = 'NA';
         lastName   = nameParts[1];
-        logger.warn(`[LOS MAPPING] appId=${appId} — 2-part name detected, MiddleName defaulted to 'NA'. Name: "${user.name}"`);
+        logger.warn(`[LOS MAPPING] appId=${appId} — 2-part name detected, MiddleName defaulted to 'NA'. Name: "${user.name?.charAt(0)}***"`);
     } else {
         firstName  = nameParts[0] || 'Unknown';
         middleName = 'NA';
         lastName   = 'Unknown';
-        logger.warn(`[LOS MAPPING] appId=${appId} — Single/empty name detected. FirstName="${firstName}", LastName defaulted to 'Unknown'. Raw name: "${user.name}"`);
+        logger.warn(`[LOS MAPPING] appId=${appId} — Single/empty name detected. FirstName="${firstName?.charAt(0)}***", LastName defaulted to 'Unknown'.`);
     }
 
     // ── Date fields ─────────────────────────────────────────────────────
@@ -271,13 +274,13 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         Gender,
         QualificationID: QUALIFICATION_ID,
 
-        FirstName:    firstName  || 'Unknown',
-        MiddleName:   middleName || 'NA',
-        LastName:     lastName   || 'Unknown',
+        FirstName:    losClean(firstName)  || 'Unknown',
+        MiddleName:   losClean(middleName) || 'NA',
+        LastName:     losClean(lastName)   || 'Unknown',
         DateOfBirth,
 
         MobileNo:       user.phone || '0000000000',
-        Email:          user.email || `${user.phone}@noemail.com`,
+        Email:          losClean(user.email) || `${user.phone}@noemail.com`,
         PanSSN:         panVerification && panVerification.panNumber ? panVerification.panNumber : 'NA',
         AdharDrivingNo: aadhaarVerification && aadhaarVerification.aadhaarNumber
             ? aadhaarVerification.aadhaarNumber
@@ -286,7 +289,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         Address: {
             AddressTypeID: addressTypeMap.CURRENT,   // 335 — we always send current address
             ResidentType,
-            AddressLine1:  kycAddress && kycAddress.currentAddress ? kycAddress.currentAddress : 'NA',
+            AddressLine1:  kycAddress && kycAddress.currentAddress ? losClean(kycAddress.currentAddress) : 'NA',
             StateID:       StateCode,
             PinZipCode:    kycAddress && kycAddress.postalCode ? kycAddress.postalCode : '000000',
             PhoneNo:       user.phone || '0000000000'
@@ -383,6 +386,7 @@ module.exports = {
     stateMap,
     QUALIFICATION_ID,
     calculateAge,
+    losClean,
     buildNewLosPayload,       // New LOS contract (active)
     buildLosPayloadLegacy     // v1 legacy (kept for rollback)
 };
