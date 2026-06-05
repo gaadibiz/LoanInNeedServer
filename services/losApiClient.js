@@ -36,7 +36,9 @@ const getAuthHeaders = async () => {
     const token = await getLosToken();
     return {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'Accept':        '*/*',
+        'Cache-Control': 'no-cache'
     };
 };
 
@@ -68,12 +70,18 @@ const createLosApplication = async (payload) => {
     }
 
     try {
-        // Log the EXACT payload being sent to LOS — critical for debugging
+        // Pre-stringify the payload to send as a raw JSON string — matches Postman behavior exactly.
+        // axios v1.x has an internal data transformer that can subtly alter serialization;
+        // by sending a pre-stringified string, we bypass it entirely.
+        const jsonBody = JSON.stringify(payload);
         logger.info(`[LOS API] 📤 OUTBOUND PAYLOAD TO LOS:\n${JSON.stringify(payload, null, 2)}`);
+        logger.info(`[LOS API] 📤 Raw body length: ${jsonBody.length} bytes`);
 
-        const response = await losSaveBreaker.fire(payload, {
+        const response = await losSaveBreaker.fire(jsonBody, {
             headers,
-            timeout: LOS_TIMEOUT_MS
+            timeout: LOS_TIMEOUT_MS,
+            // Prevent axios from double-serializing the already-stringified body
+            transformRequest: [(data) => data]
         });
 
         const data = response.data;
