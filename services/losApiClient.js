@@ -70,18 +70,28 @@ const createLosApplication = async (payload) => {
     }
 
     try {
-        // Pre-stringify the payload to send as a raw JSON string — matches Postman behavior exactly.
-        // axios v1.x has an internal data transformer that can subtly alter serialization;
-        // by sending a pre-stringified string, we bypass it entirely.
+        // Pre-stringify to send exactly what Postman sends — a raw JSON string
         const jsonBody = JSON.stringify(payload);
         logger.info(`[LOS API] 📤 OUTBOUND PAYLOAD TO LOS:\n${JSON.stringify(payload, null, 2)}`);
         logger.info(`[LOS API] 📤 Raw body length: ${jsonBody.length} bytes`);
 
-        const response = await losSaveBreaker.fire(jsonBody, {
+        // Explicitly set Content-Length to prevent Node.js from using chunked
+        // transfer encoding — some .NET backends fail on chunked bodies
+        headers['Content-Length'] = Buffer.byteLength(jsonBody, 'utf8');
+
+        // Log exact headers being sent (for comparison with Postman)
+        logger.info(`[LOS API] 📤 Request headers: ${JSON.stringify(headers)}`);
+        logger.info(`[LOS API] 📤 Target URL: ${LOS_SAVE_URL}`);
+
+        // Direct axios call (bypass circuit breaker for reliability)
+        const response = await axios.post(LOS_SAVE_URL, jsonBody, {
             headers,
             timeout: LOS_TIMEOUT_MS,
-            // Prevent axios from double-serializing the already-stringified body
-            transformRequest: [(data) => data]
+            // Prevent axios from re-serializing the already-stringified body
+            transformRequest: [(data) => data],
+            // Prevent axios from overriding our explicit Content-Length
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
         });
 
         const data = response.data;
