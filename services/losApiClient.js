@@ -65,6 +65,9 @@ const createLosApplication = async (payload) => {
     }
 
     try {
+        // Log the EXACT payload being sent to LOS — critical for debugging
+        logger.info(`[LOS API] 📤 OUTBOUND PAYLOAD TO LOS:\n${JSON.stringify(payload, null, 2)}`);
+
         const response = await losSaveBreaker.fire(payload, {
             headers,
             timeout: LOS_TIMEOUT_MS
