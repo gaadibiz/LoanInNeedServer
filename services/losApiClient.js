@@ -43,15 +43,18 @@ const getAuthHeaders = async () => {
 /**
  * Pushes a new loan application to the LOS system.
  *
- * Endpoint  : POST /api/NewApplicationAPI/SaveNewApplication
+ * Endpoint  : POST /api/NewApplicationAPI/NewApplication_BhumChum_Enquiry/V1
  * Auth      : Bearer <LOS token>
  * Payload   : New LOS contract payload (buildNewLosPayload from losMapping.js)
  *
- * @param   {object} payload  - Built by buildLosPayload()
- * @returns {object}          - { success, applicationId, caseNumber, rawData }
+ * V1 Response shape (on success):
+ *   { Result: 200, Message: "...", Data: { ApplicationID, LoanEnquiryID, KYCID, CaseNumber, Status, StageID, ... } }
+ *
+ * @param   {object} payload  - Built by buildNewLosPayload()
+ * @returns {object}          - { success, applicationId, caseNumber, loanEnquiryId, kycId, rawData }
  */
 const createLosApplication = async (payload) => {
-    logger.info('[LOS API] Submitting application to LOS (SaveNewApplication)...', {
+    logger.info('[LOS API] Submitting application to LOS (V1)...', {
         applicationRef: payload.applicationId || payload.FirstName,
         amount: payload.LoanAmountRequired || payload.loanDetails?.amount
     });
@@ -77,25 +80,30 @@ const createLosApplication = async (payload) => {
         logger.info(`[LOS API] ✅ SaveNewApplication response received. Status: ${response.status}`, data);
 
         // LOS may return success under different structures — handle all observed variants
-        // Note: LOS auth returns { isSuccess: true, Token: ... } so we also check isSuccess
-        const isSuccess = data?.isSuccess === true
+        // V1 confirmed response: { Result: 200, Data: { ApplicationID, CaseNumber, Status: "SUCCESS", ... } }
+        const isSuccess = data?.Result === 200
+            || data?.Data?.Status === 'SUCCESS'
+            || data?.isSuccess === true
             || data?.IsSuccess === true
             || data?.StatusCode === 200
             || data?.status === 'SUCCESS'
             || data?.Status === 'Success'
-            || data?.Result === 200
             || (response.status >= 200 && response.status < 300 && !data?.IsError && !data?.Message);
 
         if (isSuccess) {
-            const appId   = data?.Data?.ApplicationID || data?.ApplicationId || data?.applicationId || null;
-            const caseNum = data?.Data?.CaseNumber || data?.CaseNumber || data?.caseNumber || data?.CaseNo || null;
+            const appId          = data?.Data?.ApplicationID || data?.ApplicationId || data?.applicationId || null;
+            const caseNum        = data?.Data?.CaseNumber || data?.CaseNumber || data?.caseNumber || data?.CaseNo || null;
+            const loanEnquiryId  = data?.Data?.LoanEnquiryID || null;
+            const kycId          = data?.Data?.KYCID || null;
 
-            logger.info(`[LOS API] ✅ Application pushed to LOS. ApplicationId: ${appId}, CaseNumber: ${caseNum}`);
+            logger.info(`[LOS API] ✅ Application pushed to LOS (V1). ApplicationId: ${appId}, CaseNumber: ${caseNum}, LoanEnquiryID: ${loanEnquiryId}, KYCID: ${kycId}`);
             return {
-                success:       true,
-                applicationId: appId,
-                caseNumber:    caseNum,
-                rawData:       data
+                success:        true,
+                applicationId:  appId,
+                caseNumber:     caseNum,
+                loanEnquiryId,
+                kycId,
+                rawData:        data
             };
         }
 
