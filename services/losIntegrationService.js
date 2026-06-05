@@ -132,7 +132,7 @@ const processSingleJob = async (job) => {
 
     // ── 6. Push KYC Documents and Store LOS IDs ──────────────────────────────
     if (losResponse.success) {
-        logger.info(`[LOS WORKER] ✅ Job ${id} pushed successfully. ApplicationId: ${losResponse.applicationId}, CaseNumber: ${losResponse.caseNumber}`);
+        logger.info(`[LOS WORKER] ✅ Job ${id} pushed successfully. ApplicationId: ${losResponse.applicationId}, CaseNumber: ${losResponse.caseNumber}, LoanEnquiryID: ${losResponse.loanEnquiryId || 'N/A'}, KYCID: ${losResponse.kycId || 'N/A'}`);
 
         // Push KYC Documents
         try {
