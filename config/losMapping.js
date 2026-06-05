@@ -316,7 +316,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         Email:          losClean(user.email) || `${losPhone(user.phone)}@noemail.com`,
         PanSSN:         panVerification && panVerification.panNumber ? losClean(panVerification.panNumber) : 'NA',
         AdharDrivingNo: aadhaarVerification && aadhaarVerification.aadhaarNumber
-            ? losClean(aadhaarVerification.aadhaarNumber)
+            ? losClean(aadhaarVerification.aadhaarNumber.replace(/_DUP_\d+$/, ''))
             : 'NA',
 
         Address: {
