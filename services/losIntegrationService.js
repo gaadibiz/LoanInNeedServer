@@ -248,9 +248,19 @@ const processSingleJob = async (job) => {
             }
 
             if (documentsArray.length > 0) {
-                const kycResponse = await pushKycDocumentToLos(documentsArray);
-                if (kycResponse.success) {
-                    logger.info(`[LOS WORKER] ✅ KYC Documents pushed successfully.`);
+                let allSuccess = true;
+                for (const docPayload of documentsArray) {
+                    // Send each document one by one, wrapped in an array as per the payload structure
+                    const kycResponse = await pushKycDocumentToLos([docPayload]);
+                    if (!kycResponse.success) {
+                        allSuccess = false;
+                        logger.error(`[LOS WORKER] Failed to push document (DocTypeID: ${docPayload.DocTypeID}, DocID: ${docPayload.DocID})`);
+                        break; // Stop pushing further documents if one fails, allowing the retry mechanism to pick it up later
+                    }
+                }
+
+                if (allSuccess) {
+                    logger.info(`[LOS WORKER] ✅ All KYC Documents pushed successfully.`);
                 } else {
                     throw new Error('LOS responded with success=false during Phase 2 (Document Push).');
                 }
