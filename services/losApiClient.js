@@ -178,13 +178,16 @@ const pushKycDocumentToLos = async (docPayload) => {
         const data = response.data;
         logger.info(`[LOS API] ✅ SaveChatBotKYCProof response received. Status: ${response.status}`, data);
 
+        const isSuccessMessage = typeof data?.Message === 'string' && data.Message.toLowerCase().includes('success');
         const isSuccess = data?.isSuccess === true
             || data?.IsSuccess === true
             || data?.StatusCode === 200
+            || data?.StatusCode === '200'
             || data?.status === 'SUCCESS'
             || data?.Status === 'Success'
             || data?.Result === 200
-            || (response.status >= 200 && response.status < 300 && !data?.IsError && !data?.Message);
+            || isSuccessMessage
+            || (response.status >= 200 && response.status < 300 && !data?.IsError && (!data?.Message || isSuccessMessage));
 
         if (isSuccess) {
             logger.info('[LOS API] ✅ KYC document pushed to LOS successfully.');
