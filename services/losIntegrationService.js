@@ -76,7 +76,7 @@ const processPendingIntegrations = async () => {
  * ─────────────────────────────────────────────────────────────────────────────
  */
 const processSingleJob = async (job) => {
-    const { id, userId, applicationId } = job;
+    const { id, userId, applicationId, losApplicationId, losCaseNumber, losKycId } = job;
     logger.info(`[LOS WORKER] Processing Job ID: ${id} | User: ${userId} | App: ${applicationId}`);
 
     // ── 1. Fetch records from LIN DB ─────────────────────────────────────────
