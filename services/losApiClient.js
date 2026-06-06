@@ -73,23 +73,15 @@ const createLosApplication = async (payload) => {
         // Pre-stringify to send exactly what Postman sends — a raw JSON string
         const jsonBody = JSON.stringify(payload);
         logger.info(`[LOS API] 📤 OUTBOUND PAYLOAD TO LOS:\n${JSON.stringify(payload, null, 2)}`);
-        logger.info(`[LOS API] 📤 Raw body length: ${jsonBody.length} bytes`);
 
-        // Explicitly set Content-Length to prevent Node.js from using chunked
-        // transfer encoding — some .NET backends fail on chunked bodies
+        // Explicitly set Content-Length to prevent chunked transfer encoding
         headers['Content-Length'] = Buffer.byteLength(jsonBody, 'utf8');
 
-        // Log exact headers being sent (for comparison with Postman)
-        logger.info(`[LOS API] 📤 Request headers: ${JSON.stringify(headers)}`);
-        logger.info(`[LOS API] 📤 Target URL: ${LOS_SAVE_URL}`);
-
-        // Direct axios call (bypass circuit breaker for reliability)
-        const response = await axios.post(LOS_SAVE_URL, jsonBody, {
+        const response = await losSaveBreaker.fire(jsonBody, {
             headers,
             timeout: LOS_TIMEOUT_MS,
             // Prevent axios from re-serializing the already-stringified body
             transformRequest: [(data) => data],
-            // Prevent axios from overriding our explicit Content-Length
             maxContentLength: Infinity,
             maxBodyLength: Infinity
         });
