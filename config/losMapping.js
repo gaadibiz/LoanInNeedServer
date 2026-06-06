@@ -412,6 +412,21 @@ const buildLosPayloadLegacy = (application, user, kycEmployment, kycAddress, pan
     };
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. Document Type Mapping (Confirmed by LOS team)
+// ─────────────────────────────────────────────────────────────────────────────
+const documentTypeMap = {
+    PAN:             { DocID: 2011, DocTypeID: 1 },
+    AADHAAR:         { DocID: 2014, DocTypeID: 1 }, // Map default Aadhaar to Front Side
+    PAY_SLIP:        { DocID: 73,   DocTypeID: 3 },
+    BANK_STATEMENT:  { DocID: 0,    DocTypeID: 0 }, // Not specified in mapping table yet
+    PHOTO:           { DocID: 0,    DocTypeID: 0 }, // Not specified
+    SIGNATURE:       { DocID: 0,    DocTypeID: 0 }, // Not specified
+    GST_CERTIFICATE: { DocID: 0,    DocTypeID: 0 }, // Not specified
+    TRADE_LICENSE:   { DocID: 0,    DocTypeID: 0 }, // Not specified
+    COMPANY_PAN:     { DocID: 0,    DocTypeID: 0 }, // Not specified
+};
+
 module.exports = {
     employmentMap,
     salutationMap,
@@ -420,6 +435,7 @@ module.exports = {
     addressTypeMap,
     residentTypeMap,
     stateMap,
+    documentTypeMap,
     QUALIFICATION_ID,
     calculateAge,
     losClean,
