@@ -419,7 +419,7 @@ const documentTypeMap = {
     PAN:             { DocID: 2011, DocTypeID: 1 },
     AADHAAR:         { DocID: 2014, DocTypeID: 1 }, // Map default Aadhaar to Front Side
     PAY_SLIP:        { DocID: 73,   DocTypeID: 3 },
-    BANK_STATEMENT:  { DocID: 0,    DocTypeID: 0 }, // Not specified in mapping table yet
+    BANK_STATEMENT:  { DocID: 3023, DocTypeID: 3 }, // STMT
     PHOTO:           { DocID: 0,    DocTypeID: 0 }, // Not specified
     SIGNATURE:       { DocID: 0,    DocTypeID: 0 }, // Not specified
     GST_CERTIFICATE: { DocID: 0,    DocTypeID: 0 }, // Not specified
