@@ -3,6 +3,7 @@ const logger = require('../utils/logger');
 const { buildNewLosPayload } = require('../config/losMapping');
 const { createLosApplication, pushKycDocumentToLos } = require('./losApiClient');
 const path = require('path');
+const axios = require('axios');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
 
 // Maximum times a job will be attempted before marking as permanently FAILED
@@ -203,8 +204,14 @@ const processSingleJob = async (job) => {
             const { documentTypeMap } = require('../config/losMapping');
             for (const doc of userDocuments) {
                 try {
-                    const absolutePath = path.join(__dirname, '..', doc.filePath);
-                    const base64Data = encodeFileToBase64(absolutePath, false);
+                    let base64Data = '';
+                    if (doc.fileUrl) {
+                        const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
+                        base64Data = Buffer.from(response.data, 'binary').toString('base64');
+                    } else {
+                        const absolutePath = path.join(__dirname, '..', doc.filePath);
+                        base64Data = encodeFileToBase64(absolutePath, false);
+                    }
 
                     let proofNumber = '';
                     if (doc.docType === 'PAN' && panVerification) {
