@@ -110,8 +110,14 @@ const processSingleJob = async (job) => {
     // ── 2b. Defer if Aadhaar not yet verified (race condition guard) ─────────
     // The LOS job is queued during KYC submission, but Aadhaar verify-otp is a
     // separate parallel request that may complete AFTER the job is queued.
-    // Instead of failing, we skip this cycle and let the retry pick it up.
     if (!user.aadhaarVerification || !user.aadhaarVerification.aadhaarNumber) {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        if (job.createdAt < oneHourAgo) {
+            // It's been waiting for Aadhaar for over an hour. The user likely abandoned the flow.
+            throw new Error('Aadhaar verification was never completed (timed out after 1 hour).');
+        }
+
+        // Instead of failing, we skip this cycle and let the retry pick it up.
         logger.warn(
             `[LOS WORKER] ⏳ Job ${id} deferred — Aadhaar not yet verified for userId ${userId}. ` +
             'Will retry on next cron cycle once Aadhaar verification completes.'
