@@ -8,7 +8,7 @@ const { createCircuitBreaker } = require('../utils/circuitBreaker');
 // ─────────────────────────────────────────────────────────────────────────────
 // Credentials confirmed by LOS team on 2026-04-07 (live public endpoints)
 const LOS_SAVE_URL    = 'http://59.95.101.93:7021//api/NewApplicationAPI/NewApplication_BhumChum_Enquiry/V1';
-const LOS_KYC_DOC_URL = process.env.LOS_KYC_DOC_URL || 'http://59.95.101.93:7021/api/ChatBotKYCProof/SaveChatBotKYCProof';
+const LOS_KYC_DOC_URL = 'http://59.95.101.93:7021/api/ChatBotKYCProof/SaveChatBotKYCProof';
 const LOS_TIMEOUT_MS  = parseInt(process.env.LOS_API_TIMEOUT_MS) || 30000; // Configurable timeout
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,28 +152,14 @@ const createLosApplication = async (payload) => {
  * @returns {object}          - { success, rawData }
  */
 const pushKycDocumentToLos = async (docPayload) => {
+    // Determine applicationId for logging (payload is now an array)
+    const appId = Array.isArray(docPayload) && docPayload.length > 0 
+        ? docPayload[0].ApplicationID 
+        : 'UNKNOWN';
+        
     logger.info('[LOS API] Pushing KYC document to LOS (SaveChatBotKYCProof)...', {
-        applicationId: docPayload?.ApplicationId || docPayload?.applicationId
+        applicationId: appId
     });
-
-    // Normalise KYC payload — LOS expects { ApplicationId, CreatedBy, Documents: [ { ProofType, ProofNumber, DocumentBase64 } ] }
-    // If the caller passed a flat single-doc format, wrap it automatically
-    let normalisedPayload = docPayload;
-    if (!docPayload.Documents && (docPayload.ProofType || docPayload.ProofNumber)) {
-        normalisedPayload = {
-            ApplicationId: docPayload.ApplicationId || docPayload.applicationId || 0,
-            CreatedBy:     docPayload.CreatedBy || 1,
-            Documents: [
-                {
-                    ProofType:      docPayload.ProofType      || 'PAN',
-                    ProofNumber:    docPayload.ProofNumber    || '',
-                    DocumentBase64: docPayload.DocumentBase64 || '',
-                    DocumentName:   docPayload.DocumentName   || ''
-                }
-            ]
-        };
-        logger.info('[LOS API] Auto-wrapped flat KYC payload into Documents array format.');
-    }
 
     let headers;
     try {
@@ -184,7 +170,7 @@ const pushKycDocumentToLos = async (docPayload) => {
     }
 
     try {
-        const response = await losKycBreaker.fire(normalisedPayload, {
+        const response = await losKycBreaker.fire(docPayload, {
             headers,
             timeout: LOS_TIMEOUT_MS
         });

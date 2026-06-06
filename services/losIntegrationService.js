@@ -29,6 +29,7 @@ const processPendingIntegrations = async () => {
         where: {
             OR: [
                 { status: 'PENDING' },
+                { status: 'PUSHING_DOCUMENTS', updatedAt: { lte: minus30m } },
                 { status: 'FAILED', retryCount: 1, updatedAt: { lte: minus5m } },
                 { status: 'FAILED', retryCount: 2, updatedAt: { lte: minus30m } },
                 { status: 'FAILED', retryCount: 3, updatedAt: { lte: minus2h } },
@@ -131,93 +132,144 @@ const processSingleJob = async (job) => {
     const panVerification = user.panVerification || null;
     const aadhaarVerification = user.aadhaarVerification || null;
 
-    // ── 4. Build the new LOS payload (confirmed contract, June 2026) ─────
-    const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification);
+    let currentLosAppId = losApplicationId;
+    let currentLosCaseNumber = losCaseNumber;
+    let currentLosKycId = losKycId;
 
-    logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}`, {
-        customer: `${payload.FirstName} ${payload.LastName}`,
-        amount:   payload.LoanAmountRequired
-    });
+    if (!currentLosAppId) {
+        // ── 4. Build the new LOS payload (confirmed contract, June 2026) ─────
+        const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification);
 
-    // Update job with rawRequest before sending
-    await prisma.losIntegrationJob.update({
-        where: { id },
-        data: { rawRequest: JSON.parse(JSON.stringify(payload)) }
-    });
+        logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}`, {
+            customer: `${payload.FirstName} ${payload.LastName}`,
+            amount:   payload.LoanAmountRequired
+        });
 
-    // ── 5. Push to LOS ───────────────────────────────────────────────────────
-    const losResponse = await createLosApplication(payload);
+        // Update job with rawRequest before sending
+        await prisma.losIntegrationJob.update({
+            where: { id },
+            data: { rawRequest: JSON.parse(JSON.stringify(payload)) }
+        });
 
-    // ── 6. Push KYC Documents and Store LOS IDs ──────────────────────────────
-    if (losResponse.success) {
-        logger.info(`[LOS WORKER] ✅ Job ${id} pushed successfully. ApplicationId: ${losResponse.applicationId}, CaseNumber: ${losResponse.caseNumber}, LoanEnquiryID: ${losResponse.loanEnquiryId || 'N/A'}, KYCID: ${losResponse.kycId || 'N/A'}`);
+        // ── 5. Push to LOS (Phase 1) ───────────────────────────────────────────────────────
+        const losResponse = await createLosApplication(payload);
 
-        // Push KYC Documents
-        try {
-            const userDocuments = await prisma.userDocument.findMany({ where: { userId } });
-            if (userDocuments && userDocuments.length > 0) {
-                logger.info(`[LOS WORKER] Found ${userDocuments.length} documents for ApplicationId: ${losResponse.applicationId}`);
-                const documentsArray = [];
-                for (const doc of userDocuments) {
-                    try {
-                        const absolutePath = path.join(__dirname, '..', doc.filePath);
-                        const base64Data = encodeFileToBase64(absolutePath, false);
+        if (losResponse.success) {
+            currentLosAppId = losResponse.applicationId ? losResponse.applicationId.toString() : null;
+            currentLosCaseNumber = losResponse.caseNumber ? losResponse.caseNumber.toString() : null;
+            currentLosKycId = losResponse.kycId ? losResponse.kycId.toString() : null;
 
-                        let proofNumber = '';
-                        if (doc.docType === 'PAN' && panVerification) {
-                            proofNumber = panVerification.panNumber;
-                        } else if (doc.docType === 'AADHAAR' && user.aadhaarVerification) {
-                            proofNumber = user.aadhaarVerification.aadhaarNumber;
-                        } else {
-                            proofNumber = user.phone;
-                        }
+            logger.info(`[LOS WORKER] ✅ Job ${id} Phase 1 pushed successfully. ApplicationId: ${currentLosAppId}, CaseNumber: ${currentLosCaseNumber}, LoanEnquiryID: ${losResponse.loanEnquiryId || 'N/A'}, KYCID: ${currentLosKycId}`);
 
-                        documentsArray.push({
-                            ProofType: doc.docType,
-                            ProofNumber: proofNumber,
-                            DocumentBase64: base64Data,
-                            DocumentName: doc.fileName || `${doc.docType}.pdf`
-                        });
-                    } catch (docErr) {
-                        logger.warn(`[LOS WORKER] Failed to process document ${doc.id} (${doc.docType}): ${docErr.message}`);
-                    }
+            await prisma.losIntegrationJob.update({
+                where: { id },
+                data: {
+                    status:           'PUSHING_DOCUMENTS',
+                    losApplicationId: currentLosAppId,
+                    losCaseNumber:    currentLosCaseNumber,
+                    losKycId:         currentLosKycId,
+                    rawResponse:      losResponse.rawData ? JSON.parse(JSON.stringify(losResponse.rawData)) : null,
+                    lastError:        null
                 }
+            });
 
-                if (documentsArray.length > 0) {
-                    const kycPayload = {
-                        ApplicationId: losResponse.applicationId,
-                        CreatedBy: 1,
-                        Documents: documentsArray
-                    };
-                    const kycResponse = await pushKycDocumentToLos(kycPayload);
-                    if (kycResponse.success) {
-                        logger.info(`[LOS WORKER] ✅ KYC Documents pushed successfully.`);
-                    }
+            await prisma.loanApplication.update({
+                where: { id: applicationId },
+                data: {
+                    losApplicationNumber: currentLosCaseNumber
                 }
-            }
-        } catch (kycErr) {
-            logger.error(`[LOS WORKER] Failed to push KYC documents: ${kycErr.message}`);
+            });
+        } else {
+            throw new Error('LOS responded with success=false or an unexpected body during Phase 1.');
         }
-
+    } else {
+        logger.info(`[LOS WORKER] Phase 1 Skipped for Job ${id} (losApplicationId ${currentLosAppId} already exists). Proceeding to Phase 2.`);
+        // Update status to PUSHING_DOCUMENTS if it was FAILED
         await prisma.losIntegrationJob.update({
             where: { id },
             data: {
-                status:           'SUCCESS',
-                losApplicationId: losResponse.applicationId ? losResponse.applicationId.toString() : null,
-                losCaseNumber:    losResponse.caseNumber ? losResponse.caseNumber.toString() : null,
-                rawResponse:      losResponse.rawData ? JSON.parse(JSON.stringify(losResponse.rawData)) : null,
-                lastError:        null
+                status: 'PUSHING_DOCUMENTS',
+                lastError: null
             }
         });
+    }
 
-        await prisma.loanApplication.update({
-            where: { id: applicationId },
+    // ── 6. Push KYC Documents (Phase 2) ──────────────────────────────
+    try {
+        const userDocuments = await prisma.userDocument.findMany({ where: { userId } });
+        if (userDocuments && userDocuments.length > 0) {
+            logger.info(`[LOS WORKER] Found ${userDocuments.length} documents for ApplicationId: ${currentLosAppId}`);
+            const documentsArray = [];
+            const { documentTypeMap } = require('../config/losMapping');
+            for (const doc of userDocuments) {
+                try {
+                    const absolutePath = path.join(__dirname, '..', doc.filePath);
+                    const base64Data = encodeFileToBase64(absolutePath, false);
+
+                    let proofNumber = '';
+                    if (doc.docType === 'PAN' && panVerification) {
+                        proofNumber = panVerification.panNumber;
+                    } else if (doc.docType === 'AADHAAR' && user.aadhaarVerification) {
+                        proofNumber = user.aadhaarVerification.aadhaarNumber;
+                    } else {
+                        proofNumber = user.phone;
+                    }
+
+                    const mapInfo = documentTypeMap[doc.docType] || { DocID: 0, DocTypeID: 0 };
+                    
+                    if (mapInfo.DocID > 0) {
+                        documentsArray.push({
+                            ProofID: 0,
+                            OrganizationID: 0,
+                            KYCID: parseInt(currentLosKycId) || 0,
+                            ApplicationID: parseInt(currentLosAppId) || 0,
+                            DocTypeID: mapInfo.DocTypeID,
+                            DocID: mapInfo.DocID,
+                            AttachmentID: 0,
+                            BranchID: 0,
+                            AgencyDocVerID: 0,
+                            AgencyID: 0,
+                            GuarantorID: 0,
+                            DocNumber: proofNumber,
+                            DocPerson: "",
+                            IssuingAuth: "",
+                            ValidTill: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(),
+                            IsMandatory: true,
+                            FileName: "",
+                            FilePath: "",
+                            AssignToEMP: "",
+                            IsNewFile: true,
+                            UserImageBase64: base64Data
+                        });
+                    }
+                } catch (docErr) {
+                    logger.warn(`[LOS WORKER] Failed to process document ${doc.id} (${doc.docType}): ${docErr.message}`);
+                }
+            }
+
+            if (documentsArray.length > 0) {
+                const kycResponse = await pushKycDocumentToLos(documentsArray);
+                if (kycResponse.success) {
+                    logger.info(`[LOS WORKER] ✅ KYC Documents pushed successfully.`);
+                } else {
+                    throw new Error('LOS responded with success=false during Phase 2 (Document Push).');
+                }
+            } else {
+                logger.warn(`[LOS WORKER] No valid mapped documents found to push for Job ${id}.`);
+            }
+        }
+
+        // Only mark SUCCESS if documents were successfully pushed (or no documents to push)
+        await prisma.losIntegrationJob.update({
+            where: { id },
             data: {
-                losApplicationNumber: losResponse.caseNumber ? losResponse.caseNumber.toString() : null
+                status: 'SUCCESS',
+                lastError: null
             }
         });
-    } else {
-        throw new Error('LOS responded with success=false or an unexpected body.');
+    } catch (kycErr) {
+        logger.error(`[LOS WORKER] Failed to push KYC documents for Job ${id}: ${kycErr.message}`);
+        throw new Error(`Phase 2 Document Push Failed: ${kycErr.message}`);
     }
 };
 
