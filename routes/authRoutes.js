@@ -21,5 +21,7 @@ router.post('/phone/verify-otp',
 // Aadhaar OTP routes
 router.post('/aadhaar/request-otp', protect, authController.requestAadhaarOtp);
 router.post('/aadhaar/verify-otp', protect, authController.verifyAadhaarOtp);
+// Real-time Aadhaar existence check (no DB write, used for inline frontend validation)
+router.post('/aadhaar/validate', protect, authController.validateAadhaarExists);
 
 module.exports = router;
