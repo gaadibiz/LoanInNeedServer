@@ -163,19 +163,34 @@ async function main() {
     log('  URL: ' + LOS_KYC_URL);
 
     const appId = appData?.ApplicationId || appData?.applicationId || appData?.ApplicationID || 0;
-    // LOS SaveChatBotKYCProof expects a Documents array
-    const kycPayload = {
-        ApplicationId: appId,
-        CreatedBy:     1,
-        Documents: [
-            {
-                ProofType:      'PAN',
-                ProofNumber:    'ABCDE1234F',
-                DocumentBase64: ''   // empty for connectivity test
-            }
-        ]
-    };
-    log('  Using ApplicationId: ' + appId);
+    const kycId = appData?.KYCID || appData?.KycId || appData?.kycId || 0;
+    // LOS SaveChatBotKYCProof expects an array of document objects
+    const kycPayload = [
+        {
+            ProofID: 0,
+            OrganizationID: 0,
+            KYCID: kycId,
+            ApplicationID: appId,
+            DocTypeID: 1,
+            DocID: 2011,
+            AttachmentID: 0,
+            BranchID: 0,
+            AgencyDocVerID: 0,
+            AgencyID: 0,
+            GuarantorID: 0,
+            DocNumber: "ABCDE1234F",
+            DocPerson: "",
+            IssuingAuth: "",
+            ValidTill: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(),
+            IsMandatory: true,
+            FileName: "",
+            FilePath: "",
+            AssignToEMP: "",
+            IsNewFile: true,
+            UserImageBase64: "" // empty for connectivity test
+        }
+    ];
+    log('  Using ApplicationId: ' + appId + ' and KYCID: ' + kycId);
     log('  Payload: ' + JSON.stringify(kycPayload));
     let step3Pass = false;
     try {
