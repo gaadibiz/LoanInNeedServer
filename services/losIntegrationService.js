@@ -242,7 +242,7 @@ const processSingleJob = async (job) => {
                             IssuingAuth: "",
                             ValidTill: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(),
                             IsMandatory: true,
-                            FileName: "",
+                            FileName: doc.fileName || `${doc.docType.toLowerCase()}.pdf`,
                             FilePath: "",
                             AssignToEMP: "",
                             IsNewFile: true,
