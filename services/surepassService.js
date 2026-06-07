@@ -91,25 +91,12 @@ class SurepassService {
 
       return response.data.data;
     } catch (error) {
-      // If there is an HTTP response body, it means Surepass was reachable and
-      // explicitly rejected the Aadhaar number (e.g. number not found in DB)
       if (error.response && error.response.data) {
-        const status = error.response.status;
-        // 401/403 = auth failure (expired/invalid token) → treat as service unavailable
-        if (status === 401 || status === 403) {
-          logger.error(`Surepass Aadhaar auth failure (status ${status}): token may be expired. Treating as service unavailable.`);
-          const unavailableErr = new Error('SUREPASS_UNAVAILABLE');
-          unavailableErr.isSurepassUnavailable = true;
-          throw unavailableErr;
-        }
         logger.error(`Surepass Aadhaar API Error: ${JSON.stringify(error.response.data)}`);
         throw new BadRequestError('oops invalid adhar number');
       }
-      // No HTTP response = network error, timeout, circuit breaker open, etc.
       logger.error('Surepass Aadhaar execution error:', error.message);
-      const unavailableErr = new Error('SUREPASS_UNAVAILABLE');
-      unavailableErr.isSurepassUnavailable = true;
-      throw unavailableErr;
+      throw new BadRequestError('oops invalid adhar number');
     }
   }
 }

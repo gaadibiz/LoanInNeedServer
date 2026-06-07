@@ -34,13 +34,6 @@ const validateAadhaarExists = asyncHandler(async (req, res) => {
     await surepassService.verifyAadhaar(cleanAadhaar);
     return res.json({ success: true, message: 'Aadhaar number is valid' });
   } catch (err) {
-    // If Surepass itself is unavailable (expired token, network failure, circuit open),
-    // fail open — do not block the user. The submission flow will still record the Aadhaar.
-    if (err.isSurepassUnavailable) {
-      console.warn('[AUTH] Surepass Aadhaar API unavailable during inline validation — failing open:', err.message);
-      return res.json({ success: true, message: 'Aadhaar verification service is temporarily unavailable. Proceeding.', degraded: true });
-    }
-    // Surepass was reachable and explicitly rejected the number
     return res.status(422).json({ success: false, message: 'Invalid Aadhaar number. Please enter a valid Aadhaar card number.' });
   }
 });
