@@ -21,6 +21,23 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+// Validate Aadhaar existence via Surepass (no DB write — for real-time frontend check)
+const validateAadhaarExists = asyncHandler(async (req, res) => {
+  const { aadhaarNumber } = req.body;
+
+  if (!aadhaarNumber || aadhaarNumber.replace(/\D/g, '').length !== 12) {
+    return res.status(400).json({ success: false, message: 'A valid 12-digit Aadhaar number is required' });
+  }
+
+  try {
+    const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
+    await surepassService.verifyAadhaar(cleanAadhaar);
+    return res.json({ success: true, message: 'Aadhaar number is valid' });
+  } catch (err) {
+    return res.status(422).json({ success: false, message: 'Invalid Aadhaar number. Please enter a valid Aadhaar card number.' });
+  }
+});
+
 // Verify Aadhaar OTP (Using Surepass Validation endpoint OR master OTP bypass)
 const MASTER_OTP = '261102';
 
@@ -75,5 +92,6 @@ module.exports =
   requestPhoneOtp,
   verifyPhoneOtp,
   verifyAadhaarOtp,
-  requestAadhaarOtp
+  requestAadhaarOtp,
+  validateAadhaarExists
 };
