@@ -12,6 +12,16 @@ const AadhaarModel = {
   },
 
   /**
+   * Find Aadhaar verification record by Aadhaar Number
+   */
+  async findByAadhaarNumber(aadhaarNumber, tx = prisma) {
+    const client = tx;
+    return client.aadhaarVerification.findUnique({
+      where: { aadhaarNumber },
+    });
+  },
+
+  /**
    * Find Aadhaar verification record by ID
    */
   async findById(id, tx = prisma) {

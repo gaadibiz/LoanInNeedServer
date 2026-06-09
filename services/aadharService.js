@@ -41,7 +41,7 @@ class AadhaarService {
       const existing = await AadhaarModel.findByUserId(userId, tx);
 
       if (existing) {
-        // Update existing record — try to update with real number, fallback gracefully
+        // Update existing record — try to update with real number
         try {
           return await AadhaarModel.updateAadhaarRecord(userId, {
             aadhaarNumber: finalAadhaar,
@@ -49,23 +49,19 @@ class AadhaarService {
             verifiedAt: null
           }, tx);
         } catch (err) {
-          // If duplicate — Aadhaar already linked to another user, keep the old value
-          if (err.code === 'P2002') return existing;
+          if (err.code === 'P2002') {
+            throw new BadRequestError("This Aadhaar number is already registered with another account.");
+          }
           throw err;
         }
       }
 
-      // Create new record — if duplicate Aadhaar exists for another user, still proceed
+      // Create new record
       try {
         return await AadhaarModel.createAadhaarRecord(userId, finalAadhaar, tx);
       } catch (err) {
         if (err.code === 'P2002') {
-          // Aadhaar number taken by another user — create record with a note suffix
-          // so the current user still gets an Aadhaar record and can proceed
-          const fallbackNumber = `${finalAadhaar}_DUP_${userId}`;
-          return await tx.aadhaarVerification.create({
-            data: { userId, aadhaarNumber: fallbackNumber, verified: false, verifiedAt: null }
-          });
+          throw new BadRequestError("This Aadhaar number is already registered with another account.");
         }
         throw err;
       }
