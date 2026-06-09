@@ -36,7 +36,7 @@ const validateAadhaarExists = asyncHandler(async (req, res) => {
     // Check if Aadhaar is already registered to another user in our DB
     const existing = await AadhaarModel.findByAadhaarNumber(cleanAadhaar);
     if (existing && existing.userId !== req.user?.id) {
-      return res.status(422).json({ success: false, message: 'This Aadhaar number is already registered with another account.' });
+      return res.json({ success: false, message: 'This Aadhaar number is already registered with another account.' });
     }
 
     await surepassService.verifyAadhaar(cleanAadhaar);
