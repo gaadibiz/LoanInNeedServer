@@ -3,6 +3,7 @@ const authService = require('../services/authService');
 const asyncHandler = require('express-async-handler'); // cleaner try/catch
 const surepassService = require('../services/surepassService');
 const aadhaarService = require('../services/aadharService');
+const AadhaarModel = require('../models/aadhaarModel');
 
 // Request OTP
 const requestPhoneOtp = asyncHandler(async (req, res) => {
@@ -31,6 +32,13 @@ const validateAadhaarExists = asyncHandler(async (req, res) => {
 
   try {
     const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
+
+    // Check if Aadhaar is already registered to another user in our DB
+    const existing = await AadhaarModel.findByAadhaarNumber(cleanAadhaar);
+    if (existing && existing.userId !== req.user?.id) {
+      return res.status(400).json({ success: false, message: 'This Aadhaar number is already registered with another account.' });
+    }
+
     await surepassService.verifyAadhaar(cleanAadhaar);
     return res.json({ success: true, message: 'Aadhaar number is valid' });
   } catch (err) {
@@ -70,8 +78,15 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
   }
 
   // Persist Aadhaar Validation in DB
-  await aadhaarService.submitAadhaar(userId, aadhaarNumber);
-  await aadhaarService.verifyAadhaar(userId);
+  try {
+    await aadhaarService.submitAadhaar(userId, aadhaarNumber);
+    await aadhaarService.verifyAadhaar(userId);
+  } catch (err) {
+    if (err.isOperational || err.statusCode === 400) {
+      return res.status(err.statusCode || 400).json({ success: false, message: err.message });
+    }
+    throw err;
+  }
 
   console.log(`[AUTH] Aadhaar Verified successfully for user: ${userId}`);
   res.json({ 
