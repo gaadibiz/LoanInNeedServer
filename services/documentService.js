@@ -132,6 +132,8 @@ class DocumentVerificationService {
         uploadedDocs.push(await this.uploadDocument(userId, file, 'PAY_SLIP', tx));
       }
       return uploadedDocs;
+    }, {
+      timeout: 30000, // 30 seconds
     });
 
     return {
