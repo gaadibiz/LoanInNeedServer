@@ -94,6 +94,7 @@ async function saveFullKYC(userId, data) {
         OWNER_SELF_OR_FAMILY: 'OWNER_SELF_OR_FAMILY',
         OWNER: 'OWNER_SELF_OR_FAMILY', // Backward compatibility
         OWN: 'OWNER_SELF_OR_FAMILY', // Handle "OWN" mapping
+        OWNED: 'OWNER_SELF_OR_FAMILY',
         RENTED: 'RENTED',
       };
 
