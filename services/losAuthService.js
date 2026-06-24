@@ -77,7 +77,10 @@ const getLosToken = async () => {
         }
 
     } catch (error) {
-        logger.error(`[LOS AUTH] Failed to retrieve token: ${error.message}`);
+        logger.error(`[LOS AUTH] Failed to retrieve token: ${error.message}`, error.response ? error.response.data : {});
+        if (error.response && error.response.data) {
+            throw new Error(`LOS authentication failed with 400: ${JSON.stringify(error.response.data)}`);
+        }
         throw error;
     }
 };

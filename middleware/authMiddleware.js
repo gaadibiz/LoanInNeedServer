@@ -36,6 +36,12 @@ const authenticate = async (req, res, next) => {
 
     next();
   } catch (err) {
+    if (err.name === 'TokenExpiredError' || err.message === 'jwt expired') {
+      return next(new UnauthorizedError('Session expired. Please log in again.'));
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return next(new UnauthorizedError('Invalid authentication token.'));
+    }
     next(err);
   }
 };

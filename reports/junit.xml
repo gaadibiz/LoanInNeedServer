@@ -1,3 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="LoanInNeed Backend Tests" tests="0" failures="0" errors="0" time="3.072">
+<testsuites name="LoanInNeed Backend Tests" tests="5" failures="0" errors="0" time="7.365">
+  <testsuite name="__tests__\unit\middleware\authMiddleware.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-06-24T09:05:19" time="6.851" tests="5">
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="✅ should authenticate valid token" time="0.003">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request without token" time="0">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token format" time="0">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token" time="0">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request if user not found in DB" time="0">
+    </testcase>
+  </testsuite>
 </testsuites>
