@@ -87,7 +87,10 @@ const processSingleJob = async (job) => {
             employment: true,
             address: true,
             panVerification: true,
-            aadhaarVerification: true
+            aadhaarVerification: true,
+            _count: {
+                select: { loanApplications: true }
+            }
         }
     });
 
@@ -139,9 +142,10 @@ const processSingleJob = async (job) => {
 
     if (!currentLosAppId) {
         // ── 4. Build the new LOS payload (confirmed contract, June 2026) ─────
-        const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification);
+        const isReloan = user._count && user._count.loanApplications > 1;
+        const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan);
 
-        logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}`, {
+        logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}, isReloan: ${isReloan}`, {
             customer: `${payload.FirstName} ${payload.LastName}`,
             amount:   payload.LoanAmountRequired
         });
