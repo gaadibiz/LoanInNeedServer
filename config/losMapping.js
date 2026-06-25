@@ -176,7 +176,7 @@ const validatePayload = (payload, appId) => {
  * @param {object} aadhaarVerification - Prisma AadhaarVerification record (or null)
  * @returns {object}                  - LOS-ready payload
  */
-const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification) => {
+const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan = false) => {
     const appId = application?.id || 'UNKNOWN';
     logger.info(`[LOS MAPPING] Building payload for applicationId: ${appId}`);
 
@@ -297,7 +297,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
 
     // ── Build payload ───────────────────────────────────────────────────
     const payload = {
-        ProductID:          13,
+        ProductID:          isReloan ? 14 : 13,
         LoanAmountRequired: application.loanAmount || 5000,
         PayDayDate:         PayDayDateString,
 
