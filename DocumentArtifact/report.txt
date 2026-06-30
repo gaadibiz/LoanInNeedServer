@@ -1,0 +1,576 @@
+================================================================================
+          LOANINNEED SERVER — COMPLETE BUG & ISSUE REPORT
+================================================================================
+  Project   : LoanInNeed Server (LoanInNeedServer)
+  Branch    : testDeploy
+  Server    : http://localhost:5000
+  Date      : 2026-06-17
+  Scope     : OTP Authentication APIs + KYC APIs + UI Issues + Track Loan
+  Total Tests Run : 81 (35 OTP + 46 KYC)
+  Overall Result  : 45 PASS | 25 FAIL | 11 WARN
+================================================================================
+
+
+================================================================================
+SECTION 1 — EXECUTIVE SUMMARY
+================================================================================
+
+The OTP authentication and KYC APIs are partially functional but contain serious
+security vulnerabilities that MUST be resolved before going to production.
+
+KEY CONCERNS:
+
+  1. A hardcoded master bypass code ("261102") exists directly in the source code.
+     Anyone who finds this code can log in as ANY phone number — no real SMS
+     verification is needed. This is a critical authentication bypass.
+
+  3. A malicious script tag submitted in the loan "purpose" field is stored
+     directly in the database and sent back in API responses — this is a stored
+     XSS attack vector.
+
+  4. The Aadhaar OTP verification is a complete stub — it accepts ANY input,
+     including an empty body, and returns "Aadhaar verified successfully."
+     There is zero actual identity verification happening.
+
+
+  6. No rate limiting is in place anywhere — an attacker can fire thousands of
+     OTP requests or verification attempts with no throttling or lockout.
+
+These issues collectively represent significant security risks, data integrity
+problems, and poor user experience. None of the critical issues require major
+architectural changes — they are targeted fixes in specific service files.
+
+
+================================================================================
+SECTION 2 — OTP AUTHENTICATION API BUGS
+================================================================================
+
+Endpoints Covered:
+  - POST /api/auth/phone/request-otp
+  - POST /api/auth/phone/verify-otp
+  - POST /api/auth/aadhaar/request-otp
+  - POST /api/auth/aadhaar/verify-otp
+
+--------------------------------------------------------------------------------
+2.1  CRITICAL BUGS — OTP APIs
+--------------------------------------------------------------------------------
+
+BUG OTP-C1: Hardcoded Master Bypass OTP Code
+-----------------------------------------------
+  Severity  : CRITICAL (Authentication Bypass)
+  File      : services/authService.js, around line 48
+  Test Case : T13, T18, T24, T35
+
+  WHAT IS HAPPENING:
+  The code contains a hardcoded secret OTP value ("261102"). When any user sends
+  this specific code in the verify-otp request, the server skips all OTP
+  verification and immediately creates or logs in the user. There is no check on
+  whether the user actually received an SMS OTP.
+
+  WHY IT IS DANGEROUS:
+  - Any developer, tester, or attacker who discovers this code (from code review,
+    version history, or trial-and-error) can log into ANY phone number account
+    without owning the phone.
+  - Since there is no phone number validation when this bypass is used (see
+    BUG OTP-C2 below), an attacker can create user accounts with garbage phone
+    numbers like "' OR 1=1 --" or "+91   " (spaces) stored in the database.
+  - The bypass code can be used unlimited times for any phone number (replay
+    attack confirmed — same response returned on repeated calls).
+
+  HOW TO FIX:
+  Remove the hardcoded bypass entirely. If developers need a testing bypass,
+  create a DEV_OTP_BYPASS_CODE environment variable that is explicitly removed
+  (set to empty/unset) in production deployment. Never hardcode credentials in
+  source code.
+
+
+BUG OTP-C2: No Phone Number Sanitisation Before Database Write
+---------------------------------------------------------------
+  Severity  : CRITICAL (Data Integrity + Input Validation)
+  File      : services/authService.js, lines 62–88
+  Test Cases: T18 (SQL-like string stored), T24 (whitespace stored)
+
+  WHAT IS HAPPENING:
+  When the master bypass OTP (see BUG OTP-C1) is used, the phone number field
+  is never validated. The server accepts and stores ANY string as the user's
+  phone number in the User table.
+
+  CONFIRMED TEST RESULTS:
+  - Phone: "' OR 1=1 --"  → User created, JWT token returned (200 OK)
+  - Phone: "+91   "        → User created with whitespace phone, JWT returned (200 OK)
+
+  WHY IT IS DANGEROUS:
+  - SQL-injection-like strings are stored in the User table polluting data.
+  - Whitespace phone numbers cause lookup failures and inconsistencies.
+  - This garbage data can cause failures in downstream services (e.g., SMS
+    services, loan processing) that rely on a valid phone number.
+
+  HOW TO FIX:
+  Validate phone against the international E.164 standard format (regex:
+  /^\+[1-9]\d{7,14}$/) before ANY database operation, completely independent
+  of whether the bypass code or real OTP was used.
+
+
+--------------------------------------------------------------------------------
+2.2  HIGH SEVERITY BUGS — OTP APIs
+--------------------------------------------------------------------------------
+
+BUG OTP-H1: No Rate Limiting on OTP Request Endpoint
+------------------------------------------------------
+  Severity  : HIGH (Brute Force / Denial of Service)
+  File      : services/authService.js, lines 12–33
+  Test Case : T31 (5 rapid requests all returned 200)
+
+  WHAT IS HAPPENING:
+  There is no limit on how many OTP requests can be sent for a phone number or
+  from an IP address. All 5 rapid-fire requests in the test returned 200 OK
+  with no throttling.
+
+  WHY IT IS DANGEROUS:
+  - An attacker can spam OTP requests to flood the SMS provider (Speqtra API),
+    incurring significant cost to the business.
+  - Legitimate users can be annoyed/harassed by unwanted OTP SMS messages.
+  - Brute-force OTP guessing is possible when combined with unlimited retries.
+
+  HOW TO FIX:
+  Install the "express-rate-limit" npm package and configure:
+  - OTP Request: Maximum 3 requests per phone number per 10 minutes.
+  - OTP Verify: Maximum 5 attempts per phone number per 10 minutes, then lock
+    the phone number temporarily.
+
+--------------------------------------------------------------------------------
+2.3  MEDIUM SEVERITY BUGS — OTP APIs
+--------------------------------------------------------------------------------
+
+BUG OTP-M1: Integer OTP Code Type Causes 500 Error
+---------------------------------------------------
+  Severity  : MEDIUM
+  File      : controllers/authController.js, line 13
+  Test Case : T22
+
+  WHAT IS HAPPENING:
+  When the OTP code is sent as a number (261102) instead of a string ("261102"),
+  the server returns HTTP 500. The code attempts string operations on an integer.
+
+  Example failing request: {"phone": "+919900000001", "code": 261102}
+
+  HOW TO FIX:
+  Convert the code field to string at the start of the controller:
+    const code = String(req.body.code ?? '')
+  Then check if it's empty/blank and return 400 if so.
+
+
+BUG OTP-M2: Aadhaar OTP Is a Complete Bypass — Accepts Anything
+----------------------------------------------------------------
+  Severity  : MEDIUM (Intentional Stub, but Must Be Gated)
+  File      : controllers/authController.js, lines 22–35
+  Test Cases: T27, T28, T29
+
+  WHAT IS HAPPENING:
+  Both Aadhaar OTP endpoints (request-otp and verify-otp) are stubs that return
+  "success" regardless of any input. An empty body {} on verify-otp returns
+  "Aadhaar verified successfully."
+
+  WHY IT MATTERS:
+  This stub must never be exposed in production in its current state. Any user
+  can claim Aadhaar verification without owning an Aadhaar number.
+
+  HOW TO FIX:
+  Gate the stub behind an environment variable:
+    if (process.env.AADHAAR_STUB_ENABLED !== 'true') {
+      return res.status(503).json({ message: 'Aadhaar verification unavailable' });
+    }
+  This ensures the stub never runs in production deployment.
+
+
+
+BUG OTP-L2: Console.log Debug Statements in Production Code
+------------------------------------------------------------
+  Files: controllers/authController.js (line 17), middleware/attributionMiddleware.js (line 16)
+
+  Debug log statements like "[DEBUG] Auth Controller - Attribution:" are present
+  in production code. These print sensitive attribution data and internal values
+  to server logs (stdout) which may be accessible via log monitoring tools.
+
+  FIX: Remove all console.log() calls or replace with logger.debug() which can
+  be silenced by setting the log level in production.
+
+
+BUG OTP-L4: JWT Token Contains Personal Data (Phone and Email)
+--------------------------------------------------------------
+  File      : utils/jwt.js
+
+  The JWT token payload includes the user's phone number and email address.
+  JWT token bodies are base64-encoded (not encrypted) — anyone can decode the
+  token body without the secret key and read the personal data.
+
+  Example decoded payload:
+    { "id": 12705, "email": null, "phone": "+919900000001", "role": "CUSTOMER" }
+
+  FIX: Remove PII from the JWT payload. Store only { id, customUserId, role }.
+  Fetch the full user profile from the database on authenticated requests.
+
+  File      : utils/jwt.js
+
+  The internal numeric database ID (e.g. "id": 12705) is exposed in the JWT
+  payload. This reveals database row counts and internal system structure.
+
+  FIX: Return only the customUserId (e.g. "LIN12705") in the token, not the
+  raw integer primary key.
+
+================================================================================
+SECTION 3 — KYC API BUGS
+================================================================================
+
+Endpoints Covered:
+  - GET  /api/kyc
+  - POST /api/kyc (Full KYC Submission)
+  - POST /api/kyc/verify-pan
+  - PUT  /api/kyc/employment
+  - PUT  /api/kyc/address
+
+
+--------------------------------------------------------------------------------
+3.2  HIGH SEVERITY BUGS — KYC APIs
+--------------------------------------------------------------------------------
+
+BUG KYC-H2: File Size Error Returns 500 + Multer Stack Trace
+------------------------------------------------------------
+  Severity  : HIGH (Information Disclosure + Wrong Status Code)
+  File      : routes/kycRoutes.js, middleware/ErrorHandler.js
+  Test Case : K38
+
+  WHAT IS HAPPENING:
+  When a PAN card image larger than 10 MB is uploaded, the server returns
+  HTTP 500 with the full Multer library stack trace including internal file
+  paths and node_modules layout.
+
+  Correct behavior: HTTP 400 with message "File too large. Maximum 10 MB allowed."
+
+  HOW TO FIX:
+  Add a specific Multer error handler in the route file:
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File too large. Maximum 10 MB.' })
+    }
+
+
+BUG KYC-H3: XSS Characters in PAN Number Cause Server Connection Reset / Crash
+-------------------------------------------------------------------------------
+  Severity  : HIGH (Denial of Service / Server Crash)
+  File      : controllers/kycController.js, verifyPAN() function
+  Test Case : K37
+
+  WHAT IS HAPPENING:
+  When a script tag is submitted as the panNumber via multipart form:
+    panNumber = <script>alert(1)</script>
+  The server drops the connection entirely with no HTTP response (curl exit code
+  26 — connection reset). This indicates a server crash or unhandled exception
+  during multipart parsing or the panNumber.toUpperCase() call.
+
+  WHY IT MATTERS:
+  - A single malformed request can crash or hang the server.
+  - This is a denial-of-service vulnerability.
+
+  HOW TO FIX:
+  Immediately after reading panNumber from req.body, validate its format:
+    /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i
+  If the format does not match → return 400 immediately before any processing.
+
+
+BUG KYC-H4: Each POST /api/kyc Call Creates a New Loan Application (No Idempotency)
+------------------------------------------------------------------------------------
+  Severity  : HIGH (Data Integrity)
+  File      : services/kycService.js, saveFullKYC() function
+  Test Case : K18
+
+  WHAT IS HAPPENING:
+  Every time the same user calls POST /api/kyc (even with identical data), a
+  brand new LoanApplication record is created in the database with a new ID.
+
+  Confirmed: User submitted twice → Application ID 1906 on first call,
+  Application ID 1907 on second call.
+
+  WHY IT MATTERS:
+  - A user with a slow connection who retries a submission will have multiple
+    pending loan applications in the system.
+  - Loan officers/reviewers will see duplicate applications without knowing
+    which is the correct one.
+  - Downstream LOS (Loan Origination System) integration jobs are created for
+    each duplicate, causing processing errors.
+
+  HOW TO FIX:
+  Before creating a new LoanApplication, check if one already exists:
+    existing = findFirst({ where: { userId, status: 'PENDING' } })
+    if (existing) → return existing record instead of creating a new one.
+
+
+BUG KYC-H5: Surepass API Token Hardcoded in Source Code
+-------------------------------------------------------
+  Severity  : HIGH (Credential Exposure)
+  File      : services/surepassService.js, constructor
+  Test Case : K30 context
+
+  WHAT IS HAPPENING:
+  The Surepass API authentication JWT token is hardcoded as a fallback value
+  in the source code. If the environment variable SUREPASS_TOKEN is not set,
+  the code uses the hardcoded token.
+
+  WHY IT IS DANGEROUS:
+  - The hardcoded token is visible in version control (git history).
+  - Anyone with access to the repository can extract the token and make
+    unauthorized PAN verification API calls (potential cost and abuse).
+  - The token has a 90-day expiry, so this is an active, live credential.
+
+  HOW TO FIX:
+  - Remove the hardcoded default value from the source code.
+  - Require the environment variable to be set and fail fast at startup:
+      if (!process.env.SUREPASS_TOKEN) { process.exit(1) }
+  - Rotate the currently exposed token immediately.
+
+
+--------------------------------------------------------------------------------
+3.3  MEDIUM SEVERITY BUGS — KYC APIs
+--------------------------------------------------------------------------------
+
+BUG KYC-M1: Silent DB Fallback Masks Missing Required Fields
+------------------------------------------------------------
+  Severity  : MEDIUM
+  File      : services/kycService.js, saveFullKYC(), isPlaceholder() merge logic
+  Test Cases: K06, K07
+
+  WHAT IS HAPPENING:
+  If a user already has an employment record in the database and submits POST
+  /api/kyc WITHOUT required fields like companyName or monthlyIncome, the
+  server silently uses the old database values and returns HTTP 200 OK.
+
+  A caller who sends an incomplete form gets no error or warning — they assume
+  the submission was successful with their new data, but actually old data is
+  being used.
+
+  This behavior only affects users who already have existing employment records.
+  Fresh users (no previous records) correctly get a 400 error.
+
+  HOW TO FIX:
+  Log a warning message when a fallback to DB values occurs. Alternatively,
+  require all employment fields on initial full KYC submission and only allow
+  partial updates via the dedicated PUT /api/kyc/employment endpoint.
+
+
+BUG KYC-M2: No Maximum Loan Amount Validation
+---------------------------------------------
+  Severity  : MEDIUM
+  File      : services/kycService.js, loanPayload section
+  Test Case : K17
+
+  WHAT IS HAPPENING:
+  Any arbitrarily large loan amount is accepted and stored. Test confirmed that
+  loanAmount = 999999999999 (1 trillion) was accepted and stored with HTTP 200.
+
+  WHY IT MATTERS:
+  - Downstream EMI/interest calculations may overflow or produce incorrect values.
+  - No business rules are enforced — loan applications for impossible amounts
+    will reach loan officers.
+
+  HOW TO FIX:
+  Add a maximum loan amount check based on business rules:
+    if (loanAmount > 500000) return 400 "Loan amount exceeds maximum limit of ₹5,00,000"
+  Adjust the cap to match actual business lending limits.
+
+
+BUG KYC-M3: Invalid Address Type Silently Stored as Null (No Error Returned)
+----------------------------------------------------------------------------
+  Severity  : MEDIUM
+  File      : controllers/kycController.js, updateAddress()
+  Test Case : K28
+
+  WHAT IS HAPPENING:
+  When an invalid currentAddressType value (e.g. "INVALID_TYPE") is submitted,
+  the server stores null in the database and returns HTTP 200 OK. The caller
+  has no idea their address type was discarded.
+
+  WHY IT MATTERS:
+  - User data appears to be saved, but the address type field is null in the DB.
+  - This causes data integrity issues in records that depend on address type.
+
+  HOW TO FIX:
+  Validate currentAddressType against the known allowed values (RENTED,
+  OWNER_SELF_OR_FAMILY) - required with the list of valid options.
+
+
+BUG KYC-M4: All 500 Error Responses Expose Stack Traces in Production
+----------------------------------------------------------------------
+  Severity  : MEDIUM
+  File      : middleware/ErrorHandler.js (global error handler)
+  Test Cases: K15, K19, K23, K38
+
+  WHAT IS HAPPENING:
+  Every unhandled error in the system returns a response containing:
+    - error.stack (full JavaScript stack trace with file paths and line numbers)
+    - error.code (internal error codes)
+  This information is returned to clients in production.
+
+  WHY IT IS DANGEROUS:
+  Stack traces reveal:
+    - Internal file structure and paths
+    - Library names and versions (attackers can look up vulnerabilities)
+    - Database ORM query structure
+
+  HOW TO FIX:
+  In ErrorHandler.js, check the environment before including stack details:
+    if (process.env.NODE_ENV !== 'production') { include stack }
+    else { return generic: { "status": "error", "message": "Something went wrong" } }
+
+
+--------------------------------------------------------------------------------
+3.4  LOW SEVERITY / CODE QUALITY — KYC APIs
+--------------------------------------------------------------------------------
+
+BUG KYC-L1: GET /api/kyc Stub Returns HTTP 200 (Should Return 501)
+-------------------------------------------------------------------
+  Test Case : K01
+  File      : controllers/kycController.js, getKYC()
+
+  The GET /api/kyc endpoint is a stub that returns "KYC details not implemented
+  yet." It returns HTTP 200 (OK), which implies the request succeeded and
+  returned data. An unimplemented endpoint should return HTTP 501 Not Implemented.
+
+  FIX: Change to res.status(501).json({ message: 'Not implemented yet' })
+
+
+BUG KYC-L3: Unprofessional Error Message on PAN Validation Failure
+------------------------------------------------------------------
+  File      : services/surepassService.js, verifyPAN()
+  Test Case : K34
+
+  When an invalid PAN format is submitted, the error message returned to the
+  client is: "oops Invalid Pan number"
+
+  This is unprofessional and inappropriate for a financial application.
+
+  FIX: Change to "Invalid PAN number. Please verify and resubmit."
+
+
+BUG KYC-L4: No PAN Format Pre-Validation Before External API Call
+------------------------------------------------------------------
+  File      : controllers/kycController.js, submitKYC()
+
+  Arbitrary strings are sent directly to the Surepass external PAN verification
+  API without first checking if the format is valid. Only after the API rejects
+  it does the server return an error.
+
+  This wastes external API calls and quota on obviously invalid inputs.
+
+  FIX: Pre-validate PAN format with /^[A-Z]{5}[0-9]{4}[A-Z]$/i before calling
+  the external API. Return 400 immediately for non-matching formats.
+
+
+
+================================================================================
+SECTION 4 — UI ISSUES
+================================================================================
+
+These are front-end issues identified during manual testing:
+
+
+UI-1: Salary Field Allows Scroll / Arrow Key Increment-Decrement
+----------------------------------------------------------------
+  Location  : Employment section — Monthly Salary / Income input field
+  Issue     : The salary input field accepts scrolling with the mouse wheel and
+              clicking the up/down arrow buttons to increment or decrement the
+              value. This is undesirable behavior for a financial input field.
+              Users can accidentally change the salary amount by scrolling over
+              the field.
+  Fix       : Add onWheel={(e) => e.target.blur()} to the input to prevent
+              scroll changes. Remove spinner arrows by adding:
+              type="number" and CSS: input[type=number] { -moz-appearance: textfield }
+              and input[type=number]::-webkit-inner-spin-button { display: none }
+
+
+UI-2: PAN Card Surname Field Cannot Be Filled When PAN Has Only First Name
+--------------------------------------------------------------------------
+  Location  : PAN verification page — Surname / Last Name input field
+  Issue (K40): When a user submits a PAN card that has only a first name and no
+              surname (some PAN cards issued in India have this), the surname
+              field on the UI remains empty AND the input field for surname
+              appears to be disabled or locked. The user cannot type in the
+              surname, and the form cannot be submitted.
+  Impact    : Users with single-name PAN cards are completely unable to complete
+              KYC verification.
+  Fix       : If the surname field is empty after PAN verification, enable the
+              surname input so the user can manually type their surname.
+              Do not disable the field just because the API returned no surname.
+
+
+UI-3: Re-Verification Does Not Update Missing Data from New PAN
+--------------------------------------------------------------
+  Location  : PAN verification flow — surname/name field after PAN change
+  Issue (K50): When a user who previously verified a PAN with a surname now
+              changes to a different PAN that has NO surname, the old surname
+              data from the previous verification is still shown. The system
+              does not update (clear) the surname to reflect that the new PAN
+              has no surname.
+  Impact    : User's profile shows an incorrect surname that does not belong
+              to their current PAN card.
+  Fix       : When re-verification succeeds with a new PAN, fully replace ALL
+              previously stored PAN details with the new verification result.
+              If the new result has no surname, the stored surname should be
+              cleared/emptied.
+
+
+================================================================================
+SECTION 5 — TRACK LOAN ISSUES
+================================================================================
+
+These bugs were identified in the Track Loan feature:
+
+
+TL-1: Any Phone Number Returns the Logged-In User's Loan Details
+----------------------------------------------------------------
+  Issue (K1): When tracking a loan, entering ANY phone number (including an
+              incorrect or completely unrelated phone number) returns the
+              currently logged-in user's own loan details.
+  Impact    : This is a serious data privacy issue — users can attempt to look
+              up other users and instead keep seeing their own data (no error
+              is shown to indicate the phone is wrong).
+  Fix       : The lookup should search by the submitted phone number and return
+              404 Not Found if no matching loan exists for that number. It must
+              NOT fall back to the current user's data.
+
+
+
+TL-3: Address Not Fetched from Aadhaar or PAN Card
+---------------------------------------------------
+  Issue (K3): The Track Loan or user profile does not auto-populate the
+              user's address from their Aadhaar or PAN card verification data.
+              Users have to manually enter address details that should already
+              be available from the verified documents.
+  Fix       : After successful PAN/Aadhaar verification, extract the address
+              from the verification response and pre-fill the address fields.
+
+
+TL-4: Current Address Type Dropdown Is Missing
+---------------------------------------------
+  Issue (K4): The "Current Address Type" dropdown (Rented / Owned) is missing
+              from the Track Loan or address section of the application.
+              Users cannot select their address type.
+  Fix       : Add the Current Address Type dropdown with the standard options
+              (Rented, Owned by Self or Family).
+
+
+TL-5: Net Banking Details Link Not Working
+-----------------------------------------
+  Issue (K5): The link or button for "Net Banking Details" in the loan
+              application flow is not functional. Clicking it does nothing
+              or leads to an error.
+  Fix       : Implement the Net Banking Details flow or connect the existing
+              link to the correct screen/service.
+
+
+TL-6: Loan History "Reapply" Button Not Working
+-----------------------------------------------
+  Issue (K6): In the Loan History section, the "Reapply" option/button does
+              not work. Users who want to reapply for a loan after a previous
+              application cannot do so through this button.
+  Fix       : Connect the Reapply button to the loan application flow,
+              pre-filling relevant user data where possible.
+

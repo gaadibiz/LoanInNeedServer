@@ -30,9 +30,14 @@ exports.submitKYC = async (req, res, next) => {
     const userId = req.user?.id || req.params.userId;
     if (!userId) throw new BadRequestError('User not found ❌');
 
-    logger.info('📝 [KYC] Full KYC submission request for userId=%s', userId);
+    let ip =  req.body.ipAddress || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    let ipAddress =  typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip)
 
-    const data = req.body;
+    let data = req.body;
+    data.ipAddress = ipAddress;
+
+    logger.info('📝 [KYC] Full KYC submission request for userId=%s', userId,ip);
+
 
     const result = await saveFullKYC(userId, data);
 

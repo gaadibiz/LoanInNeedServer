@@ -162,7 +162,8 @@ async function saveFullKYC(userId, data) {
           loanType: loanTypeEnum,
           status: 'PENDING',
           attributedPartnerId: user.attributedPartnerId,
-          attributionSource: user.attributionType || 'ORGANIC'
+          attributionSource: user.attributionType || 'ORGANIC',
+          ipAddress: data?.ipAddress || ''
         }
       });
       logger.info('✅ LoanApplication synced for userId=%s appId=%s', userId, application.id);
@@ -170,6 +171,7 @@ async function saveFullKYC(userId, data) {
       // ---------- Queue for LOS Integration ----------
       await tx.losIntegrationJob.create({
         data: {
+          ipAddress: data?.ipAddress || '',
           userId,
           applicationId: application.id,
           status: 'PENDING'

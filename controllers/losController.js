@@ -82,7 +82,7 @@ const getApplicationsForLos = asyncHandler(async (req, res) => {
 const updateJobStatus = asyncHandler(async (req, res) => {
     const { applicationId } = req.params;
     const { status, losApplicationId, losCaseNumber, losKycId, lastError } = req.body;
-
+    
     const job = await prisma.losIntegrationJob.findUnique({
         where: { applicationId: parseInt(applicationId) }
     });
@@ -90,7 +90,7 @@ const updateJobStatus = asyncHandler(async (req, res) => {
     if (!job) {
         throw new NotFoundError(`No LOS integration job tracked for LoanApplication ID ${applicationId}`);
     }
-
+   
     const updatedJob = await prisma.losIntegrationJob.update({
         where: { id: job.id },
         data: {

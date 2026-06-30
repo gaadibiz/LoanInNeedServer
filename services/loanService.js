@@ -2,7 +2,7 @@ const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { enqueueJob } = require('../utils/postgresMQ');
 
-async function createLoanApplication(userId, loanAmount, loanType, reqAttribution) {
+async function createLoanApplication(userId, loanAmount, loanType, reqAttribution, ipAddress = '') {
     let partnerId = null;
     let attributionSource = 'ORGANIC';
 
@@ -39,7 +39,8 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
             loanType: loanType || 'OTHER',
             status: 'PENDING',
             attributedPartnerId: partnerId,
-            attributionSource: attributionSource
+            attributionSource: attributionSource,
+            ipAddress: ipAddress
         }
     });
 
@@ -48,6 +49,7 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
         await prisma.losIntegrationJob.create({
             data: {
                 userId,
+                ipAddress: ipAddress,
                 applicationId: application.id,
                 status: 'PENDING'
             }

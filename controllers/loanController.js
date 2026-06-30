@@ -46,10 +46,12 @@ function releaseSubmissionSlot() {
  * @access  Private
  */
 const applyForLoan = asyncHandler(async (req, res) => {
-    const { loanAmount, purposeOfLoan, loanType } = req.body;
+    const { loanAmount, purposeOfLoan, loanType  } = req.body;
     const userId = req.user.id;
+     let ip =  req.body.ipAddress || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    let ipAddress =  typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip)
 
-    const result = await createLoanApplication(userId, loanAmount, loanType, req.attribution);
+    const result = await createLoanApplication(userId, loanAmount, loanType, req.attribution, IPAddress);
 
     res.status(201).json({
         message: 'Loan application submitted successfully.',
