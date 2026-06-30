@@ -77,8 +77,8 @@ const processPendingIntegrations = async () => {
  * ─────────────────────────────────────────────────────────────────────────────
  */
 const processSingleJob = async (job) => {
-    const { id, userId, applicationId, losApplicationId, losCaseNumber, losKycId } = job;
-    logger.info(`[LOS WORKER] Processing Job ID: ${id} | User: ${userId} | App: ${applicationId}`);
+    const { id, userId, applicationId, losApplicationId, losCaseNumber, losKycId, ipAddress } = job;
+    logger.info(`[LOS WORKER] Processing Job ID: ${id} | User: ${userId} | App: ${applicationId} | IPAddress : ${ipAddress}`);
 
     // ── 1. Fetch records from LIN DB ─────────────────────────────────────────
     const user = await prisma.user.findUnique({
@@ -144,7 +144,7 @@ const processSingleJob = async (job) => {
         // ── 4. Build the new LOS payload (confirmed contract, June 2026) ─────
         const isReloan = user._count && user._count.loanApplications > 1;
         const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan);
-
+        payload.ipAddress = ipAddress
         logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}, isReloan: ${isReloan}`, {
             customer: `${payload.FirstName} ${payload.LastName}`,
             amount:   payload.LoanAmountRequired
@@ -153,11 +153,11 @@ const processSingleJob = async (job) => {
         // Update job with rawRequest before sending
         await prisma.losIntegrationJob.update({
             where: { id },
-            data: { rawRequest: JSON.parse(JSON.stringify(payload)) }
+            data: { rawRequest: JSON.parse(JSON.stringify({...payload,IPAddress:ipAddress})) }
         });
 
         // ── 5. Push to LOS (Phase 1) ───────────────────────────────────────────────────────
-        const losResponse = await createLosApplication(payload);
+        const losResponse = await createLosApplication({...payload,IPAddress:ipAddress});
 
         if (losResponse.success) {
             currentLosAppId = losResponse.applicationId ? losResponse.applicationId.toString() : null;
@@ -174,14 +174,16 @@ const processSingleJob = async (job) => {
                     losCaseNumber:    currentLosCaseNumber,
                     losKycId:         currentLosKycId,
                     rawResponse:      losResponse.rawData ? JSON.parse(JSON.stringify(losResponse.rawData)) : null,
-                    lastError:        null
+                    lastError:        null,
+                    ipAddress : ipAddress
                 }
             });
 
             await prisma.loanApplication.update({
                 where: { id: applicationId },
                 data: {
-                    losApplicationNumber: currentLosCaseNumber
+                    losApplicationNumber: currentLosCaseNumber,
+                    ipAddress : ipAddress
                 }
             });
         } else {

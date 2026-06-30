@@ -7,7 +7,8 @@ const { createCircuitBreaker } = require('../utils/circuitBreaker');
 // LOS API Endpoint Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 // Credentials confirmed by LOS team on 2026-04-07 (live public endpoints)
-const LOS_SAVE_URL    = 'http://59.95.101.93:7021//api/NewApplicationAPI/NewApplication_BhumChum_Enquiry/V1';
+//const LOS_SAVE_URL    = 'http://59.95.101.93:7021//api/NewApplicationAPI/NewApplication_BhumChum_Enquiry/V1';
+const LOS_SAVE_URL    = 'http://59.95.101.93:7021//api/NewApplicationAPI/NewApplication_BhumChum_Enquiry/V2';
 const LOS_KYC_DOC_URL = 'http://59.95.101.93:7021/api/ChatBotKYCProof/SaveChatBotKYCProof';
 const LOS_TIMEOUT_MS  = parseInt(process.env.LOS_API_TIMEOUT_MS) || 30000; // Configurable timeout
 
@@ -71,7 +72,7 @@ const createLosApplication = async (payload) => {
 
     try {
         // Pre-stringify to send exactly what Postman sends — a raw JSON string
-        const jsonBody = JSON.stringify(payload);
+        let jsonBody = JSON.stringify(payload);
         logger.info(`[LOS API] 📤 OUTBOUND PAYLOAD TO LOS:\n${JSON.stringify(payload, null, 2)}`);
 
         // Explicitly set Content-Length to prevent chunked transfer encoding
