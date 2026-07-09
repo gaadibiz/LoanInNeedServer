@@ -147,7 +147,7 @@ const processSingleJob = async (job) => {
     if (!currentLosAppId) {
         // ── 4. Build the new LOS payload (confirmed contract, June 2026) ─────
         const isReloan = user._count && user._count.loanApplications > 1;
-        const payload = buildNewLosPayload(application, {...user,...employee}, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan);
+        const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan,employee);
         payload.ipAddress = ipAddress
         logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}, isReloan: ${isReloan}`, {
             customer: `${payload.FirstName} ${payload.LastName}`,
