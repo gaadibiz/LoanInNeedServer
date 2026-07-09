@@ -300,7 +300,8 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         ProductID:          isReloan ? 14 : 13,
         LoanAmountRequired: application.loanAmount || 5000,
         PayDayDate:         PayDayDateString,
-
+        TotalMonthlyIncome: user.monthlyIncome || 0,
+        
         PurposeOfLoanID,
         EmploymentTypeID,
         SalutationID,

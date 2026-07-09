@@ -46,7 +46,7 @@ function releaseSubmissionSlot() {
  * @access  Private
  */
 const applyForLoan = asyncHandler(async (req, res) => {
-    const { loanAmount, purposeOfLoan, loanType  } = req.body;
+    const { loanAmount, purposeOfLoan, loanType, monthlyIncome  } = req.body;
     const userId = req.user.id;
      let ip =  req.body.ipAddress || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     let ipAddress =  typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip)
