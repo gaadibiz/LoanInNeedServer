@@ -95,14 +95,18 @@ const processSingleJob = async (job) => {
     });
 
     const employee = await prisma.employmentDetail.findUnique({
-        where: { userId: userId }
-    });
+        where: { userId: userId },
+        select: { monthlyIncome: true }
+    }) || {};
 
     const application = await prisma.loanApplication.findUnique({
         where: { id: applicationId }
     });
 
     // ── 2. Validate required fields ──────────────────────────────────────────
+    if(!employee || !employee.monthlyIncome) {
+         logger.info(`[LOS WORKER] MonthlyIncome not verified, TotalMonthlyIncome will be '0'`);
+    }
     if (!user) {
         throw new Error('User record not found in database.');
     }
