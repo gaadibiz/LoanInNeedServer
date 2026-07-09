@@ -176,13 +176,13 @@ const validatePayload = (payload, appId) => {
  * @param {object} aadhaarVerification - Prisma AadhaarVerification record (or null)
  * @returns {object}                  - LOS-ready payload
  */
-const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan = false) => {
+const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan = false,employee) => {
     const appId = application?.id || 'UNKNOWN';
     logger.info(`[LOS MAPPING] Building payload for applicationId: ${appId}`);
 
     // ── Log input data availability ─────────────────────────────────────
     logger.info(`[LOS MAPPING] Input data status:`, {
-        monthyIncome:       user.monthlyIncome || 0,
+        monthyIncome:       employee.monthlyIncome || 0,
         applicationId:      appId,
         hasUser:            !!user,
         userName:           user?.name ? `${user.name.charAt(0)}***` : 'MISSING',
@@ -283,6 +283,9 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
     if (!panVerification || !panVerification.panNumber) {
         logger.warn(`[LOS MAPPING] appId=${appId} — PAN not verified, PanSSN will be 'NA'`);
     }
+    if(!employee || !employee.monthlyIncome) {
+        logger.warn(`[LOS MAPPING] appId=${appId} — MonthlyIncome not verified, TotalMonthlyIncome will be '0'`);
+    }
     if (!aadhaarVerification || !aadhaarVerification.aadhaarNumber) {
         logger.warn(`[LOS MAPPING] appId=${appId} — Aadhaar not verified, AdharDrivingNo will be 'NA'`);
     }
@@ -301,7 +304,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         ProductID:          isReloan ? 14 : 13,
         LoanAmountRequired: application.loanAmount || 5000,
         PayDayDate:         PayDayDateString,
-        TotalMonthlyIncome: user.monthlyIncome || 0,
+        TotalMonthlyIncome: employee.monthlyIncome || 0,
         
         PurposeOfLoanID,
         EmploymentTypeID,
