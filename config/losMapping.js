@@ -182,6 +182,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
 
     // ── Log input data availability ─────────────────────────────────────
     logger.info(`[LOS MAPPING] Input data status:`, {
+        monthyIncome:       user.monthlyIncome || 0,
         applicationId:      appId,
         hasUser:            !!user,
         userName:           user?.name ? `${user.name.charAt(0)}***` : 'MISSING',
