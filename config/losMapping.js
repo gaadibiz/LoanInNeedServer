@@ -182,7 +182,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
 
     // ── Log input data availability ─────────────────────────────────────
     logger.info(`[LOS MAPPING] Input data status:`, {
-        monthyIncome:       employee.monthlyIncome || 0,
+        monthyIncome:       employee?.monthlyIncome || 0,
         applicationId:      appId,
         hasUser:            !!user,
         userName:           user?.name ? `${user.name.charAt(0)}***` : 'MISSING',
@@ -304,7 +304,7 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
         ProductID:          isReloan ? 14 : 13,
         LoanAmountRequired: application.loanAmount || 5000,
         PayDayDate:         PayDayDateString,
-        TotalMonthlyIncome: employee.monthlyIncome || 0,
+        TotalMonthlyIncome: employee?.monthlyIncome || 0,
         
         PurposeOfLoanID,
         EmploymentTypeID,
