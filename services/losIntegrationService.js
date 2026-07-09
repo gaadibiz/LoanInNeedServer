@@ -94,6 +94,10 @@ const processSingleJob = async (job) => {
         }
     });
 
+    const employee = await prisma.employmentDetail.findUnique({
+        where: { userId: userId }
+    });
+
     const application = await prisma.loanApplication.findUnique({
         where: { id: applicationId }
     });
@@ -143,7 +147,7 @@ const processSingleJob = async (job) => {
     if (!currentLosAppId) {
         // ── 4. Build the new LOS payload (confirmed contract, June 2026) ─────
         const isReloan = user._count && user._count.loanApplications > 1;
-        const payload = buildNewLosPayload(application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan);
+        const payload = buildNewLosPayload(application, {...user,...employee}, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan);
         payload.ipAddress = ipAddress
         logger.info(`[LOS WORKER] Payload built for applicationId: ${applicationId}, isReloan: ${isReloan}`, {
             customer: `${payload.FirstName} ${payload.LastName}`,
@@ -153,11 +157,11 @@ const processSingleJob = async (job) => {
         // Update job with rawRequest before sending
         await prisma.losIntegrationJob.update({
             where: { id },
-            data: { rawRequest: JSON.parse(JSON.stringify({...payload,IPAddress:ipAddress})) }
+            data: { rawRequest: JSON.parse(JSON.stringify({...payload,IPAddress:ipAddress,})) }
         });
 
         // ── 5. Push to LOS (Phase 1) ───────────────────────────────────────────────────────
-        const losResponse = await createLosApplication({...payload,IPAddress:ipAddress});
+        const losResponse = await createLosApplication({...payload,IPAddress:ipAddress,});
 
         if (losResponse.success) {
             currentLosAppId = losResponse.applicationId ? losResponse.applicationId.toString() : null;
