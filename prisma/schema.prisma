@@ -27,6 +27,8 @@ model User {
   attributionDate     DateTime?
   attributionType     AttributionType?
   profileType         ProfileType?
+  digilockerRequestId String?              @unique
+  digilockerStatus    DigilockerStatus?
   aadhaarVerification AadhaarVerification?
   address             AddressDetail?
   attributionLogs     AttributionLog[]
@@ -42,6 +44,7 @@ model User {
   status              UserDocumentStatus?
   locations           UserLocation[]
   losIntegrationJobs  LosIntegrationJob[]
+  phonePrefillDetail  PhonePrefillDetail?
 }
 
 model BusinessDetail {
@@ -107,12 +110,21 @@ model AttributionLog {
 }
 
 model AadhaarVerification {
-  id            Int       @id @default(autoincrement())
-  aadhaarNumber String    @unique
-  verified      Boolean   @default(false)
-  verifiedAt    DateTime?
-  userId        Int       @unique
-  user          User      @relation(fields: [userId], references: [id])
+  id                Int       @id @default(autoincrement())
+  aadhaarNumber     String    @unique
+  verified          Boolean   @default(false)
+  verifiedAt        DateTime?
+  userId            Int       @unique
+  name              String?
+  dob               String?
+  gender            String?
+  address           String?
+  photoUrl          String?
+  aadhaarJpegUrl    String?
+  splitAddress      Json?
+  rawResponse       Json?
+  eAadhaarFetchedAt DateTime?
+  user              User      @relation(fields: [userId], references: [id])
 }
 
 model PanVerification {
@@ -122,6 +134,20 @@ model PanVerification {
   verifiedAt DateTime?
   userId     Int       @unique
   user       User      @relation(fields: [userId], references: [id])
+}
+
+model PhonePrefillDetail {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  phoneNumber String
+  pan         String?
+  firstName   String?
+  lastName    String?
+  response    Json
+  fetchedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model EmploymentDetail {
@@ -369,6 +395,13 @@ enum AttributionType {
   ASSISTED
   ORGANIC
   ADMIN_OVERRIDE
+}
+
+enum DigilockerStatus {
+  URL_CREATED
+  CONSENT_COMPLETED
+  CONSENT_FAILED
+  FETCH_FAILED
 }
 
 model LosIntegrationJob {

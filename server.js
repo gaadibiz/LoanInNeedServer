@@ -81,7 +81,7 @@ app.use(cors({
     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
     return callback(new Error(msg), false);
   },
-  credentials: true
+  credentials: false
 }));
 
 // Use morgan with winston for HTTP request logging

@@ -1,6 +1,7 @@
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { enqueueJob } = require('../utils/postgresMQ');
+const phonePrefillService = require('./phonePrefillService');
 
 async function createLoanApplication(userId, loanAmount, loanType, reqAttribution, ipAddress = '') {
     let partnerId = null;
@@ -43,6 +44,16 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
             ipAddress: ipAddress
         }
     });
+
+    // --- PHONE PREFILL (Signzy) ---
+    // Best-effort: fetched details are saved to PhonePrefillDetail and later
+    // forwarded to LOS as-is by the LOS worker. Must not block loan submission.
+    try {
+        await phonePrefillService.fetchAndSavePrefillDetails(userId);
+        logger.info(`[LOAN] Phone prefill details fetched and saved for User ${userId}`);
+    } catch (error) {
+        logger.error(`[LOAN] Failed to fetch/save phone prefill details for User ${userId}: ${error.message}`);
+    }
 
     // --- LOS INTEGRATION (MQ) ---
     try {
