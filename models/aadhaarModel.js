@@ -71,6 +71,35 @@ const AadhaarModel = {
   },
 
   /**
+   * Upsert the full e-Aadhaar payload fetched from Signzy's Get e-Aadhaar API
+   * and mark the record as verified.
+   */
+  async saveEAadhaarDetails(userId, eAadhaar, tx = prisma) {
+    const client = tx;
+    const data = {
+      aadhaarNumber: eAadhaar.uid,
+      verified: true,
+      verifiedAt: new Date(),
+      name: eAadhaar.name,
+      dob: eAadhaar.dob,
+      gender: eAadhaar.gender,
+      address: eAadhaar.address,
+      photoUrl: eAadhaar.photo,
+      aadhaarJpegUrl: eAadhaar.aadhaarJpeg,
+      splitAddress: eAadhaar.splitAddress,
+      rawResponse: eAadhaar.rawResponse,
+      eAadhaarFetchedAt: new Date(),
+    };
+
+    console.log(data,eAadhaar)
+    return client.aadhaarVerification.upsert({
+      where: { userId },
+      update: data,
+      create: { userId, ...data },
+    });
+  },
+
+  /**
    * Delete Aadhaar verification record
    */
   async deleteAadhaarRecord(userId, tx = prisma) {

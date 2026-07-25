@@ -8,14 +8,27 @@ const { protect } = require('../middleware/authMiddleware'); // Added protect
 const { withConcurrencyLimit } = require('../middleware/concurrencyManager');
 
 // Phone OTP routes
-router.post('/phone/request-otp', 
+router.post('/phone/request-otp',
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before requesting an OTP.'),
     authController.requestPhoneOtp
 );
-router.post('/phone/verify-otp', 
+router.post('/phone/verify-otp',
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before verifying your OTP.'),
-    attributionMiddleware, 
+    attributionMiddleware,
     authController.verifyPhoneOtp
+);
+
+// User-initiated: generate a Digilocker consent URL (userId comes from the request body)
+router.post('/aadhaar/request-digilocker',
+    protect,
+    authController.requestDigiLocker
+);
+
+// Called by our frontend (authenticated) after the user lands back from the
+// Digilocker consent flow — fetches and saves the e-Aadhaar for req.user.id
+router.post('/aadhaar/save-verified-adhaar-details',
+    protect,
+    authController.saveVerifiedAadhaarDetails
 );
 
 // Aadhaar OTP routes

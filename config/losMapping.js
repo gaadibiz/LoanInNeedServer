@@ -176,7 +176,7 @@ const validatePayload = (payload, appId) => {
  * @param {object} aadhaarVerification - Prisma AadhaarVerification record (or null)
  * @returns {object}                  - LOS-ready payload
  */
-const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan = false,employee) => {
+const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVerification, aadhaarVerification, isReloan = false, employee, phonePrefillData = {}) => {
     const appId = application?.id || 'UNKNOWN';
     logger.info(`[LOS MAPPING] Building payload for applicationId: ${appId}`);
 
@@ -331,7 +331,11 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
             StateID:       StateCode,
             PinZipCode:    kycAddress && kycAddress.postalCode ? losClean(kycAddress.postalCode) : '000000',
             PhoneNo:       losPhone(user.phone)
-        }
+        },
+
+        // Raw Signzy Phone-Prefill response, forwarded as-is (additive field —
+        // not part of the confirmed LOS contract, purely supplementary data).
+        PhonePrefillData: phonePrefillData || {}
     };
 
     // ── Log the complete outgoing payload (sanitized) ────────────────────
@@ -340,7 +344,8 @@ const buildNewLosPayload = (application, user, kycEmployment, kycAddress, panVer
             ...payload,
             PanSSN:         payload.PanSSN !== 'NA' ? `${payload.PanSSN.substring(0, 4)}******` : 'NA',
             AdharDrivingNo: payload.AdharDrivingNo !== 'NA' ? `********${payload.AdharDrivingNo.slice(-4)}` : 'NA',
-            MobileNo:       `******${payload.MobileNo.slice(-4)}`
+            MobileNo:       `******${payload.MobileNo.slice(-4)}`,
+            PhonePrefillData: payload?.PhonePrefillData ? '[REDACTED]' : {}
         }
     });
 

@@ -1,5 +1,8 @@
 const prisma = require('../utils/prismaClient');
 const AadhaarModel = require('../models/aadhaarModel');
+const UserModel = require('../models/userModel');
+const signzyService = require('./signzyService');
+const logger = require('../utils/logger');
 const { BadRequestError, NotFoundError } = require('../GlobalExceptionHandler/exception');
 
 class AadhaarService {
@@ -103,6 +106,71 @@ class AadhaarService {
     const data = await AadhaarModel.findByUserId(userId);
     if (!data) throw new NotFoundError("Aadhaar record not found");
     return data;
+  }
+
+  /**
+   * Generate a Digilocker consent URL via Signzy and record the requestId
+   * against the user so the frontend can later resolve it after redirect.
+   */
+  async requestDigilockerUrl(userId, { mock = false } = {}) {
+    let digilockerDetails;
+
+    if (mock) {
+      logger.info(`[DIGILOCKER] Mock URL requested by user ${userId}`);
+      digilockerDetails = {
+        url: 'https://api.digitallocker.gov.in/public/oauth2/1/authorize?client_id=MOCK&mock=true',
+        requestId: `MOCK-${userId}-${Date.now()}`,
+      };
+    } else {
+      digilockerDetails = await signzyService.createDigilockerUrl(userId);
+    }
+
+    await UserModel.updateUser(userId, {
+      digilockerRequestId: digilockerDetails.requestId,
+      digilockerStatus: 'URL_CREATED',
+    });
+
+    logger.info(`[DIGILOCKER] URL created for user ${userId}, requestId=${digilockerDetails.requestId}`);
+
+    return digilockerDetails;
+  }
+
+  /**
+   * Called once the user is back from the Digilocker consent flow: look up
+   * the requestId already stored on this user, fetch the e-Aadhaar via
+   * Signzy, and persist it.
+   */
+  async handleDigilockerCallback(userId, status) {
+    let requestId = (await UserModel.findUserById(userId)).digilockerRequestId;
+    if (!requestId) throw new BadRequestError('requestId is required');
+
+    const user = await UserModel.findUserById(userId);
+    if (!user) throw new NotFoundError(`No user found for Digilocker requestId ${requestId}`);
+
+    if (status !== 'success') {
+      await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_FAILED' });
+      logger.warn(`[DIGILOCKER] Consent not completed for user ${user.id}, requestId=${requestId}`);
+      return { userId: user.id, saved: false };
+    }
+
+    let eAadhaar;
+    try {
+      eAadhaar = await signzyService.getEAadhaarDetails(requestId);
+      console.log("RAW_EAADHAR", eAadhaar)
+    } catch (err) {
+      await UserModel.updateUser(user.id, { digilockerStatus: 'FETCH_FAILED' });
+      logger.error(`[DIGILOCKER] Get e-Aadhaar failed for user ${user.id}, requestId=${requestId}: ${err.message}`);
+      throw err;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await AadhaarModel.saveEAadhaarDetails(user.id, eAadhaar, tx);
+      await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_COMPLETED' }, tx);
+    });
+
+    logger.info(`[DIGILOCKER] e-Aadhaar fetched and saved for user ${user.id}`);
+
+    return { userId: user.id, saved: true ,data: eAadhaar};
   }
 }
 

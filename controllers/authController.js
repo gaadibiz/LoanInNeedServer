@@ -4,7 +4,10 @@ const asyncHandler = require('express-async-handler'); // cleaner try/catch
 const surepassService = require('../services/surepassService');
 const aadhaarService = require('../services/aadharService');
 const AadhaarModel = require('../models/aadhaarModel');
+const { BadRequestError } = require('../GlobalExceptionHandler/exception');
+const UserModel = require('../models/userModel');
 
+require('dotenv').config()
 // Request OTP
 const requestPhoneOtp = asyncHandler(async (req, res) => {
   const { phone } = req.body;
@@ -102,11 +105,61 @@ const requestAadhaarOtp = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "OTP sent successfully" });
 });
 
+/**
+ * POST /api/auth/aadhaar/request-digilocker
+ * Generates a Digilocker consent URL for the logged-in user.
+ * ?mock=true (non-prod only) skips Signzy for local/QA testing.
+ */
+const requestDigiLocker = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  if (!userId) {
+    throw new BadRequestError('userId is required');
+  }
+
+  const mock = req.query.mock === 'true' && process.env.NODE_ENV !== 'production';
+
+  const digilockerDetails = await aadhaarService.requestDigilockerUrl(userId, { mock });
+
+  res.status(200).json({
+    success: true,
+    message: 'Digilocker URL generated successfully',
+    data: digilockerDetails,
+  });
+});
+
+/**
+ * POST /api/auth/aadhaar/save-verified-adhaar-details
+ * Called directly by our own frontend (authenticated, JWT required) once the
+ * user lands back on successRedirectUrl/failureRedirectUrl after the
+ * Digilocker consent flow. No Signzy webhook involved — this just invokes
+ * aadhaarService.handleDigilockerCallback as a plain function for the
+ * logged-in user.
+ */
+const saveVerifiedAadhaarDetails = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  console.log("RAW_USER_ID--------", userId)
+  if (!userId) {
+    throw new BadRequestError('userId is required');
+  }
+
+  const result = await aadhaarService.handleDigilockerCallback(userId, req.body.status);
+
+  res.status(200).json({
+    success: true,
+    message: result.saved ? 'Aadhaar details saved successfully' : 'Callback received',
+    data: result.data
+  });
+});
+
+
 module.exports =
 {
   requestPhoneOtp,
   verifyPhoneOtp,
   verifyAadhaarOtp,
   requestAadhaarOtp,
-  validateAadhaarExists
+  validateAadhaarExists,
+  saveVerifiedAadhaarDetails,
+  requestDigiLocker
 };
