@@ -32,8 +32,13 @@ class PhonePrefillService {
 
     const panRecord = await PanModel.findByUserId(userId);
 
+    function getLastTenDigits(phone) {
+      const digits = phone.replace(/\D/g, '');
+      return digits.slice(-10);
+    }
+    let phone = getLastTenDigits(user.phone);
     const requestPayload = {
-      phoneNumber: user.phone,
+      phoneNumber: phone,
       firstName,
       lastName,
       pan: panRecord?.panNumber,
@@ -42,7 +47,7 @@ class PhonePrefillService {
     const response = await signzyService.getPhonePrefillDetails(requestPayload);
 
     const saved = await PhonePrefillModel.savePrefillDetails(userId, {
-      phoneNumber: requestPayload.phoneNumber,
+      phoneNumber: user.phone,
       pan: requestPayload.pan,
       firstName,
       lastName,
