@@ -25,6 +25,17 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+//Register phone number without verification
+const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
+  console.log(req.body,"---->")
+  const { phone } = req.body;
+  // Pass attribution if available (from middleware)
+  const attribution = req.attribution || null;
+  console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
+  const result = await authService.registerPhone(phone, attribution);
+  res.json(result);
+});
+
 // Validate Aadhaar existence via Surepass (no DB write — for real-time frontend check)
 const validateAadhaarExists = asyncHandler(async (req, res) => {
   const { aadhaarNumber } = req.body;
@@ -161,5 +172,6 @@ module.exports =
   requestAadhaarOtp,
   validateAadhaarExists,
   saveVerifiedAadhaarDetails,
-  requestDigiLocker
+  requestDigiLocker,
+  registerPhoneWithoutVerification
 };

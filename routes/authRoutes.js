@@ -18,6 +18,10 @@ router.post('/phone/verify-otp',
     authController.verifyPhoneOtp
 );
 
+router.post('/register/register-phone-without-verification',
+    authController.registerPhoneWithoutVerification
+);
+
 // User-initiated: generate a Digilocker consent URL (userId comes from the request body)
 router.post('/aadhaar/request-digilocker',
     protect,
