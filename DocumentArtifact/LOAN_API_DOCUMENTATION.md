@@ -25,7 +25,7 @@ Submits a new loan application for the authenticated user. It automatically capt
 | `purposeOfLoan` | string | Yes | Reason or description for the loan. |
 | `loanType` | string | Optional | Enum value for the type of loan. Default is `'OTHER'`. Examples: `'MEDICAL_EMERGENCY'`, `'EDUCATION'`, `'WEDDING'`, `'TRAVEL'`. |
 
-**Sample Request (JSON):**
+**Sample Request :**
 ```json
 {
   "loanAmount": 50000,

@@ -9,42 +9,43 @@ datasource db {
 }
 
 model User {
-  id                  Int                  @id @default(autoincrement())
-  name                String?
-  email               String?              @unique
-  phone               String               @unique
-  password            String?
-  dob                 DateTime?
-  gender              Gender?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  role                UserRole             @default(CUSTOMER)
-  verificationStatus  VerificationStatus   @default(PENDING)
-  phoneVerified       Boolean              @default(false)
-  phoneVerifiedAt     DateTime?
-  customUserId        String?              @unique
-  attributedPartnerId Int?
-  attributionDate     DateTime?
-  attributionType     AttributionType?
-  profileType         ProfileType?
-  digilockerRequestId String?              @unique
-  digilockerStatus    DigilockerStatus?
-  aadhaarVerification AadhaarVerification?
-  address             AddressDetail?
-  attributionLogs     AttributionLog[]
-  business            BusinessDetail?
-  employment          EmploymentDetail?
-  loans               Loan[]
-  loanApplications    LoanApplication[]
-  otps                OtpVerification[]
-  panVerification     PanVerification?
-  partnerStatus       PartnerStatus?
-  attributedPartner   Partner?             @relation(fields: [attributedPartnerId], references: [id])
-  documents           UserDocument[]
-  status              UserDocumentStatus?
-  locations           UserLocation[]
-  losIntegrationJobs  LosIntegrationJob[]
-  phonePrefillDetail  PhonePrefillDetail?
+  id                     Int                     @id @default(autoincrement())
+  name                   String?
+  email                  String?                 @unique
+  phone                  String                  @unique
+  password               String?
+  dob                    DateTime?
+  gender                 Gender?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  role                   UserRole                @default(CUSTOMER)
+  verificationStatus     VerificationStatus      @default(PENDING)
+  phoneVerified          Boolean                 @default(false)
+  phoneVerifiedAt        DateTime?
+  customUserId           String?                 @unique
+  attributedPartnerId    Int?
+  attributionDate        DateTime?
+  attributionType        AttributionType?
+  profileType            ProfileType?
+  digilockerRequestId    String?                 @unique
+  digilockerStatus       DigilockerStatus?
+  aadhaarVerification    AadhaarVerification?
+  address                AddressDetail?
+  attributionLogs        AttributionLog[]
+  business               BusinessDetail?
+  employment             EmploymentDetail?
+  loans                  Loan[]
+  loanApplications       LoanApplication[]
+  otps                   OtpVerification[]
+  panVerification        PanVerification?
+  partnerStatus          PartnerStatus?
+  attributedPartner      Partner?                @relation(fields: [attributedPartnerId], references: [id])
+  documents              UserDocument[]
+  status                 UserDocumentStatus?
+  locations              UserLocation[]
+  losIntegrationJobs     LosIntegrationJob[]
+  phonePrefillDetail     PhonePrefillDetail?
+  finnauxIntegrationJobs FinnauxIntegrationJob[]
 }
 
 model BusinessDetail {
@@ -215,26 +216,27 @@ model Loan {
 }
 
 model LoanApplication {
-  id                  Int                @id @default(autoincrement())
-  userId              Int
-  employmentDetailId  Int?
-  loanType            LoanType
-  loanAmount          Float?
-  otpVerified         Boolean            @default(false)
-  status              LoanStatus         @default(PENDING)
-  employeeId          String?
-  employeeName        String?
-  reason              String?
-  loanAccountNumber   String?
-  losApplicationNumber String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  attributedPartnerId Int?
-  attributionSource   String?
-  ipAddress           String?
-  employmentDetail    EmploymentDetail?  @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
-  user                User               @relation(fields: [userId], references: [id])
-  losIntegrationJob   LosIntegrationJob?
+  id                    Int                    @id @default(autoincrement())
+  userId                Int
+  employmentDetailId    Int?
+  loanType              LoanType
+  loanAmount            Float?
+  otpVerified           Boolean                @default(false)
+  status                LoanStatus             @default(PENDING)
+  employeeId            String?
+  employeeName          String?
+  reason                String?
+  loanAccountNumber     String?
+  losApplicationNumber  String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  attributedPartnerId   Int?
+  attributionSource     String?
+  ipAddress             String?
+  employmentDetail      EmploymentDetail?      @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
+  user                  User                   @relation(fields: [userId], references: [id])
+  losIntegrationJob     LosIntegrationJob?
+  finnauxIntegrationJob FinnauxIntegrationJob?
 
   @@index([userId])
 }
@@ -415,12 +417,12 @@ model LosIntegrationJob {
   losCaseNumber    String?
   losKycId         String?
 
-  rawRequest       Json?
-  rawResponse      Json?
-  lastError String?  @db.Text
-  ipAddress String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  rawRequest  Json?
+  rawResponse Json?
+  lastError   String?  @db.Text
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user        User            @relation(fields: [userId], references: [id])
   application LoanApplication @relation(fields: [applicationId], references: [id])
@@ -436,4 +438,27 @@ model LosExportLog {
   statusFilterRequested  String?
   exportedCount          Int
   exportedApplicationIds Json
+}
+
+model FinnauxIntegrationJob {
+  id            Int    @id @default(autoincrement())
+  applicationId Int    @unique
+  userId        Int
+  status        String @default("PENDING") // PENDING, SUCCESS, FAILED
+  retryCount    Int    @default(0)
+
+  finnauxApplicationId String?
+  finnauxReferenceId   String?
+
+  rawRequest  Json?
+  rawResponse Json?
+  lastError   String?  @db.Text
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id])
+  application LoanApplication @relation(fields: [applicationId], references: [id])
+
+  @@index([userId])
 }

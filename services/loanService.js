@@ -3,6 +3,59 @@ const logger = require('../utils/logger');
 const { enqueueJob } = require('../utils/postgresMQ');
 const phonePrefillService = require('./phonePrefillService');
 
+function evaluateEligibility({
+    loanAmount,
+    monthlySalaryRange,
+    salaryReceivedIn,
+    cibilScore,
+    purposeOfLoan,
+    occupation,
+    city,
+    income,
+    expense,
+    tenure
+} = {}) {
+    // Signup-style Eligibility Check
+    // Uses the payload format coming from the frontend Step 2
+    if (monthlySalaryRange || salaryReceivedIn || occupation) {
+        logger.info(`[ELIGIBILITY] Checking for User - Amount: ${loanAmount}, Salary: ${monthlySalaryRange}, ReceivedIn: ${salaryReceivedIn}, Occ: ${occupation}, City: ${city}`);
+
+        if (
+            salaryReceivedIn !== "Bank Transfer" ||
+            monthlySalaryRange === "Less than Rs.25,000/-"
+        ) {
+            return {
+                statusCode: 200,
+                eligible: false,
+                reason: "Does not meet basic criteria."
+            };
+        }
+        return {
+            statusCode: 200,
+            eligible: true,
+            message: "Eligible for next steps."
+        };
+    }
+
+    // Calculator-style Eligibility Check
+    if (income !== undefined && expense !== undefined && tenure !== undefined) {
+        const expenseAmount = (income * expense) / 100;
+        const netIncome = income - expenseAmount;
+        const maxEmi = netIncome * 0.4; // 40% EMI rule
+        const totalMonths = tenure * 12;
+        const eligibleLoanAmount = maxEmi * totalMonths;
+
+        return {
+            statusCode: 200,
+            eligible: true,
+            eligibleAmount: eligibleLoanAmount > 0 ? eligibleLoanAmount : 0,
+            emi: maxEmi > 0 ? maxEmi : 0
+        };
+    }
+
+    return { statusCode: 400, error: "Invalid eligibility parameters provided." };
+}
+
 async function createLoanApplication(userId, loanAmount, loanType, reqAttribution, ipAddress = '') {
     let partnerId = null;
     let attributionSource = 'ORGANIC';
@@ -74,6 +127,21 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
         logger.error(`[LOAN] Failed to queue LOS Integration Job for App ${application.id}: ${error.message}`);
     }
 
+    // --- FINNAUX INTEGRATION ---
+    try {
+        await prisma.finnauxIntegrationJob.create({
+            data: {
+                userId,
+                ipAddress: ipAddress,
+                applicationId: application.id,
+                status: 'PENDING'
+            }
+        });
+        logger.info(`[LOAN] Created Finnaux Integration Job for Application ${application.id}`);
+    } catch (error) {
+        logger.error(`[LOAN] Failed to queue Finnaux Integration Job for App ${application.id}: ${error.message}`);
+    }
+
     // 4. Log Event
     if (partnerId) {
         await prisma.attributionLog.create({
@@ -93,5 +161,6 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
 }
 
 module.exports = {
-    createLoanApplication
+    createLoanApplication,
+    evaluateEligibility
 };

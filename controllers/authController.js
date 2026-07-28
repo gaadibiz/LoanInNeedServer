@@ -1,5 +1,6 @@
 // controllers/authController.js
 const authService = require('../services/authService');
+const { evaluateEligibility } = require('../services/loanService');
 const asyncHandler = require('express-async-handler'); // cleaner try/catch
 const surepassService = require('../services/surepassService');
 const aadhaarService = require('../services/aadharService');
@@ -33,7 +34,12 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   const attribution = req.attribution || null;
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
   const result = await authService.registerPhone(phone, attribution);
-  res.json(result);
+
+  // Merge in eligibility check (Step 2 payload may already be present in req.body).
+  // Registration has already succeeded at this point, so we always respond 200
+  // regardless of the eligibility outcome.
+  const { statusCode, ...eligibility } = evaluateEligibility(req.body);
+  res.json({ ...result, ...eligibility });
 });
 
 // Validate Aadhaar existence via Surepass (no DB write — for real-time frontend check)
