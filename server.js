@@ -19,6 +19,7 @@ const selfieRoutes = require('./routes/selfieRoutes'); // ✅ Added Selfie route
 const logger = require('./utils/logger'); // Winston logger
 const errorHandler = require('./GlobalExceptionHandler/errorHandler'); // Central error handler
 const { startLosWorker } = require('./scripts/losWorker'); // ✅ LOS Integration Worker
+const { startFinnauxWorker } = require('./scripts/finnauxWorker'); // ✅ Finnaux Integration Worker
 
 // Load environment variables from .env file
 dotenv.config();
@@ -59,29 +60,29 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  // origin: function (origin, callback) {
-  //   // Allow requests with no origin (like mobile apps or curl requests)
-  //   if (!origin) return callback(null, true);
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
 
-  //   // Check if origin is in allowed list
-  //   if (allowedOrigins.indexOf(origin) !== -1) {
-  //     return callback(null, true);
-  //   }
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
 
-  //   // Allow all Vercel preview deployments (*.vercel.app)
-  //   if (origin.endsWith('.vercel.app')) {
-  //     return callback(null, true);
-  //   }
+    // Allow all Vercel preview deployments (*.vercel.app)
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
 
-  //   // Allow all subdomains of loaninneed.in (*.loaninneed.in)
-  //   if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in') {
-  //     return callback(null, true);
-  //   }
+    // Allow all subdomains of loaninneed.in (*.loaninneed.in)
+    if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in') {
+      return callback(null, true);
+    }
 
-  //   const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-  //   return callback(new Error(msg), false);
-  // },
-  // credentials: false
+    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    return callback(new Error(msg), false);
+  },
+  credentials: true
 }));
 
 // Use morgan with winston for HTTP request logging
@@ -122,6 +123,9 @@ app.use('/api/loans', require('./routes/loanRoutes')); // ✅ Mounted Loan route
 // ✅ LOS Bridge Routes
 app.use('/api/los', require('./routes/losRoutes')); // ✅ Mounted LOS routes
 
+// ✅ Finnaux Bridge Routes
+app.use('/api/finnaux', require('./routes/finnauxRoutes')); // ✅ Mounted Finnaux routes
+
 // ✅ Application Audit Routes
 
 // ✅ Utility Routes
@@ -144,6 +148,7 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
 
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
   startLosWorker();
+  startFinnauxWorker();
 
   // --- Dynamic IPC Global Traffic Controller ---
   const globalActiveTasks = new Map();

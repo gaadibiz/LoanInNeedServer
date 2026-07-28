@@ -179,6 +179,17 @@ async function saveFullKYC(userId, data) {
       });
       logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
 
+      // ---------- Queue for Finnaux Integration ----------
+      await tx.finnauxIntegrationJob.create({
+        data: {
+          ipAddress: data?.ipAddress || '',
+          userId,
+          applicationId: application.id,
+          status: 'PENDING'
+        }
+      });
+      logger.info('✅ Finnaux Integration Job queued for userId=%s appId=%s', userId, application.id);
+
       // ---------- Return ----------
       return { user, employment, addressDetail, loan, application };
     },
