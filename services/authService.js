@@ -138,4 +138,93 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
   };
 }
 
-module.exports = { requestPhoneOtp, verifyPhoneOtp };
+
+// ==============================
+// Register Phone number and Create or Update User
+// ==============================
+async function registerPhone(phone, attribution = null) {
+  logger.info('Register phone OTP for: %s', phone);
+  const targetPhone = phone;
+  logger.info('Requested phone: %s', targetPhone);
+
+  if (!targetPhone ) {
+    throw new BadRequestError('Phone is required.');
+  }
+
+  // Check if user already exists
+  let user = await prisma.user.findUnique({ where: { phone: targetPhone } });
+  if (user) {
+    logger.info(`[AUTH SERVICE] Found user: ${user.phone}, Role: ${user.role}`);
+  } else {
+    logger.info(`[AUTH SERVICE] User not found for phone: ${targetPhone}, creating new...`);
+  }
+
+  if (!user) {
+    // ✅ Fixed Concurrency Bug: Let Postgres generate the unique ID first, then update customUserId
+    user = await prisma.user.create({
+      data: {
+        phone: targetPhone,
+        phoneVerified: true,
+        phoneVerifiedAt: new Date(),
+        role: 'CUSTOMER',
+        verificationStatus: 'PENDING',
+        // ✅ Add Attribution if present
+        attributedPartnerId: attribution ? attribution.partnerId : null,
+        attributionDate: attribution ? new Date() : null,
+        attributionType: attribution ? 'ONLINE_LINK' : null
+      }
+    });
+
+    const customUserId = `LIN${user.id.toString().padStart(3, '0')}`;
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { customUserId }
+    });
+
+    logger.info('New user created and verified: %s (customId=%s)', targetPhone, customUserId);
+  } else if (!user.phoneVerified) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        phoneVerified: true,
+        phoneVerifiedAt: new Date()
+      }
+    });
+    logger.info('Existing user verified: %s (customId=%s)', targetPhone, user.customUserId);
+  } else if (!user.attributedPartnerId && attribution) {
+    // Late Attribution for existing user (First verified touch)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        attributedPartnerId: attribution.partnerId,
+        attributionDate: new Date(),
+        attributionType: 'ONLINE_LINK'
+      }
+    });
+    logger.info(`Existing user attributed to Partner ${attribution.partnerId}`);
+  }
+
+  logger.info(`[AUTH SERVICE] Generating token for User: ${user.phone}, Role: ${user.role}`);
+  const token = generateToken(user);
+
+  // Fetch profile completeness for the frontend to decide next step
+  const hasName = !!user.name;
+  const hasPan = !!(await prisma.panVerification.findUnique({ where: { userId: user.id } }));
+  const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
+  const isProfileComplete = hasName && hasPan && hasAadhaar;
+
+  return {
+    message: 'Phone verified successfully.',
+    user: {
+      id: user.customUserId,
+      phone: user.phone,
+      role: user.role,
+      verificationStatus: user.verificationStatus
+    },
+    token,
+    isExistingUser: !!(await prisma.user.findUnique({ where: { id: user.id }, select: { phoneVerifiedAt: true, name: true } }))?.name,
+    isProfileComplete
+  };
+}
+
+module.exports = { requestPhoneOtp, verifyPhoneOtp, registerPhone };
