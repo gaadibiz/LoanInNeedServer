@@ -62,6 +62,146 @@ const processPendingFinnauxIntegrations = async () => {
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
+ * Gathers every source record for a user/application and builds the current,
+ * correct Finnaux payload. Shared by job processing (below) and by the job
+ * creation sites (loanService.js, kycService.js) so a job's rawRequest is
+ * always in the right shape — whether it's the initial snapshot at insert
+ * time or the one written right before the actual send.
+ *
+ * Accepts an optional Prisma client so callers running inside a `$transaction`
+ * (e.g. kycService.js's `tx`) can reuse this against the same transaction.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client = prisma) => {
+    const user = await client.user.findUnique({
+        where: { id: userId },
+        select : {
+            name: true,
+            email: true,
+            phone: true,
+            dob: true,
+            gender: true,
+            verificationStatus: true,
+            phoneVerified: true,
+            phonePrefillDetail: {
+                select: { response: true }
+            },
+        }
+    });
+
+    const employee = await client.employmentDetail.findUnique({
+        where: { userId },
+        select: { monthlyIncome: true ,
+            employerName: true,
+            employmentType: true,
+            companyAddress: true,
+        }
+    }) || {};
+
+    const business = await client.businessDetail.findUnique({
+        where: { userId },
+        select: { firmName: true,
+            gstNumber: true,
+            tradeLicense: true,
+            companyPan: true,
+            address: true,
+            city: true,
+            state: true,
+            pincode: true,
+        }
+    }) || {};
+
+    const application = await client.loanApplication.findUnique({
+        where: { id: applicationId },
+        select: {
+            id: true,
+            loanType: true,
+            loanAmount: true,
+            employeeName: true,
+            loanAccountNumber: true,
+            losApplicationNumber: true,
+            reason: true,
+        }
+    });
+
+    const latestLocation = await client.userLocation.findFirst({
+        where: { userId },
+        orderBy: { capturedAt: 'desc' },
+        select: {
+            locality: true,
+            city: true,
+            state: true,
+            postalCode: true,
+            latitude: true,
+            longitude: true,
+        }
+    });
+
+    const userDocuments = await client.userDocument.findMany({
+        where: { userId },
+        select: {
+            id: true,
+            docType: true,
+            fileName: true,
+            filePath: true,
+            fileUrl: true
+        }
+    });
+
+    const address = await client.addressDetail.findUnique({
+        where: { userId },
+        select: {
+            currentAddress: true,
+            permanentAddress: true,
+            city: true,
+            state: true,
+            postalCode: true,
+            currentAddressType: true,
+        }
+    });
+
+    const aadhaarVerification = await client.aadhaarVerification.findUnique({
+        where: { userId },
+        select: {
+            aadhaarNumber: true,
+            verified: true,
+            verifiedAt: true,
+            address: true,
+            dob: true,
+        }
+    });
+
+    const panVerification = await client.panVerification.findUnique({
+        where: { userId },
+        select: {
+            panNumber: true,
+            verified: true,
+        }
+    });
+
+    if (!user) {
+        throw new Error('User record not found in database.');
+    }
+
+    const phonePrefillData = user.phonePrefillDetail?.response || {};
+
+    return buildFinnauxPayload(
+        application,
+        user,
+        employee,
+        business,
+        address,
+        aadhaarVerification,
+        userDocuments,
+        phonePrefillData,
+        latestLocation,
+        panVerification,
+        ipAddress
+    );
+};
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
  * Processes a single Finnaux integration job:
  *   1. Fetch user + application data from LIN database
  *   2. Build the Finnaux payload
@@ -73,52 +213,15 @@ const processSingleFinnauxJob = async (job) => {
     const { id, userId, applicationId, ipAddress } = job;
     logger.info(`[FINNAUX WORKER] Processing Job ID: ${id} | User: ${userId} | App: ${applicationId}`);
 
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-            employment: true,
-            address: true,
-            panVerification: true,
-            aadhaarVerification: true,
-            phonePrefillDetail: true
-        }
-    });
-
-    const employee = await prisma.employmentDetail.findUnique({
-        where: { userId },
-        select: { monthlyIncome: true }
-    }) || {};
-
     const application = await prisma.loanApplication.findUnique({
-        where: { id: applicationId }
+        where: { id: applicationId },
+        select: { loanAmount: true }
     });
-
-    const latestLocation = await prisma.userLocation.findFirst({
-        where: { userId },
-        orderBy: { capturedAt: 'desc' }
-    });
-
-    if (!user) {
-        throw new Error('User record not found in database.');
-    }
     if (!application || !application.loanAmount || application.loanAmount <= 0) {
         throw new Error('Valid loan amount is required for the Finnaux push.');
     }
 
-    const phonePrefillData = user.phonePrefillDetail?.response || {};
-
-    const payload = buildFinnauxPayload(
-        application,
-        user,
-        user.employment || null,
-        user.address || null,
-        user.panVerification || null,
-        user.aadhaarVerification || null,
-        employee,
-        phonePrefillData,
-        latestLocation,
-        ipAddress
-    );
+    const payload = await buildFinnauxJobPayload(userId, applicationId, ipAddress);
 
     await prisma.finnauxIntegrationJob.update({
         where: { id },
@@ -175,5 +278,6 @@ const markJobFailed = async (job, errorMessage) => {
 
 module.exports = {
     processPendingFinnauxIntegrations,
-    processSingleFinnauxJob
+    processSingleFinnauxJob,
+    buildFinnauxJobPayload
 };

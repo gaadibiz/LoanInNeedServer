@@ -7,6 +7,7 @@ const EmploymentModel = require('../models/employmentModel');
 const LoanModel = require('../models/loanModel');
 const AddressModel = require('../models/adressModel');
 const UserModel = require('../models/userModel');
+const { buildFinnauxJobPayload } = require('./finnauxIntegrationService');
 
 async function saveFullKYC(userId, data) {
   if (!userId) {
@@ -180,12 +181,14 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Queue for Finnaux Integration ----------
+      const finnauxRawRequest = await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx);
       await tx.finnauxIntegrationJob.create({
         data: {
           ipAddress: data?.ipAddress || '',
           userId,
           applicationId: application.id,
-          status: 'PENDING'
+          status: 'PENDING',
+          rawRequest: JSON.parse(JSON.stringify(finnauxRawRequest))
         }
       });
       logger.info('✅ Finnaux Integration Job queued for userId=%s appId=%s', userId, application.id);
