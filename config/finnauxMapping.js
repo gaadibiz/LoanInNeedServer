@@ -70,6 +70,7 @@ const buildFinnauxPayload = async (
 
     const payload = {
         "loanId": application?.id || null,
+        "loanApplicationId": application?.id || null, // Used by Finnaux to call back and update the loan application's status
         "name": user.name || null,
         "fatherName": null, // Not collected yet
         "dob": user.dob ? new Date(user.dob).toISOString() : null,
@@ -113,7 +114,7 @@ const buildFinnauxPayload = async (
         "isOfficeEmailVerified": false,
         "salarySlips": salarySlips,
         "employmentProofDocument": null, // No matching document type captured yet
-        "applicationNumber": application?.losApplicationNumber || null,
+        "applicationNumber": null, // losApplicationNumber belongs to the LOS platform, not Finnaux
         "loanAccountNumber": application?.loanAccountNumber || null,
         "reason": application?.reason || null,
         "employeeName": application?.employeeName || null,
