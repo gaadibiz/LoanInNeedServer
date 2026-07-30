@@ -184,7 +184,6 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
     }
 
     const phonePrefillData = user.phonePrefillDetail?.response || {};
-
     return buildFinnauxPayload(
         application,
         user,
