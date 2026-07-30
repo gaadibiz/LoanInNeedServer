@@ -2,6 +2,7 @@ const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { enqueueJob } = require('../utils/postgresMQ');
 const phonePrefillService = require('./phonePrefillService');
+const { buildFinnauxJobPayload } = require('./finnauxIntegrationService');
 
 function evaluateEligibility({
     loanAmount,
@@ -129,12 +130,14 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
 
     // --- FINNAUX INTEGRATION ---
     try {
+        const rawRequest = await buildFinnauxJobPayload(userId, application.id, ipAddress);
         await prisma.finnauxIntegrationJob.create({
             data: {
                 userId,
                 ipAddress: ipAddress,
                 applicationId: application.id,
-                status: 'PENDING'
+                status: 'PENDING',
+                rawRequest: JSON.parse(JSON.stringify(rawRequest))
             }
         });
         logger.info(`[LOAN] Created Finnaux Integration Job for Application ${application.id}`);

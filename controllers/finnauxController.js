@@ -88,7 +88,65 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * @desc    Update loan application status from Finnaux system.
+ *          Finnaux is given `loanApplicationId` in the rawRequest payload
+ *          (config/finnauxMapping.js) and calls back here with that same
+ *          id to report the loan's decision status.
+ * @route   POST /api/finnaux/applications/update-status
+ * @access  Private (API Key)
+ */
+const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
+    const { loanApplicationId, status, reason, finnauxApplicationNumber } = req.body;
+
+    if (!loanApplicationId || !status) {
+        throw new BadRequestError('Both "loanApplicationId" and "status" are required in the request body.');
+    }
+
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED', 'HOLD', 'IN_PROGRESS', 'COMPLETED'];
+    const uppercaseStatus = status.toUpperCase();
+    if (!validStatuses.includes(uppercaseStatus)) {
+        throw new BadRequestError(`Invalid status value. Must be one of: ${validStatuses.join(', ')}`);
+    }
+
+    if (uppercaseStatus === 'REJECTED' && (!reason || reason.trim() === '')) {
+        throw new BadRequestError('Reason is required when status is REJECTED.');
+    }
+
+    const applicationId = parseInt(loanApplicationId, 10);
+    if (isNaN(applicationId)) {
+        throw new BadRequestError(`Invalid "loanApplicationId": ${loanApplicationId}`);
+    }
+
+    const loanApplication = await prisma.loanApplication.findUnique({ where: { id: applicationId } });
+    if (!loanApplication) {
+        throw new NotFoundError(`Loan Application not found for loanApplicationId: ${loanApplicationId}`);
+    }
+
+    const updatedApplication = await prisma.loanApplication.update({
+        where: { id: loanApplication.id },
+        data: {
+            status: uppercaseStatus,
+            reason: reason || loanApplication.reason,
+            finnauxApplicationNumber: finnauxApplicationNumber || loanApplication.finnauxApplicationNumber
+        }
+    });
+
+    logger.info(`[FINNAUX] Updated LoanApplication ${updatedApplication.id} to status ${updatedApplication.status}`);
+
+    res.status(200).json({
+        success: true,
+        message: 'Loan application updated successfully from Finnaux.',
+        data: {
+            applicationId: updatedApplication.id,
+            status: updatedApplication.status,
+            finnauxApplicationNumber: updatedApplication.finnauxApplicationNumber
+        }
+    });
+});
+
 module.exports = {
     triggerFinnauxIntegration,
-    getFinnauxRawPayloads
+    getFinnauxRawPayloads,
+    updateLoanStatusFromFinnaux
 };
