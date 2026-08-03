@@ -48,7 +48,6 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
                 id: true,
                 docType: true,
             },
-            groupBy: { docType: true },
             orderBy: { uploadedAt: 'desc' }
         });
 
