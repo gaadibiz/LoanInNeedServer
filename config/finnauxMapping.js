@@ -13,17 +13,45 @@
  * proof" or "employment proof" type, so addressDocument/employmentProofDocument
  * stay null until those capture points exist. AADHAAR is stored as a single
  * scan, so aadhaarBack has no independent source and stays null.
+ *
+ * Document fields are sent as [base64Data, fileName] pairs (an array of such
+ * pairs for salarySlips) rather than fileUrl links.
  */
 
+const axios = require('axios');
+const path = require('path');
 const logger = require('../utils/logger');
+const { encodeFileToBase64 } = require('../utils/base64Encoder');
 
 /**
- * Documents are uploaded to DigitalOcean Spaces as public-read objects, so
- * Finnaux is given the fileUrl directly rather than an embedded base64 blob —
- * nothing else from the UserDocument record belongs in the payload. Document
- * fields are always an array of URL strings, even when there's just one.
+ * Finnaux wants documents inline as base64 rather than as a fileUrl link, so
+ * each document is fetched (from DigitalOcean Spaces if fileUrl is set, else
+ * from local disk) and encoded on the fly. Document fields are always
+ * [base64Data, fileName], even when there's just one.
  */
-const buildDocumentEntry = (doc) => (doc?.fileUrl ? [doc.fileUrl] : null);
+const getDocumentBase64 = async (doc) => {
+    if (doc.fileUrl) {
+        const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
+        return Buffer.from(response.data, 'binary').toString('base64');
+    }
+    if (doc.filePath) {
+        const absolutePath = path.join(__dirname, '..', doc.filePath);
+        return encodeFileToBase64(absolutePath, false);
+    }
+    return null;
+};
+
+const buildDocumentEntry = async (doc) => {
+    if (!doc) return null;
+    try {
+        const base64Data = await getDocumentBase64(doc);
+        if (!base64Data) return null;
+        return [base64Data, doc.fileName || null];
+    } catch (err) {
+        logger.warn(`[FINNAUX MAPPING] Failed to encode document ${doc.id} (${doc.docType}): ${err.message}`);
+        return null;
+    }
+};
 
 /**
  * @param {object} application     - Prisma LoanApplication record
@@ -58,19 +86,22 @@ const buildFinnauxPayload = async (
     const docs = userDocuments || [];
     const findDoc = (docType) => docs.find((doc) => doc.docType === docType);
 
-    const profilePicture = buildDocumentEntry(findDoc('PHOTO'));
-    const aadhaarFront = buildDocumentEntry(findDoc('AADHAAR'));
-    const panCard = buildDocumentEntry(findDoc('PAN'));
-
-    const salarySlipUrls = docs
-        .filter((doc) => doc.docType === 'PAY_SLIP')
-        .map((doc) => doc.fileUrl)
-        .filter(Boolean);
-    const salarySlips = salarySlipUrls.length > 0 ? salarySlipUrls : null;
+    const [profilePicture, aadhaarFront, panCard, salarySlipEntries] = await Promise.all([
+        buildDocumentEntry(findDoc('PHOTO')),
+        buildDocumentEntry(findDoc('AADHAAR')),
+        buildDocumentEntry(findDoc('PAN')),
+        Promise.all(
+            docs
+                .filter((doc) => doc.docType === 'PAY_SLIP')
+                .map((doc) => buildDocumentEntry(doc))
+        )
+    ]);
+    const filteredSalarySlips = salarySlipEntries.filter(Boolean);
+    const salarySlips = filteredSalarySlips.length > 0 ? filteredSalarySlips : null;
 
     const payload = {
         "loanId": application?.id || null,
-        "loanApplicationId": application?.id || null, // Used by Finnaux to call back and update the loan application's status
+        "id": application?.id || null, // Used by Finnaux to call back and update the loan application's status
         "name": user.name || null,
         "fatherName": null, // Not collected yet
         "dob": user.dob ? new Date(user.dob).toISOString() : null,
@@ -126,10 +157,12 @@ const buildFinnauxPayload = async (
         "utmContent": null,
         "riskFactor": null, // Not collected yet
         'phonePrefill': phonePrefillData || {},
-        'extras': {}
+        'extras': {},
+        'status': application?.status 
 
     };
 
+    const redactDocEntry = (entry) => (entry ? [`[BASE64 ${entry[0].length} chars]`, entry[1]] : null);
     logger.info(`[FINNAUX MAPPING] ✅ Payload built for appId=${appId}`, {
         payload: {
             ...payload,
@@ -137,7 +170,11 @@ const buildFinnauxPayload = async (
             aadhaarNo: payload.aadhaarNo ? `****${payload.aadhaarNo.slice(-4)}` : null,
             mobileNo: payload.mobileNo ? `******${payload.mobileNo.slice(-4)}` : null,
             phonePrefill: payload.phonePrefill && Object.keys(payload.phonePrefill).length
-                ? '[REDACTED]' : {}
+                ? '[REDACTED]' : {},
+            profilePicture: redactDocEntry(payload.profilePicture),
+            aadhaarFront: redactDocEntry(payload.aadhaarFront),
+            panCard: redactDocEntry(payload.panCard),
+            salarySlips: payload.salarySlips ? payload.salarySlips.map(redactDocEntry) : null
         }
     });
 

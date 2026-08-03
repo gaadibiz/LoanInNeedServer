@@ -462,4 +462,5 @@ model FinnauxIntegrationJob {
   application LoanApplication @relation(fields: [applicationId], references: [id])
 
   @@index([userId])
+  @@index([status, retryCount, updatedAt])
 }

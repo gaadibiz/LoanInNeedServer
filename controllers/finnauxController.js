@@ -2,9 +2,12 @@ const asyncHandler = require('express-async-handler');
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { NotFoundError, BadRequestError } = require('../GlobalExceptionHandler/exception');
+const { buildFinnauxJobPayloadsBatch, buildFinnauxJobPayload } = require('../services/finnauxIntegrationService');
 
 /**
- * @desc    Manually trigger the Finnaux Integration for an application
+ * @desc    Rebuild and persist a job's rawRequest from current source data
+ *          (documents as base64 + fileName). Does not send to Finnaux or
+ *          touch job.status/retryCount — use the cron worker for that.
  * @route   POST /api/finnaux/applications/:applicationId/trigger
  * @access  Private (API Key / Admin)
  */
@@ -30,28 +33,18 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
         });
     }
 
-    const { processSingleFinnauxJob } = require('../services/finnauxIntegrationService');
+    const payload = await buildFinnauxJobPayload(job.userId, job.applicationId, job.ipAddress);
 
-    try {
-        await processSingleFinnauxJob(job);
+    const updatedJob = await prisma.finnauxIntegrationJob.update({
+        where: { id: job.id },
+        data: { rawRequest: JSON.parse(JSON.stringify(payload)) }
+    });
 
-        const updatedJob = await prisma.finnauxIntegrationJob.findUnique({
-            where: { id: job.id }
-        });
-
-        res.status(200).json({
-            success: true,
-            message: 'Finnaux integration triggered successfully.',
-            job: updatedJob
-        });
-    } catch (error) {
-        logger.error(`[FINNAUX] Manual trigger failed for job ${job.id}: ${error.message}`);
-        res.status(500).json({
-            success: false,
-            message: 'Finnaux integration encountered an error.',
-            error: error.message
-        });
-    }
+    res.status(200).json({
+        success: true,
+        message: 'Finnaux rawRequest refreshed successfully (documents rebuilt as base64 + fileName).',
+        job: updatedJob
+    });
 });
 
 /**
@@ -76,10 +69,12 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const jobs = await prisma.finnauxIntegrationJob.findMany({
         where: { createdAt: { gte: fromDate, lte: toDate } },
         orderBy: { createdAt: 'asc' },
-        select: { rawRequest: true }
+        select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true }
     });
 
-    const data = jobs.map(job => job.rawRequest);
+    let data = jobs.map(job => job.rawRequest);
+
+    //  const data = await buildFinnauxJobPayloadsBatch(jobs);
 
     res.status(200).json({
         success: true,
@@ -97,10 +92,11 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
  * @access  Private (API Key)
  */
 const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
-    const { loanApplicationId, status, reason, finnauxApplicationNumber } = req.body;
+    const { id } = req.params;
+    const { ipAddress, status, reason, finnauxApplicationNumber } = req.body;
 
-    if (!loanApplicationId || !status) {
-        throw new BadRequestError('Both "loanApplicationId" and "status" are required in the request body.');
+    if (!id || !status) {
+        throw new BadRequestError('Both "id" and "status" are required in the request body.');
     }
 
     const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED', 'HOLD', 'IN_PROGRESS', 'COMPLETED'];
@@ -113,14 +109,14 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         throw new BadRequestError('Reason is required when status is REJECTED.');
     }
 
-    const applicationId = parseInt(loanApplicationId, 10);
+    const applicationId = parseInt(id, 10);
     if (isNaN(applicationId)) {
-        throw new BadRequestError(`Invalid "loanApplicationId": ${loanApplicationId}`);
+        throw new BadRequestError(`Invalid "loanApplicationId": ${id}`);
     }
 
     const loanApplication = await prisma.loanApplication.findUnique({ where: { id: applicationId } });
     if (!loanApplication) {
-        throw new NotFoundError(`Loan Application not found for loanApplicationId: ${loanApplicationId}`);
+        throw new NotFoundError(`Loan Application not found for loanApplicationId: ${id}`);
     }
 
     const updatedApplication = await prisma.loanApplication.update({
@@ -131,6 +127,22 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
             finnauxApplicationNumber: finnauxApplicationNumber || loanApplication.finnauxApplicationNumber
         }
     });
+
+    let finnauxLoanApplication = await prisma.finnauxIntegrationJob.findUnique({
+        where: { applicationId: updatedApplication.id },
+        select: { rawRequest: true }
+    });
+
+    if (finnauxLoanApplication) {
+        const updatedRawResponse = await prisma.finnauxIntegrationJob.update({
+            where: { applicationId: updatedApplication.id },
+            data: {
+                rawRequest: { ...finnauxLoanApplication.rawRequest, ...req.body },
+                rawResponse: { ...req.body },
+                finnauxApplicationId: req.body.applicationNo
+            }
+        });
+    }
 
     logger.info(`[FINNAUX] Updated LoanApplication ${updatedApplication.id} to status ${updatedApplication.status}`);
 

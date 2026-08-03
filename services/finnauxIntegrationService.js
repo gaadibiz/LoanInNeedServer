@@ -6,6 +6,28 @@ const { sendApplicationToFinnaux } = require('./finnauxApiClient');
 // Maximum times a job will be attempted before marking as permanently FAILED
 const MAX_FAILURES = 7;
 
+// Cap on concurrent payload builds so a large date-range export doesn't fire
+// hundreds of simultaneous document downloads at DigitalOcean Spaces.
+const PAYLOAD_BUILD_CONCURRENCY = 10;
+
+/**
+ * Runs `mapper` over `items` with at most `limit` in flight at once.
+ */
+const mapWithConcurrency = async (items, limit, mapper) => {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+        while (nextIndex < items.length) {
+            const currentIndex = nextIndex++;
+            results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+        }
+    });
+
+    await Promise.all(workers);
+    return results;
+};
+
 /**
  * ─────────────────────────────────────────────────────────────────────────────
  * Core processor run by the cron worker (finnauxWorker.js)
@@ -121,6 +143,7 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
             loanAccountNumber: true,
             losApplicationNumber: true,
             reason: true,
+            status:true
         }
     });
 
@@ -197,6 +220,128 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
         panVerification,
         ipAddress
     );
+};
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Same as buildFinnauxJobPayload, but for many (userId, applicationId) pairs
+ * at once. Fetches each related table exactly once with an `IN` clause, then
+ * maps the results back to each job in-memory - avoiding the N+1 query blowup
+ * of calling buildFinnauxJobPayload in a loop.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+const buildFinnauxJobPayloadsBatch = async (jobs, client = prisma) => {
+    const userIds = [...new Set(jobs.map(job => job.userId))];
+    const applicationIds = [...new Set(jobs.map(job => job.applicationId))];
+
+    const [
+        users,
+        employees,
+        businesses,
+        applications,
+        locations,
+        documents,
+        addresses,
+        aadhaarVerifications,
+        panVerifications
+    ] = await Promise.all([
+        client.user.findMany({
+            where: { id: { in: userIds } },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                dob: true,
+                gender: true,
+                verificationStatus: true,
+                phoneVerified: true,
+                phonePrefillDetail: { select: { response: true } },
+            }
+        }),
+        client.employmentDetail.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, monthlyIncome: true, employerName: true, employmentType: true, companyAddress: true }
+        }),
+        client.businessDetail.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, firmName: true, gstNumber: true, tradeLicense: true, companyPan: true, address: true, city: true, state: true, pincode: true }
+        }),
+        client.loanApplication.findMany({
+            where: { id: { in: applicationIds } },
+            select: { id: true, loanType: true, loanAmount: true, employeeName: true, loanAccountNumber: true, losApplicationNumber: true, reason: true, status: true }
+        }),
+        client.userLocation.findMany({
+            where: { userId: { in: userIds } },
+            orderBy: { capturedAt: 'desc' },
+            select: { userId: true, locality: true, city: true, state: true, postalCode: true, latitude: true, longitude: true }
+        }),
+        client.userDocument.findMany({
+            where: { userId: { in: userIds } },
+            select: { id: true, userId: true, docType: true, fileName: true, filePath: true, fileUrl: true }
+        }),
+        client.addressDetail.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, currentAddress: true, permanentAddress: true, city: true, state: true, postalCode: true, currentAddressType: true }
+        }),
+        client.aadhaarVerification.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, aadhaarNumber: true, verified: true, verifiedAt: true, address: true, dob: true }
+        }),
+        client.panVerification.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, panNumber: true, verified: true }
+        })
+    ]);
+
+    const byId = (rows) => new Map(rows.map(row => [row.id, row]));
+    const byUserId = (rows) => new Map(rows.map(row => [row.userId, row]));
+    const documentsByUserId = documents.reduce((map, doc) => {
+        if (!map.has(doc.userId)) map.set(doc.userId, []);
+        map.get(doc.userId).push(doc);
+        return map;
+    }, new Map());
+
+    const usersMap = byId(users);
+    const employeesMap = byUserId(employees);
+    const businessesMap = byUserId(businesses);
+    const applicationsMap = byId(applications);
+    // locations are ordered by capturedAt desc, so the first one seen per userId is the latest
+    const latestLocationByUserId = new Map();
+    for (const location of locations) {
+        if (!latestLocationByUserId.has(location.userId)) {
+            latestLocationByUserId.set(location.userId, location);
+        }
+    }
+    const addressesMap = byUserId(addresses);
+    const aadhaarVerificationsMap = byUserId(aadhaarVerifications);
+    const panVerificationsMap = byUserId(panVerifications);
+
+    const jobsWithUser = jobs.filter((job) => {
+        if (usersMap.has(job.userId)) return true;
+        logger.error(`[FINNAUX] Skipping payload build: User record not found for userId ${job.userId}.`);
+        return false;
+    });
+
+    const payloads = await mapWithConcurrency(jobsWithUser, PAYLOAD_BUILD_CONCURRENCY, (job) => {
+        const user = usersMap.get(job.userId);
+        const phonePrefillData = user.phonePrefillDetail?.response || {};
+        return buildFinnauxPayload(
+            applicationsMap.get(job.applicationId),
+            user,
+            employeesMap.get(job.userId) || {},
+            businessesMap.get(job.userId) || {},
+            addressesMap.get(job.userId),
+            aadhaarVerificationsMap.get(job.userId),
+            documentsByUserId.get(job.userId) || [],
+            phonePrefillData,
+            latestLocationByUserId.get(job.userId),
+            panVerificationsMap.get(job.userId),
+            job.ipAddress
+        );
+    });
+
+    return payloads;
 };
 
 /**
@@ -278,5 +423,6 @@ const markJobFailed = async (job, errorMessage) => {
 module.exports = {
     processPendingFinnauxIntegrations,
     processSingleFinnauxJob,
-    buildFinnauxJobPayload
+    buildFinnauxJobPayload,
+    buildFinnauxJobPayloadsBatch
 };

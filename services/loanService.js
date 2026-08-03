@@ -87,6 +87,10 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
     }
 
     // 3. Create Application with Attribution
+    // If this user already has a prior application, flag this one as a re-apply
+    // (reason: '1') so Finnaux can see it's not the user's first application.
+    const priorApplication = await prisma.loanApplication.findFirst({ where: { userId } });
+
     const application = await prisma.loanApplication.create({
         data: {
             userId,
@@ -95,7 +99,8 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
             status: 'PENDING',
             attributedPartnerId: partnerId,
             attributionSource: attributionSource,
-            ipAddress: ipAddress
+            ipAddress: ipAddress,
+            reason: priorApplication ? '1' : null
         }
     });
 
