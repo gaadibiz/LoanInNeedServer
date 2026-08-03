@@ -240,7 +240,6 @@ const processSingleFinnauxJob = async (job) => {
             id: true,
             docType: true,
         },
-        groupBy: { docType: true },
         orderBy: { uploadedAt: 'desc' }
     });
 
@@ -257,16 +256,16 @@ const processSingleFinnauxJob = async (job) => {
     let updated_documents = {}
 
     userDocuments.forEach(doc => {
-        if (doc.docType === 'AADHAAR') {
+        if (doc.docType === 'AADHAAR' && !updated_documents.aadharDocumentId) {
             updated_documents.aadharDocumentId = doc.id
         }
-        if (doc.docType === 'PAN') {
+        if (doc.docType === 'PAN' && !updated_documents.panDocumentId) {
             updated_documents.panDocumentId = doc.id
         }
-        if (doc.docType === 'PAY_SLIP') {
+        if (doc.docType === 'PAY_SLIP' && !updated_documents.salarySlipDocumentId) {
             updated_documents.salarySlipDocumentId = doc.id
         }
-        if (doc.docType === 'BANK_STATEMENT') {
+        if (doc.docType === 'BANK_STATEMENT' && !updated_documents.bankStatementDocumentId) {
             updated_documents.bankStatementDocumentId = doc.id
         }
     })
