@@ -80,7 +80,6 @@ const buildFinnauxPayload = async (
     business,
     address,
     aadhaarVerification,
-    userDocuments,
     phonePrefillData,
     latestLocation,
     panVerification,
@@ -88,22 +87,6 @@ const buildFinnauxPayload = async (
 ) => {
     const appId = application?.id || 'UNKNOWN';
     logger.info(`[FINNAUX MAPPING] Building payload for applicationId: ${appId}`);
-
-    const docs = userDocuments || [];
-    const findDoc = (docType) => docs.find((doc) => doc.docType === docType);
-
-    const [profilePicture, aadhaarFront, panCard, salarySlipEntries] = await Promise.all([
-        buildDocumentEntry(findDoc('PHOTO')),
-        buildDocumentEntry(findDoc('AADHAAR')),
-        buildDocumentEntry(findDoc('PAN')),
-        Promise.all(
-            docs
-                .filter((doc) => doc.docType === 'PAY_SLIP')
-                .map((doc) => buildDocumentEntry(doc))
-        )
-    ]);
-    const filteredSalarySlips = salarySlipEntries.filter(Boolean);
-    const salarySlips = filteredSalarySlips.length > 0 ? filteredSalarySlips : null;
 
     const payload = {
         "loanId": application?.id || null,
@@ -141,15 +124,15 @@ const buildFinnauxPayload = async (
         "addressDocument": null, // No matching document type captured yet
         "aadhaarNo": aadhaarVerification?.aadhaarNumber || null,
         "panNo": panVerification?.panNumber || null,
-        "profilePicture": profilePicture,
-        "aadhaarFront": aadhaarFront,
+        "profilePicture": null,
+       "aadhaarFront": null,
         "aadhaarBack": null, // Aadhaar is captured as a single scan, no separate back side
-        "panCard": panCard,
+       "panCard": null,
         "termsAccepted": true,
         "organizationName": business?.firmName || employee?.employerName || null,
         "officeEmail": null,
         "isOfficeEmailVerified": false,
-        "salarySlips": salarySlips,
+        "salarySlips": null,
         "employmentProofDocument": null, // No matching document type captured yet
         "applicationNumber": null, // losApplicationNumber belongs to the LOS platform, not Finnaux
         "loanAccountNumber": application?.loanAccountNumber || null,
@@ -167,8 +150,6 @@ const buildFinnauxPayload = async (
         'status': application?.status
 
     };
-
-    const redactDocEntry = (entry) => (entry ? [`[BASE64 ${entry[0].length} chars]`, entry[1]] : null);
     logger.info(`[FINNAUX MAPPING] ✅ Payload built for appId=${appId}`, {
         payload: {
             ...payload,
@@ -177,10 +158,6 @@ const buildFinnauxPayload = async (
             mobileNo: payload.mobileNo ? `******${payload.mobileNo.slice(-4)}` : null,
             phonePrefill: payload.phonePrefill && Object.keys(payload.phonePrefill).length
                 ? '[REDACTED]' : {},
-            profilePicture: redactDocEntry(payload.profilePicture),
-            aadhaarFront: redactDocEntry(payload.aadhaarFront),
-            panCard: redactDocEntry(payload.panCard),
-            salarySlips: payload.salarySlips ? payload.salarySlips.map(redactDocEntry) : null
         }
     });
 

@@ -2,7 +2,8 @@ const asyncHandler = require('express-async-handler');
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { NotFoundError, BadRequestError } = require('../GlobalExceptionHandler/exception');
-const { buildFinnauxJobPayloadsBatch, buildFinnauxJobPayload } = require('../services/finnauxIntegrationService');
+const {  buildFinnauxJobPayload } = require('../services/finnauxIntegrationService');
+const { default: axios } = require('axios');
 
 /**
  * @desc    Rebuild and persist a job's rawRequest from current source data
@@ -15,16 +16,61 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
     const { applicationId } = req.params;
 
     let job = await prisma.finnauxIntegrationJob.findUnique({
-        where: { applicationId: parseInt(applicationId) }
+        where: { applicationId: parseInt(applicationId) },
+        select: {
+            id: true,
+            userId: true,
+            applicationId: true,
+            ipAddress: true,
+            aadharDocumentId: true,
+            panDocumentId: true,
+            salarySlipDocumentId: true,
+            bankStatementDocumentId: true,
+        }
     });
 
+    let app;
     if (!job) {
-        const app = await prisma.loanApplication.findUnique({ where: { id: parseInt(applicationId) } });
+        app = await prisma.loanApplication.findUnique({ where: { id: parseInt(applicationId) } });
         if (!app) {
             throw new NotFoundError(`LoanApplication ID ${applicationId} not found`);
         }
+    }
+
+    const userId = job ? job.userId : app.userId;
+
+    let updated_documents = {}
+
+    if (!job || (!job.aadharDocumentId && !job.panDocumentId && !job.salarySlipDocumentId && !job.bankStatementDocumentId)) {
+        const userDocuments = await prisma.userDocument.findMany({
+            where: { userId },
+            select: {
+                id: true,
+                docType: true,
+            },
+            orderBy: { uploadedAt: 'desc' }
+        });
+
+        userDocuments.forEach(doc => {
+            if (doc.docType === 'AADHAAR' && !updated_documents.aadharDocumentId) {
+                updated_documents.aadharDocumentId = doc.id
+            }
+            if (doc.docType === 'PAN' && !updated_documents.panDocumentId) {
+                updated_documents.panDocumentId = doc.id
+            }
+            if (doc.docType === 'PAY_SLIP' && !updated_documents.salarySlipDocumentId) {
+                updated_documents.salarySlipDocumentId = doc.id
+            }
+            if (doc.docType === 'BANK_STATEMENT' && !updated_documents.bankStatementDocumentId) {
+                updated_documents.bankStatementDocumentId = doc.id
+            }
+        })
+    }
+
+    if (!job) {
         job = await prisma.finnauxIntegrationJob.create({
             data: {
+                ...updated_documents,
                 userId: app.userId,
                 applicationId: app.id,
                 ipAddress: app.ipAddress,
@@ -34,10 +80,10 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
     }
 
     const payload = await buildFinnauxJobPayload(job.userId, job.applicationId, job.ipAddress);
-
+    
     const updatedJob = await prisma.finnauxIntegrationJob.update({
         where: { id: job.id },
-        data: { rawRequest: JSON.parse(JSON.stringify(payload)) }
+        data: {...updated_documents, rawRequest: JSON.parse(JSON.stringify(payload)) }
     });
 
     res.status(200).json({
@@ -107,6 +153,64 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     });
 });
 
+const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
+    const { id } = req.query;
+    let documentsInfo = await prisma.finnauxIntegrationJob.findUnique({ where: { applicationId: parseInt(id) } , select: {
+        aadharDocumentId: true,
+        panDocumentId: true,
+        salarySlipDocumentId: true,
+        bankStatementDocumentId: true,
+     } });
+     console.log(documentsInfo);
+
+    if (!documentsInfo) {
+        throw new NotFoundError(`Finnaux integration job not found for applicationId: ${id}`);
+    }
+
+    let userDocuments = await prisma.userDocument.findMany({
+        where: {
+            id: {
+                in: [
+                    documentsInfo.aadharDocumentId,
+                    documentsInfo.panDocumentId,
+                    documentsInfo.salarySlipDocumentId,
+                    documentsInfo.bankStatementDocumentId
+                ].filter(Boolean)
+            }
+        },
+        select: {
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+        },
+        orderBy: { uploadedAt: 'desc' }
+    });
+
+    console.log(userDocuments);
+
+    let documentBase64 = await Promise.all(userDocuments.map(async (doc) => {
+        let base64Data = null;
+        let doctype = doc.docType === 'AADHAAR' ? 'aadhaarFront' : doc.docType === 'PAN' ? 'panCard' : doc.docType === 'PAY_SLIP' ? 'salarySlips' : doc.docType === 'BANK_STATEMENT' ? 'bankStatements' : doc.docType;
+        try {
+            if (doc.fileUrl) {
+                const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
+                base64Data = Buffer.from(response.data, 'binary').toString('base64');
+                if (!base64Data) return null;
+                return { [doctype]:[ base64Data, doc.fileName || null ]};
+            }
+            return null;
+        } catch (err) {
+            logger.error(`[FINNAUX] Failed to encode document ${doc.id} (${doc.docType}): ${err.message}`);
+            return null;
+        }
+    }));
+
+    res.status(200).json({
+        success: true,
+        count: userDocuments.length,
+        data: documentBase64
+    });
+});
 /**
  * @desc    Update loan application status from Finnaux system.
  *          Finnaux is given `loanApplicationId` in the rawRequest payload
@@ -184,5 +288,6 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
 module.exports = {
     triggerFinnauxIntegration,
     getFinnauxRawPayloads,
-    updateLoanStatusFromFinnaux
+    updateLoanStatusFromFinnaux,
+    getFinnauxUserDocuments
 };

@@ -216,28 +216,28 @@ model Loan {
 }
 
 model LoanApplication {
-  id                    Int                    @id @default(autoincrement())
-  userId                Int
-  employmentDetailId    Int?
-  loanType              LoanType
-  loanAmount            Float?
-  otpVerified           Boolean                @default(false)
-  status                LoanStatus             @default(PENDING)
-  employeeId            String?
-  employeeName          String?
-  reason                String?
-  loanAccountNumber     String?
-  losApplicationNumber  String?
+  id                       Int                    @id @default(autoincrement())
+  userId                   Int
+  employmentDetailId       Int?
+  loanType                 LoanType
+  loanAmount               Float?
+  otpVerified              Boolean                @default(false)
+  status                   LoanStatus             @default(PENDING)
+  employeeId               String?
+  employeeName             String?
+  reason                   String?
+  loanAccountNumber        String?
+  losApplicationNumber     String?
   finnauxApplicationNumber String?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  attributedPartnerId   Int?
-  attributionSource     String?
-  ipAddress             String?
-  employmentDetail      EmploymentDetail?      @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
-  user                  User                   @relation(fields: [userId], references: [id])
-  losIntegrationJob     LosIntegrationJob?
-  finnauxIntegrationJob FinnauxIntegrationJob?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  attributedPartnerId      Int?
+  attributionSource        String?
+  ipAddress                String?
+  employmentDetail         EmploymentDetail?      @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
+  user                     User                   @relation(fields: [userId], references: [id])
+  losIntegrationJob        LosIntegrationJob?
+  finnauxIntegrationJob    FinnauxIntegrationJob?
 
   @@index([userId])
   @@index([status, createdAt])
@@ -451,6 +451,11 @@ model FinnauxIntegrationJob {
 
   finnauxApplicationId String?
   finnauxReferenceId   String?
+
+  aadharDocumentId        Int?
+  panDocumentId           Int?
+  salarySlipDocumentId    Int?
+  bankStatementDocumentId Int?
 
   rawRequest  Json?
   rawResponse Json?
