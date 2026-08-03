@@ -155,6 +155,10 @@ async function saveFullKYC(userId, data) {
       ];
       const loanTypeEnum = validLoanTypes.includes(purposeStr) ? purposeStr : 'OTHER';
 
+      // If this user already has a prior application, flag this one as a re-apply
+      // (reason: '1') so Finnaux can see it's not the user's first application.
+      const priorApplication = await tx.loanApplication.findFirst({ where: { userId } });
+
       // This ensures that the LOS system (which queries LoanApplication) sees all entries.
       const application = await tx.loanApplication.create({
         data: {
@@ -164,7 +168,8 @@ async function saveFullKYC(userId, data) {
           status: 'PENDING',
           attributedPartnerId: user.attributedPartnerId,
           attributionSource: user.attributionType || 'ORGANIC',
-          ipAddress: data?.ipAddress || ''
+          ipAddress: data?.ipAddress || '',
+          reason: priorApplication ? '1' : null
         }
       });
       logger.info('✅ LoanApplication synced for userId=%s appId=%s', userId, application.id);
