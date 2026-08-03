@@ -234,6 +234,16 @@ const processSingleFinnauxJob = async (job) => {
     const { id, userId, applicationId, ipAddress } = job;
     logger.info(`[FINNAUX WORKER] Processing Job ID: ${id} | User: ${userId} | App: ${applicationId}`);
 
+    let userDocuments = await prisma.userDocument.findMany({
+        where: { userId },
+        select: {
+            id: true,
+            docType: true,
+        },
+        groupBy: { docType: true },
+        orderBy: { uploadedAt: 'desc' }
+    });
+
     const application = await prisma.loanApplication.findUnique({
         where: { id: applicationId },
         select: { loanAmount: true }
@@ -244,9 +254,26 @@ const processSingleFinnauxJob = async (job) => {
 
     const payload = await buildFinnauxJobPayload(userId, applicationId, ipAddress);
 
+    let updated_documents = {}
+
+    userDocuments.forEach(doc => {
+        if (doc.docType === 'AADHAAR') {
+            updated_documents.aadharDocumentId = doc.id
+        }
+        if (doc.docType === 'PAN') {
+            updated_documents.panDocumentId = doc.id
+        }
+        if (doc.docType === 'PAY_SLIP') {
+            updated_documents.salarySlipDocumentId = doc.id
+        }
+        if (doc.docType === 'BANK_STATEMENT') {
+            updated_documents.bankStatementDocumentId = doc.id
+        }
+    })
+
     await prisma.finnauxIntegrationJob.update({
         where: { id },
-        data: { rawRequest: JSON.parse(JSON.stringify(payload)) }
+        data: { ...updated_documents, rawRequest: JSON.parse(JSON.stringify(payload)) }
     });
 
     const finnauxResponse = await sendApplicationToFinnaux(payload);
