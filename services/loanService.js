@@ -60,7 +60,29 @@ function evaluateEligibility({
 async function createLoanApplication(userId, loanAmount, loanType, reqAttribution, ipAddress = '') {
     let partnerId = null;
     let attributionSource = 'ORGANIC';
+    let userDocuments = (await prisma.userDocument.findMany({ where: { userId },select:{
+        id: true,
+        docType: true,
+        fileName: true,
+        fileUrl: true,
+    } })) || [];
 
+    let updated_documents = {}
+
+    userDocuments.forEach(doc => {
+        if (doc.docType === 'AADHAAR') {
+            updated_documents.aadharDocumentId = doc.id
+        }
+        if (doc.docType === 'PAN') {
+            updated_documents.panDocumentId = doc.id
+        }
+        if (doc.docType === 'PAY_SLIP') {
+            updated_documents.salarySlipDocumentId = doc.id
+        }
+        if (doc.docType === 'BANK_STATEMENT') {
+            updated_documents.bankStatementDocumentId = doc.id
+        }
+    })
     // 1. Check Locked Attribution on User (First-touch wins)
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user.attributedPartnerId) {
@@ -142,6 +164,7 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
                 ipAddress: ipAddress,
                 applicationId: application.id,
                 status: 'PENDING',
+                ...updated_documents,
                 rawRequest: JSON.parse(JSON.stringify(rawRequest))
             }
         });
