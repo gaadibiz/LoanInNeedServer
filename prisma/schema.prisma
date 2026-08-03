@@ -240,6 +240,7 @@ model LoanApplication {
   finnauxIntegrationJob FinnauxIntegrationJob?
 
   @@index([userId])
+  @@index([status, createdAt])
 }
 
 model UserDocument {
@@ -463,4 +464,5 @@ model FinnauxIntegrationJob {
 
   @@index([userId])
   @@index([status, retryCount, updatedAt])
+  @@index([createdAt])
 }

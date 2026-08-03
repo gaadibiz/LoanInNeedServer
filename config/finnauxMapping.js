@@ -43,10 +43,16 @@ const getDocumentBase64 = async (doc) => {
 
 const buildDocumentEntry = async (doc) => {
     if (!doc) return null;
+
+    let base64Data = null;
     try {
-        const base64Data = await getDocumentBase64(doc);
-        if (!base64Data) return null;
-        return [base64Data, doc.fileName || null];
+        if (doc.fileUrl) {
+            const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
+            base64Data = Buffer.from(response.data, 'binary').toString('base64');
+            if (!base64Data) return null;
+            return [base64Data, doc.fileName || null];
+        }
+        return null;
     } catch (err) {
         logger.warn(`[FINNAUX MAPPING] Failed to encode document ${doc.id} (${doc.docType}): ${err.message}`);
         return null;
@@ -158,7 +164,7 @@ const buildFinnauxPayload = async (
         "riskFactor": null, // Not collected yet
         'phonePrefill': phonePrefillData || {},
         'extras': {},
-        'status': application?.status 
+        'status': application?.status
 
     };
 

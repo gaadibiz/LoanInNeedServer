@@ -49,11 +49,15 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
 
 /**
  * @desc    Get Finnaux integration jobs with raw payload data, filtered by createdAt date range
- * @route   GET /api/finnaux/payloads?from=<ISO date>&to=<ISO date>
+ * @route   GET /api/finnaux/payloads?from=<ISO date>&to=<ISO date>&page=&pageLimit=
  * @access  Private (API Key)
  */
+const MAX_FINNAUX_RANGE_DAYS = 31;
+const DEFAULT_FINNAUX_PAGE_LIMIT = 10;
+const MAX_FINNAUX_PAGE_LIMIT = 100;
+
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
-    const { from, to } = req.query;
+    const { from, to, page, pageLimit } = req.query;
 
     if (!from || !to) {
         throw new BadRequestError('Both "from" and "to" query parameters are required in ISO format.');
@@ -66,11 +70,27 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
     }
 
-    const jobs = await prisma.finnauxIntegrationJob.findMany({
-        where: { createdAt: { gte: fromDate, lte: toDate } },
-        orderBy: { createdAt: 'asc' },
-        select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true }
-    });
+    //const rangeDays = (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
+    // if (rangeDays > MAX_FINNAUX_RANGE_DAYS) {
+    //     throw new BadRequestError(`Date range too large. Maximum allowed range is ${MAX_FINNAUX_RANGE_DAYS} days — split the request into smaller windows.`);
+    // }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limit = Math.min(MAX_FINNAUX_PAGE_LIMIT, Math.max(1, parseInt(pageLimit, 10) || DEFAULT_FINNAUX_PAGE_LIMIT));
+    const offset = (pageNum - 1) * limit;
+
+    const where = { createdAt: { gte: fromDate, lte: toDate } };
+
+    const [totalCount, jobs] = await Promise.all([
+        prisma.finnauxIntegrationJob.count({ where }),
+        prisma.finnauxIntegrationJob.findMany({
+            where,
+            orderBy: { createdAt: 'asc' },
+            skip: offset,
+            take: limit,
+            select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true }
+        })
+    ]);
 
     let data = jobs.map(job => job.rawRequest);
 
@@ -79,6 +99,10 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         count: data.length,
+        totalCount,
+        page: pageNum,
+        pageLimit: limit,
+        hasMore: offset + data.length < totalCount,
         data
     });
 });
