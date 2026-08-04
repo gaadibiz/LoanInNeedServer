@@ -8,6 +8,7 @@ router.post('/applications/:applicationId/trigger', verifyApiKey, finnauxControl
 
 // Fetch raw payloads (request/response) for Finnaux jobs within a date range
 router.get('/applications/get-loan-applications', verifyApiKey, finnauxController.getFinnauxRawPayloads);
+router.get('/applications/get-loan-applications/:id', verifyApiKey, finnauxController.getFinnauxRawPayloads);
 router.get('/applications/get-loan-applications-documents', verifyApiKey, finnauxController.getFinnauxUserDocuments);
 
 // An endpoint for Finnaux to update the status of the loan application (using loanApplicationId from the rawRequest payload)
