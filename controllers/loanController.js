@@ -60,6 +60,7 @@ const applyForLoan = asyncHandler(async (req, res) => {
     });
 });
 
+
 /**
  * @desc    Get status of loan application for all and for specific LIN IDs
  * @route   GET /api/loans/status
