@@ -3,6 +3,8 @@ const logger = require('../utils/logger');
 const { enqueueJob } = require('../utils/postgresMQ');
 const phonePrefillService = require('./phonePrefillService');
 const { buildFinnauxJobPayload } = require('./finnauxIntegrationService');
+const { default: axios } = require('axios');
+require('dotenv').config();
 
 function evaluateEligibility({
     loanAmount,
@@ -57,15 +59,179 @@ function evaluateEligibility({
     return { statusCode: 400, error: "Invalid eligibility parameters provided." };
 }
 
+async function sendLoanApplicationToBumchum(userId, applicationId, ) {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            dob: true,
+            gender: true,
+            profileType: true,
+            aadhaarVerification: true,
+            panVerification: true
+        }
+    });
+    let application = await prisma.loanApplication.findUnique({
+        where: { id: applicationId },
+        select: {
+            id: true,
+            loanAmount: true,
+            loanType: true,
+            status: true,
+            reason: true,
+            employeeName: true,
+            loanAccountNumber: true,
+            reason: true,
+            ipAddress: true,
+        }
+    });
+
+    let userDocuments = await prisma.userDocument.findMany({
+        where: { userId },
+        select: {
+            id: true,
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+        }
+    });
+
+  let  documents= []
+   userDocuments.forEach(doc => {
+        if (doc.docType === 'AADHAAR' && !documents.find(d=>d.document_name==='AADHAAR')) {
+            documents.push({
+                document_name:'AADHAAR',
+                link:doc.fileUrl,
+                file_name:doc.fileName,
+                mime_type:doc.mimeType
+            })
+        }
+        if (doc.docType === 'PAN' && !documents.find(d=>d.document_name==='PAN')) {
+            documents.push({
+                document_name:'PAN',
+                link:doc.fileUrl,
+                file_name:doc.fileName,
+                mime_type:doc.mimeType
+            })
+        }
+        if (doc.docType === 'PAY_SLIP' && !documents.find(d=>d.document_name==='PAY_SLIP')) {
+            documents.push({
+                document_name:'PAY_SLIP',
+                link:doc.fileUrl,
+                file_name:doc.fileName,
+                mime_type:doc.mimeType
+            })
+        }
+        if (doc.docType === 'BANK_STATEMENT' && !documents.find(d=>d.document_name==='BANK_STATEMENT')) {
+            documents.push({
+                document_name:'BANK_STATEMENT',
+                link:doc.fileUrl,
+                file_name:doc.fileName,
+                mime_type:doc.mimeType
+            })
+        }
+    })
+    const aadhaarVerification = await prisma.aadhaarVerification.findUnique({
+        where: { userId },
+        select: {
+            aadhaarNumber: true,
+            name : true,
+            dob: true,
+            gender: true,
+            address: true,
+        }
+    });
+    const addressDetail = await prisma.addressDetail.findUnique({
+        where: { userId },
+        select: {
+            city: true,
+            state: true,
+            postalCode: true,
+        }
+    });
+    const businessDetail = await prisma.businessDetail.findUnique({
+        where: { userId },
+        select: {
+            firmName: true,
+            gstNumber: true,
+            tradeLicense: true,
+            companyPan: true,
+            address: true,
+            city: true,
+            state: true,
+            pincode: true
+        }
+    });
+
+    const employeeDetail = await prisma.employmentDetail.findUnique({
+        where: { userId },
+        select: {
+            companyAddress: true,
+            monthlyIncome: true,
+            employerName: true,
+            employmentType: true,
+        }
+    });
+    const userLocation = await prisma.userLocation.findFirst({
+        where: { userId },
+        orderBy: { capturedAt: 'desc' },
+        select: {
+            latitude: true,
+            longitude: true,
+            accuracy: true,
+            locality: true,
+            city: true,
+            state: true,
+            country: true,
+            postalCode: true,
+            placeName: true,
+        },
+    });
+
+    console.log(process.env.BUMCHUM_SAVE_LEAD_BASE_URL)
+   try{
+     await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL, {
+       user,
+       application,
+       aadhaarVerification,
+       addressDetail,
+       businessDetail,
+       employeeDetail,
+       userLocation,
+       documents,
+       country_code:'+91',
+       id:application.id,
+       source:'WEBSITE',
+       priority:'HIGH',
+       form_name:'LOAN_IN_NEED',
+       incoming_request:'LOAN_IN_NEED',
+       category_name:'Loan Application',
+    },{
+       headers: {
+        'auth-Key': process.env.BUMCHUM_AUTH_KEY,
+        'Content-Type': 'application/json'
+       }
+    });
+   }catch(error){
+    console.error('Error sending loan application to Bumchum:', error);
+   }
+}
+
 async function createLoanApplication(userId, loanAmount, loanType, reqAttribution, ipAddress = '') {
     let partnerId = null;
     let attributionSource = 'ORGANIC';
-    let userDocuments = (await prisma.userDocument.findMany({ where: { userId },select:{
-        id: true,
-        docType: true,
-        fileName: true,
-        fileUrl: true,
-    } })) || [];
+    let userDocuments = (await prisma.userDocument.findMany({
+        where: { userId },
+        select: {
+            id: true,
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+        }
+    })) || [];
 
     let updated_documents = {}
 
@@ -122,7 +288,8 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
             attributedPartnerId: partnerId,
             attributionSource: attributionSource,
             ipAddress: ipAddress,
-            reason: priorApplication ? '1' : null
+            //reloan: priorApplication ? true : false,
+            //reason: priorApplication ? '1' : null
         }
     });
 
@@ -146,10 +313,10 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
                 status: 'PENDING'
             }
         });
-        
+
         // Example MQ integration for PDF / Email generation offloading
         // enqueueJob('pdf-generation', { applicationId: application.id });
-        
+
         logger.info(`[LOAN] Created LOS Integration Job for Application ${application.id}`);
     } catch (error) {
         logger.error(`[LOAN] Failed to queue LOS Integration Job for App ${application.id}: ${error.message}`);
@@ -185,6 +352,14 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
         });
     }
 
+    (async()=>{
+       try{
+         await sendLoanApplicationToBumchum(userId, application.id)
+       }catch(error){
+        console.error('Error sending loan application to Bumchum:', error);
+       }
+    })();
+
     return {
         applicationId: application.id,
         partnerId
@@ -193,5 +368,6 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
 
 module.exports = {
     createLoanApplication,
-    evaluateEligibility
+    evaluateEligibility,
+    sendLoanApplicationToBumchum
 };
