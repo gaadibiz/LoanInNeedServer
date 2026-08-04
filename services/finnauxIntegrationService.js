@@ -2,6 +2,7 @@ const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { buildFinnauxPayload } = require('../config/finnauxMapping');
 const { sendApplicationToFinnaux } = require('./finnauxApiClient');
+const { default: axios } = require('axios');
 
 // Maximum times a job will be attempted before marking as permanently FAILED
 const MAX_FAILURES = 7;
@@ -323,8 +324,63 @@ const markJobFailed = async (job, errorMessage) => {
     }
 };
 
+const getBase64Documents = async(id)=>{
+    let documentsInfo = await prisma.finnauxIntegrationJob.findUnique({ where: { applicationId: parseInt(id) } , select: {
+        aadharDocumentId: true,
+        panDocumentId: true,
+        salarySlipDocumentId: true,
+        bankStatementDocumentId: true,
+     } });
+     console.log(documentsInfo);
+
+    if (!documentsInfo) {
+        throw new NotFoundError(`Finnaux integration job not found for applicationId: ${id}`);
+    }
+
+    let userDocuments = await prisma.userDocument.findMany({
+        where: {
+            id: {
+                in: [
+                    documentsInfo.aadharDocumentId,
+                    documentsInfo.panDocumentId,
+                    documentsInfo.salarySlipDocumentId,
+                    documentsInfo.bankStatementDocumentId
+                ].filter(Boolean)
+            }
+        },
+        select: {
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+        },
+        orderBy: { uploadedAt: 'desc' }
+    });
+
+    console.log(userDocuments);
+
+    let documentBase64 ={}
+     await Promise.all(userDocuments.map(async (doc) => {
+        let base64Data = null;
+        let doctype = doc.docType === 'AADHAAR' ? 'aadhaarFront' : doc.docType === 'PAN' ? 'panCard' : doc.docType === 'PAY_SLIP' ? 'salarySlips' : doc.docType === 'BANK_STATEMENT' ? 'bankStatements' : doc.docType;
+        try {
+            if (doc.fileUrl) {
+                const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
+                base64Data = Buffer.from(response.data, 'binary').toString('base64');
+                if (!base64Data) return null;
+                documentBase64[doctype] = doctype==='salarySlips'? [[base64Data, doc.fileName || null]]:[base64Data, doc.fileName || null];
+            }
+            return null;
+        } catch (err) {
+            logger.error(`[FINNAUX] Failed to encode document ${doc.id} (${doc.docType}): ${err.message}`);
+            return null;
+        }
+    }));
+    return documentBase64
+}
+
 module.exports = {
     processPendingFinnauxIntegrations,
     processSingleFinnauxJob,
     buildFinnauxJobPayload,
+    getBase64Documents
 };
