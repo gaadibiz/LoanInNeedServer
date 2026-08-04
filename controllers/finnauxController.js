@@ -2,7 +2,7 @@ const asyncHandler = require('express-async-handler');
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { NotFoundError, BadRequestError } = require('../GlobalExceptionHandler/exception');
-const {  buildFinnauxJobPayload } = require('../services/finnauxIntegrationService');
+const { buildFinnauxJobPayload, getBase64Documents } = require('../services/finnauxIntegrationService');
 const { default: axios } = require('axios');
 
 /**
@@ -80,10 +80,10 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
     }
 
     const payload = await buildFinnauxJobPayload(job.userId, job.applicationId, job.ipAddress);
-    
+
     const updatedJob = await prisma.finnauxIntegrationJob.update({
         where: { id: job.id },
-        data: {...updated_documents, rawRequest: JSON.parse(JSON.stringify(payload)) }
+        data: { ...updated_documents, rawRequest: JSON.parse(JSON.stringify(payload)) }
     });
 
     res.status(200).json({
@@ -103,18 +103,33 @@ const DEFAULT_FINNAUX_PAGE_LIMIT = 10;
 const MAX_FINNAUX_PAGE_LIMIT = 100;
 
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
-    const { from, to, page, pageLimit } = req.query;
+    const { from, to, page, pageLimit, id } = req.query;
 
-    if (!from || !to) {
-        throw new BadRequestError('Both "from" and "to" query parameters are required in ISO format.');
+    const hasId = !!id;
+    const hasDateRange = !!from && !!to;
+
+    if (!hasId && !hasDateRange) {
+        throw new BadRequestError(
+            'Either provide "id" or both "from" and "to" query parameters.'
+        );
     }
 
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
+    let fromDate, toDate;
+    if (from || to) {
+        if ((from && !to) || (!from && to)) {
+            throw new BadRequestError(
+                'Both "from" and "to" must be provided together.'
+            );
+        }
+        fromDate = new Date(from);
+        toDate = new Date(to);
 
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-        throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+            throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
+        }
     }
+
+
 
     //const rangeDays = (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
     // if (rangeDays > MAX_FINNAUX_RANGE_DAYS) {
@@ -125,7 +140,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const limit = Math.min(MAX_FINNAUX_PAGE_LIMIT, Math.max(1, parseInt(pageLimit, 10) || DEFAULT_FINNAUX_PAGE_LIMIT));
     const offset = (pageNum - 1) * limit;
 
-    const where = { createdAt: { gte: fromDate, lte: toDate } };
+    const where = !id && (fromDate && toDate) ? { createdAt: { gte: fromDate, lte: toDate } } : id ? { applicationId: parseInt(id) } : {}
 
     const [totalCount, jobs] = await Promise.all([
         prisma.finnauxIntegrationJob.count({ where }),
@@ -138,7 +153,8 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         })
     ]);
 
-    let data = jobs.map(job => job.rawRequest);
+    let documents = id ? await getBase64Documents(id) : {};
+    let data = jobs.map(job => ({ ...job.rawRequest, ...documents }));
 
     //  const data = await buildFinnauxJobPayloadsBatch(jobs);
 
@@ -155,13 +171,15 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
 
 const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
     const { id } = req.query;
-    let documentsInfo = await prisma.finnauxIntegrationJob.findUnique({ where: { applicationId: parseInt(id) } , select: {
-        aadharDocumentId: true,
-        panDocumentId: true,
-        salarySlipDocumentId: true,
-        bankStatementDocumentId: true,
-     } });
-     console.log(documentsInfo);
+    let documentsInfo = await prisma.finnauxIntegrationJob.findUnique({
+        where: { applicationId: parseInt(id) }, select: {
+            aadharDocumentId: true,
+            panDocumentId: true,
+            salarySlipDocumentId: true,
+            bankStatementDocumentId: true,
+        }
+    });
+    console.log(documentsInfo);
 
     if (!documentsInfo) {
         throw new NotFoundError(`Finnaux integration job not found for applicationId: ${id}`);
@@ -196,7 +214,7 @@ const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
                 const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
                 base64Data = Buffer.from(response.data, 'binary').toString('base64');
                 if (!base64Data) return null;
-                return { [doctype]:[ base64Data, doc.fileName || null ]};
+                return { [doctype]: [base64Data, doc.fileName || null] };
             }
             return null;
         } catch (err) {
@@ -227,7 +245,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         throw new BadRequestError('Both "id" and "status" are required in the request body.');
     }
 
-    const validStatuses = ['REJECTED','REJECTED', 'PENDING', 'HOLD', 'IN_PROGRESS', 'COMPLETED'];
+    const validStatuses = ['REJECTED', 'REJECTED', 'PENDING', 'HOLD', 'IN_PROGRESS', 'COMPLETED'];
     const uppercaseStatus = status.toUpperCase();
     if (!validStatuses.includes(uppercaseStatus)) {
         throw new BadRequestError(`Invalid status value. Must be one of: ${validStatuses.join(', ')}`);
