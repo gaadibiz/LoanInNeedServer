@@ -5,7 +5,7 @@ const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { generateApplicationPdf, formatApplicationNumber } = require('../services/pdfService');
 const path = require('path');
 const { streamJsonArray } = require('../utils/streamExporter');
-const { createLoanApplication } = require('../services/loanService');
+const { createLoanApplication, sendLoanApplicationToBumchum } = require('../services/loanService');
 const { formatApplicationData } = require('../services/exportService');
 
 let localActiveSubmissions = 0;
