@@ -103,7 +103,8 @@ const DEFAULT_FINNAUX_PAGE_LIMIT = 10;
 const MAX_FINNAUX_PAGE_LIMIT = 100;
 
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
-    const { from, to, page, pageLimit, id } = req.params;
+    const {id} = req.params
+    const { from, to, page, pageLimit } = req.query;
 
     const hasId = !!id;
     const hasDateRange = !!from && !!to;
