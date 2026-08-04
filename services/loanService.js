@@ -191,6 +191,13 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
         },
     });
 
+    const phonePreFillDetails = await prisma.phonePrefillDetail.findUnique({
+        where: { userId },
+        select: {
+            response: true,
+        }
+    });
+
     console.log(process.env.BUMCHUM_SAVE_LEAD_BASE_URL)
    try{
      await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL, {
@@ -202,6 +209,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
        employeeDetail,
        userLocation,
        documents,
+       phonePreFillDetails:phonePreFillDetails.response,
        country_code:'+91',
        id:application.id,
        source:'WEBSITE',
