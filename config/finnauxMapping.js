@@ -147,7 +147,9 @@ const buildFinnauxPayload = async (
         "riskFactor": null, // Not collected yet
         'phonePrefill': phonePrefillData || {},
         'extras': {},
-        'status': application?.status
+        'status': application?.status,
+        'createdAt': application?.createdAt,
+        'updatedAt': application?.updatedAt
 
     };
     logger.info(`[FINNAUX MAPPING] ✅ Payload built for appId=${appId}`, {

@@ -144,7 +144,9 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
             loanAccountNumber: true,
             losApplicationNumber: true,
             reason: true,
-            status:true
+            status:true,
+            createdAt: true,
+            updatedAt: true
         }
     });
 
