@@ -247,6 +247,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         applicationNo,
         reason
     } = req.body
+    req.body.id = id
     let finnauxApplicationNumber = applicationNo
     req.body.finnauxApplicationNumber = applicationNo
 
@@ -305,9 +306,9 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         success: true,
         message: 'Loan application updated successfully from Finnaux.',
         data: {
-            applicationId: updatedApplication.id,
+            id: updatedApplication.id,
             status: updatedApplication.status,
-            finnauxApplicationNumber: updatedApplication.finnauxApplicationNumber
+            applicationNo: updatedApplication.finnauxApplicationNumber
         }
     });
 });
