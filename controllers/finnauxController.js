@@ -103,7 +103,7 @@ const DEFAULT_FINNAUX_PAGE_LIMIT = 10;
 const MAX_FINNAUX_PAGE_LIMIT = 100;
 
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
-    const {id} = req.params
+    const { id } = req.params
 
     const { from, to, page, pageLimit } = req.query;
 
@@ -241,7 +241,14 @@ const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
  */
 const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { ipAddress, status, reason, finnauxApplicationNumber } = req.body;
+    let {
+        employeeName,
+        status,
+        applicationNo,
+        reason
+    } = req.body
+    let finnauxApplicationNumber = applicationNo
+    req.body.finnauxApplicationNumber = applicationNo
 
     if (!id || !status) {
         throw new BadRequestError('Both "id" and "status" are required in the request body.');

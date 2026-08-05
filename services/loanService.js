@@ -101,9 +101,9 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
 
   let  documents= []
    userDocuments.forEach(doc => {
-        if (doc.docType === 'AADHAAR' && !documents.find(d=>d.document_name==='AADHAAR')) {
+        if (doc.docType === 'AADHAAR' && !documents.find(d=>d.document_name==='Aadhaar')) {
             documents.push({
-                document_name:'AADHAAR',
+                document_name:'Aadhaar',
                 link:doc.fileUrl,
                 file_name:doc.fileName,
                 mime_type:doc.mimeType
@@ -117,9 +117,9 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
                 mime_type:doc.mimeType
             })
         }
-        if (doc.docType === 'PAY_SLIP' && !documents.find(d=>d.document_name==='PAY_SLIP')) {
+        if (doc.docType === 'PAY_SLIP' && !documents.find(d=>d.document_name==='Salary Slip')) {
             documents.push({
-                document_name:'PAY_SLIP',
+                document_name:'Salary Slip',
                 link:doc.fileUrl,
                 file_name:doc.fileName,
                 mime_type:doc.mimeType
