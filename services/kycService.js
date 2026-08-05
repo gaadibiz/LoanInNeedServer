@@ -8,6 +8,8 @@ const LoanModel = require('../models/loanModel');
 const AddressModel = require('../models/adressModel');
 const UserModel = require('../models/userModel');
 const { buildFinnauxJobPayload } = require('./finnauxIntegrationService');
+const { checkAndPushBumchumIfReady } = require('./loanService');
+const phonePrefillService = require('./phonePrefillService');
 
 async function saveFullKYC(userId, data) {
   if (!userId) {
@@ -15,7 +17,7 @@ async function saveFullKYC(userId, data) {
   }
 
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
-  return prisma.$transaction(
+  const result = await prisma.$transaction(
     async tx => {
       // Fetch existing records first (within the transaction tx)
       const existingEmployment = await EmploymentModel.findByUserId(userId, tx);
@@ -101,11 +103,11 @@ async function saveFullKYC(userId, data) {
 
       let addressTypeValue = null;
       if (currentAddressType) {
-         addressTypeValue = addressTypeMap[currentAddressType] || 
-                            String(currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '');
-         if (!['OWNER_SELF_OR_FAMILY', 'RENTED'].includes(addressTypeValue)) {
-             addressTypeValue = null;
-         }
+        addressTypeValue = addressTypeMap[currentAddressType] ||
+          String(currentAddressType).toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '');
+        if (!['OWNER_SELF_OR_FAMILY', 'RENTED'].includes(addressTypeValue)) {
+          addressTypeValue = null;
+        }
       }
 
       const addrPayload = {
@@ -150,7 +152,7 @@ async function saveFullKYC(userId, data) {
       // Map purpose to LoanType enum, default to 'OTHER'
       const purposeStr = data.purpose ? String(data.purpose).toUpperCase().replace(/\s+/g, '_') : 'OTHER';
       const validLoanTypes = [
-        'MEDICAL_EMERGENCY', 'EDUCATION', 'HOME_RENOVATION', 
+        'MEDICAL_EMERGENCY', 'EDUCATION', 'HOME_RENOVATION',
         'DEBT_CONSOLIDATION', 'WEDDING', 'BUSINESS', 'TRAVEL', 'OTHER'
       ];
       const loanTypeEnum = validLoanTypes.includes(purposeStr) ? purposeStr : 'OTHER';
@@ -174,6 +176,12 @@ async function saveFullKYC(userId, data) {
       });
       logger.info('✅ LoanApplication synced for userId=%s appId=%s', userId, application.id);
 
+      try {
+        await phonePrefillService.fetchAndSavePrefillDetails(userId);
+        logger.info(`[LOAN] Phone prefill details fetched and saved for User ${userId}`);
+      } catch (error) {
+        logger.error(`[LOAN] Failed to fetch/save phone prefill details for User ${userId}: ${error.message}`);
+      }
       // ---------- Queue for LOS Integration ----------
       await tx.losIntegrationJob.create({
         data: {
@@ -203,6 +211,21 @@ async function saveFullKYC(userId, data) {
     },
     { timeout: parseInt(process.env.DB_TRANSACTION_TIMEOUT_MS) || 50000 } // Configurable timeout
   );
+
+  // ---------- Bumchum Integration ----------
+  // KYC form data lands here, but documents (Aadhaar/PAN/payslip/bank statement) are
+  // often uploaded afterwards, so the lead is only pushable once both sides are in.
+  // This check picks it up immediately if the documents already exist; otherwise the
+  // document-upload flow (documentService.js) triggers the same check once they arrive.
+  (async () => {
+    try {
+      await checkAndPushBumchumIfReady(userId);
+    } catch (error) {
+      logger.error(`[BUMCHUM] Failed to sync after KYC submit for User ${userId}: ${error.message}`);
+    }
+  })();
+
+  return result;
 }
 
 module.exports = { saveFullKYC };
