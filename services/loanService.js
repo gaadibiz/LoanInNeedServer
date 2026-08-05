@@ -96,42 +96,43 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
             docType: true,
             fileName: true,
             fileUrl: true,
+            mimeType: true
         }
     });
 
-  let  documents= []
+  let  documents= {}
    userDocuments.forEach(doc => {
-        if (doc.docType === 'AADHAAR' && !documents.find(d=>d.document_name==='Aadhaar')) {
-            documents.push({
+        if (doc.docType === 'AADHAAR' && !documents.aadhaar) {
+            documents.aadhaar = {
                 document_name:'Aadhaar',
                 link:doc.fileUrl,
                 file_name:doc.fileName,
                 mime_type:doc.mimeType
-            })
+            }
         }
-        if (doc.docType === 'PAN' && !documents.find(d=>d.document_name==='PAN')) {
-            documents.push({
+        if (doc.docType === 'PAN' && !documents.pan) {
+            documents.pan = {   
                 document_name:'PAN',
                 link:doc.fileUrl,
                 file_name:doc.fileName,
                 mime_type:doc.mimeType
-            })
+            }
         }
-        if (doc.docType === 'PAY_SLIP' && !documents.find(d=>d.document_name==='Salary Slip')) {
-            documents.push({
+        if (doc.docType === 'PAY_SLIP' && !documents.salaryslip) {
+            documents.salaryslip = {
                 document_name:'Salary Slip',
                 link:doc.fileUrl,
                 file_name:doc.fileName,
                 mime_type:doc.mimeType
-            })
+            }
         }
-        if (doc.docType === 'BANK_STATEMENT' && !documents.find(d=>d.document_name==='BANK_STATEMENT')) {
-            documents.push({
+        if (doc.docType === 'BANK_STATEMENT' && !documents.bankstatement) {
+            documents.bankstatement = {
                 document_name:'BANK_STATEMENT',
                 link:doc.fileUrl,
                 file_name:doc.fileName,
                 mime_type:doc.mimeType
-            })
+            }
         }
     })
     const aadhaarVerification = await prisma.aadhaarVerification.findUnique({
@@ -228,7 +229,6 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
     throw error;
    }
 }
-
 // Documents required by sendLoanApplicationToBumchum's payload mapping.
 const BUMCHUM_REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'];
 
