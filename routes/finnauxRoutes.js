@@ -12,6 +12,6 @@ router.get('/applications/get-loan-applications/:id', verifyApiKey, finnauxContr
 router.get('/applications/get-loan-applications-documents', verifyApiKey, finnauxController.getFinnauxUserDocuments);
 
 // An endpoint for Finnaux to update the status of the loan application (using loanApplicationId from the rawRequest payload)
-router.post('/applications/update-status/:id', verifyApiKey, finnauxController.updateLoanStatusFromFinnaux);
+router.put('/applications/update-status/:id', verifyApiKey, finnauxController.updateLoanStatusFromFinnaux);
 
 module.exports = router;
