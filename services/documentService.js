@@ -9,6 +9,7 @@ const OtpService = require('./otpService');
 const { encodeBufferToBase64 } = require('../utils/base64Encoder');
 const s3Client = require('../utils/s3Client');
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const { checkAndPushBumchumIfReady } = require('./loanService');
 
 const UPLOAD_BUCKET = 'Documents';
 
@@ -109,6 +110,20 @@ class DocumentVerificationService {
       }
     }
 
+    // ---------- Bumchum Integration ----------
+    // Only fire when this write is already committed (standalone call, not part of an
+    // outer transaction started by submitDocuments below) — that caller checks once
+    // after its own transaction commits instead.
+    if (tx === prisma) {
+      (async () => {
+        try {
+          await checkAndPushBumchumIfReady(userId);
+        } catch (error) {
+          logger.error(`[BUMCHUM] Failed to sync after document upload for User ${userId}: ${error.message}`);
+        }
+      })();
+    }
+
     return document;
   }
 
@@ -135,6 +150,12 @@ class DocumentVerificationService {
     }, {
       timeout: 30000, // 30 seconds
     });
+
+    try {
+      await checkAndPushBumchumIfReady(userId);
+    } catch (error) {
+      logger.error(`[BUMCHUM] Failed to sync after bulk document submit for User ${userId}: ${error.message}`);
+    }
 
     return {
       message: 'Documents uploaded successfully. OTP sent for selfie verification ✅',

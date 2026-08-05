@@ -209,7 +209,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
        employeeDetail,
        userLocation,
        documents,
-       phonePreFillDetails:phonePreFillDetails.response,
+       phonePreFillDetails:phonePreFillDetails?.response,
        country_code:'+91',
        id:application.id,
        source:'WEBSITE',
@@ -225,7 +225,48 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
     });
    }catch(error){
     console.error('Error sending loan application to Bumchum:', error);
+    throw error;
    }
+}
+
+// Documents required by sendLoanApplicationToBumchum's payload mapping.
+const BUMCHUM_REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'];
+
+// KYC form data (LoanApplication) and documents are submitted at different times,
+// so the Bumchum lead can only be pushed once both are available. A user can have
+// several applications (re-applications), each gets its own push exactly once,
+// mirroring how LOS/Finnaux jobs are created per application rather than per user.
+async function checkAndPushBumchumIfReady(userId) {
+    try {
+        const documents = await prisma.userDocument.findMany({
+            where: { userId, docType: { in: BUMCHUM_REQUIRED_DOC_TYPES } },
+            select: { docType: true }
+        });
+        const uploadedTypes = new Set(documents.map(doc => doc.docType));
+        const allRequiredDocsReceived = BUMCHUM_REQUIRED_DOC_TYPES.every(type => uploadedTypes.has(type));
+        if (!allRequiredDocsReceived) return;
+
+        const applications = await prisma.loanApplication.findMany({
+            where: { userId, bumchumSyncedAt: null },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        for (const application of applications) {
+            try {
+                await sendLoanApplicationToBumchum(userId, application.id);
+
+                await prisma.loanApplication.update({
+                    where: { id: application.id },
+                    data: { bumchumSyncedAt: new Date() }
+                });
+                logger.info(`[BUMCHUM] Synced application for userId=${userId} appId=${application.id}`);
+            } catch (error) {
+                logger.error(`[BUMCHUM] Failed to push application appId=${application.id} for User ${userId}: ${error.message}`);
+            }
+        }
+    } catch (error) {
+        logger.error(`[BUMCHUM] Failed to check/push application(s) for User ${userId}: ${error.message}`);
+    }
 }
 
 async function createLoanApplication(userId, loanAmount, loanType, reqAttribution, ipAddress = '') {
@@ -363,6 +404,8 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
     (async()=>{
        try{
          await sendLoanApplicationToBumchum(userId, application.id)
+         // Mark synced so the document-upload flow (checkAndPushBumchumIfReady) doesn't push this application again later.
+         await prisma.loanApplication.update({ where: { id: application.id }, data: { bumchumSyncedAt: new Date() } });
        }catch(error){
         console.error('Error sending loan application to Bumchum:', error);
        }
@@ -377,5 +420,6 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
 module.exports = {
     createLoanApplication,
     evaluateEligibility,
-    sendLoanApplicationToBumchum
+    sendLoanApplicationToBumchum,
+    checkAndPushBumchumIfReady
 };
