@@ -305,11 +305,11 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: 'Loan application updated successfully from Finnaux.',
-        data: {
+        data: [{
             id: updatedApplication.id,
             status: updatedApplication.status,
             applicationNo: updatedApplication.finnauxApplicationNumber
-        }
+        }]
     });
 });
 
