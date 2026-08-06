@@ -3,6 +3,7 @@ const { generateToken } = require('../utils/jwt');
 const smsOtpService = require('../utils/smsOtpService');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
+const { sendLoanApplicationToBumchum } = require('../services/loanService');
 
 const TEST_PHONE_NUMBER = process.env.TEST_PHONE_NUMBER || null;
 
@@ -124,6 +125,15 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
   const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
   const isProfileComplete = hasName && hasPan && hasAadhaar;
 
+  try {
+    console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
+    if (user) {
+      await sendLoanApplicationToBumchum(user.id, '');
+    }
+  } catch (error) {
+    console.log(error, "here is the error");
+  }
+
   return {
     message: 'Phone verified successfully.',
     user: {
@@ -147,7 +157,7 @@ async function registerPhone(phone, attribution = null) {
   const targetPhone = phone;
   logger.info('Requested phone: %s', targetPhone);
 
-  if (!targetPhone ) {
+  if (!targetPhone) {
     throw new BadRequestError('Phone is required.');
   }
 
@@ -212,6 +222,15 @@ async function registerPhone(phone, attribution = null) {
   const hasPan = !!(await prisma.panVerification.findUnique({ where: { userId: user.id } }));
   const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
   const isProfileComplete = hasName && hasPan && hasAadhaar;
+
+  try {
+    console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
+    if (user) {
+      await sendLoanApplicationToBumchum(user.id, '');
+    }
+  } catch (error) {
+    console.log(error, "here is the error");
+  }
 
   return {
     message: 'Phone verified successfully.',

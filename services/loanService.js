@@ -59,7 +59,8 @@ function evaluateEligibility({
     return { statusCode: 400, error: "Invalid eligibility parameters provided." };
 }
 
-async function sendLoanApplicationToBumchum(userId, applicationId, ) {
+async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
+    console.log(userId);
     const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -74,7 +75,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
             panVerification: true
         }
     });
-    let application = await prisma.loanApplication.findUnique({
+    let application = applicationId ? (await prisma.loanApplication.findUnique({
         where: { id: applicationId },
         select: {
             id: true,
@@ -87,9 +88,9 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
             reason: true,
             ipAddress: true,
         }
-    });
+    })) : {}
 
-    let userDocuments = await prisma.userDocument.findMany({
+    let userDocuments = applicationId ? (await prisma.userDocument.findMany({
         where: { userId },
         select: {
             id: true,
@@ -97,41 +98,42 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
             fileName: true,
             fileUrl: true,
             mimeType: true
-        }
-    });
+        },
+        orderBy: { uploadedAt: 'desc' }
+    })) : []
 
-  let  documents= {}
-   userDocuments.forEach(doc => {
+    let documents = {}
+    userDocuments.forEach(doc => {
         if (doc.docType === 'AADHAAR' && !documents.aadhaar) {
             documents.aadhaar = {
-                document_name:'Aadhaar',
-                link:doc.fileUrl,
-                file_name:doc.fileName,
-                mime_type:doc.mimeType
+                document_name: 'Aadhaar',
+                link: doc.fileUrl,
+                file_name: doc.fileName,
+                mime_type: doc.mimeType
             }
         }
         if (doc.docType === 'PAN' && !documents.pan) {
-            documents.pan = {   
-                document_name:'PAN',
-                link:doc.fileUrl,
-                file_name:doc.fileName,
-                mime_type:doc.mimeType
+            documents.pan = {
+                document_name: 'PAN',
+                link: doc.fileUrl,
+                file_name: doc.fileName,
+                mime_type: doc.mimeType
             }
         }
         if (doc.docType === 'PAY_SLIP' && !documents.salaryslip) {
             documents.salaryslip = {
-                document_name:'Salary Slip',
-                link:doc.fileUrl,
-                file_name:doc.fileName,
-                mime_type:doc.mimeType
+                document_name: 'Salary Slip',
+                link: doc.fileUrl,
+                file_name: doc.fileName,
+                mime_type: doc.mimeType
             }
         }
         if (doc.docType === 'BANK_STATEMENT' && !documents.bankstatement) {
             documents.bankstatement = {
-                document_name:'BANK_STATEMENT',
-                link:doc.fileUrl,
-                file_name:doc.fileName,
-                mime_type:doc.mimeType
+                document_name: 'BANK_STATEMENT',
+                link: doc.fileUrl,
+                file_name: doc.fileName,
+                mime_type: doc.mimeType
             }
         }
     })
@@ -139,7 +141,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
         where: { userId },
         select: {
             aadhaarNumber: true,
-            name : true,
+            name: true,
             dob: true,
             gender: true,
             address: true,
@@ -178,7 +180,6 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
     });
     const userLocation = await prisma.userLocation.findFirst({
         where: { userId },
-        orderBy: { capturedAt: 'desc' },
         select: {
             latitude: true,
             longitude: true,
@@ -190,6 +191,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
             postalCode: true,
             placeName: true,
         },
+        orderBy: { capturedAt: 'desc' },
+        take: 1
     });
 
     const phonePreFillDetails = await prisma.phonePrefillDetail.findUnique({
@@ -200,34 +203,35 @@ async function sendLoanApplicationToBumchum(userId, applicationId, ) {
     });
 
     console.log(process.env.BUMCHUM_SAVE_LEAD_BASE_URL)
-   try{
-     await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL, {
-       user,
-       application,
-       aadhaarVerification,
-       addressDetail,
-       businessDetail,
-       employeeDetail,
-       userLocation,
-       documents,
-       phonePreFillDetails:phonePreFillDetails?.response,
-       country_code:'+91',
-       id:application.id,
-       source:'WEBSITE',
-       priority:'HIGH',
-       form_name:'LOAN_IN_NEED',
-       incoming_request:'LOAN_IN_NEED',
-       category_name:'Loan Application',
-    },{
-       headers: {
-        'auth-Key': process.env.BUMCHUM_AUTH_KEY,
-        'Content-Type': 'application/json'
-       }
-    });
-   }catch(error){
-    console.error('Error sending loan application to Bumchum:', error);
-    throw error;
-   }
+    try {
+        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL, {
+            user,
+            application: application || {},
+            aadhaarVerification: aadhaarVerification || {},
+            addressDetail: addressDetail || {},
+            businessDetail: businessDetail || {},
+            employeeDetail: employeeDetail || {},
+            userLocation: userLocation || {},
+            documents: documents || {},
+            phonePreFillDetails: phonePreFillDetails?.response || {},
+            country_code: '+91',
+            id: application.id || null,
+            user_id: user.id || null,
+            source: 'WEBSITE',
+            priority: 'HIGH',
+            form_name: 'LOAN_IN_NEED',
+            incoming_request: 'LOAN_IN_NEED',
+            category_name: 'Loan Application',
+        }, {
+            headers: {
+                'auth-Key': process.env.BUMCHUM_AUTH_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.error('Error sending loan application to Bumchum:', error);
+        throw error;
+    }
 }
 // Documents required by sendLoanApplicationToBumchum's payload mapping.
 const BUMCHUM_REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'];
@@ -401,14 +405,14 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
         });
     }
 
-    (async()=>{
-       try{
-         await sendLoanApplicationToBumchum(userId, application.id)
-         // Mark synced so the document-upload flow (checkAndPushBumchumIfReady) doesn't push this application again later.
-         await prisma.loanApplication.update({ where: { id: application.id }, data: { bumchumSyncedAt: new Date() } });
-       }catch(error){
-        console.error('Error sending loan application to Bumchum:', error);
-       }
+    (async () => {
+        try {
+            await sendLoanApplicationToBumchum(userId, application.id)
+            // Mark synced so the document-upload flow (checkAndPushBumchumIfReady) doesn't push this application again later.
+            await prisma.loanApplication.update({ where: { id: application.id }, data: { bumchumSyncedAt: new Date() } });
+        } catch (error) {
+            console.error('Error sending loan application to Bumchum:', error);
+        }
     })();
 
     return {
