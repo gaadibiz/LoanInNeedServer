@@ -280,7 +280,8 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         data: {
             status: uppercaseStatus,
             reason: reason || loanApplication.reason,
-            finnauxApplicationNumber: finnauxApplicationNumber || loanApplication.finnauxApplicationNumber
+            finnauxApplicationNumber: finnauxApplicationNumber || loanApplication.finnauxApplicationNumber,
+            updatedAt: new Date()
         }
     });
 

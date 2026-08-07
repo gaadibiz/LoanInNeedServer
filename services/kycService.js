@@ -159,7 +159,7 @@ async function saveFullKYC(userId, data) {
 
       // If this user already has a prior application, flag this one as a re-apply
       // (reason: '1') so Finnaux can see it's not the user's first application.
-      const priorApplication = await tx.loanApplication.findFirst({ where: { userId } });
+      const priorApplication =( await tx.loanApplication.findFirst({ where: { userId ,status : 'IN_PROGRESS' } })) || {};
 
       // This ensures that the LOS system (which queries LoanApplication) sees all entries.
       const application = await tx.loanApplication.create({
@@ -171,7 +171,7 @@ async function saveFullKYC(userId, data) {
           attributedPartnerId: user.attributedPartnerId,
           attributionSource: user.attributionType || 'ORGANIC',
           ipAddress: data?.ipAddress || '',
-          reason: priorApplication ? '1' : null
+          reloan: Object.keys(priorApplication).length > 0 ? 1 : 0,
         }
       });
       logger.info('✅ LoanApplication synced for userId=%s appId=%s', userId, application.id);
@@ -217,9 +217,9 @@ async function saveFullKYC(userId, data) {
   // often uploaded afterwards, so the lead is only pushable once both sides are in.
   // This check picks it up immediately if the documents already exist; otherwise the
   // document-upload flow (documentService.js) triggers the same check once they arrive.
-  (async () => {
+  (() => {
     try {
-      await checkAndPushBumchumIfReady(userId);
+      checkAndPushBumchumIfReady(userId);
     } catch (error) {
       logger.error(`[BUMCHUM] Failed to sync after KYC submit for User ${userId}: ${error.message}`);
     }

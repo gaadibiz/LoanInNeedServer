@@ -235,6 +235,7 @@ model LoanApplication {
   attributedPartnerId      Int?
   attributionSource        String?
   ipAddress                String?
+  reloan                   Boolean?
   employmentDetail         EmploymentDetail?      @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
   user                     User                   @relation(fields: [userId], references: [id])
   losIntegrationJob        LosIntegrationJob?
