@@ -212,14 +212,9 @@ async function saveFullKYC(userId, data) {
     { timeout: parseInt(process.env.DB_TRANSACTION_TIMEOUT_MS) || 50000 } // Configurable timeout
   );
 
-  // ---------- Bumchum Integration ----------
-  // KYC form data lands here, but documents (Aadhaar/PAN/payslip/bank statement) are
-  // often uploaded afterwards, so the lead is only pushable once both sides are in.
-  // This check picks it up immediately if the documents already exist; otherwise the
-  // document-upload flow (documentService.js) triggers the same check once they arrive.
-  (() => {
+  (async () => {
     try {
-      checkAndPushBumchumIfReady(userId);
+      await checkAndPushBumchumIfReady(userId);
     } catch (error) {
       logger.error(`[BUMCHUM] Failed to sync after KYC submit for User ${userId}: ${error.message}`);
     }
