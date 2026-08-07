@@ -149,7 +149,8 @@ const buildFinnauxPayload = async (
         'extras': {},
         'status': application?.status,
         'createdAt': application?.createdAt,
-        'updatedAt': application?.updatedAt
+        'updatedAt': application?.updatedAt,
+        'reloan': application?.reloan,
 
     };
     logger.info(`[FINNAUX MAPPING] ✅ Payload built for appId=${appId}`, {
