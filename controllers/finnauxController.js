@@ -216,6 +216,8 @@ const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
                 const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
                 base64Data = Buffer.from(response.data, 'binary').toString('base64');
                 if (!base64Data) return null;
+                if(doctype==='bankStatements')
+                    return { bankStatement: [base64Data, doc.fileName || null] };
                 return { [doctype]: [base64Data, doc.fileName || null] };
             }
             return null;
