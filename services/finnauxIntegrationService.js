@@ -370,7 +370,11 @@ const getBase64Documents = async(id)=>{
                 const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
                 base64Data = Buffer.from(response.data, 'binary').toString('base64');
                 if (!base64Data) return null;
-                documentBase64[doctype] = doctype==='salarySlips'? [[base64Data, doc.fileName || null]]:[base64Data, doc.fileName || null];
+                if(doctype==='bankStatements')
+                {
+                    documentBase64['bankStatement'] =  [[base64Data, doc.fileName || null]];
+                }
+                else documentBase64[doctype] = doctype==='salarySlips'? [[base64Data, doc.fileName || null]]:[base64Data, doc.fileName || null];
             }
             return null;
         } catch (err) {
