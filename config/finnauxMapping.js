@@ -84,9 +84,12 @@ const buildFinnauxPayload = async (
     latestLocation,
     panVerification,
     ipAddress,
+    utm
 ) => {
     const appId = application?.id || 'UNKNOWN';
     logger.info(`[FINNAUX MAPPING] Building payload for applicationId: ${appId}`);
+
+    console.log(utm,"[UTM here]")
 
     const payload = {
         "loanId": application?.id || null,
@@ -125,9 +128,9 @@ const buildFinnauxPayload = async (
         "aadhaarNo": aadhaarVerification?.aadhaarNumber || null,
         "panNo": panVerification?.panNumber || null,
         "profilePicture": null,
-       "aadhaarFront": null,
+        "aadhaarFront": null,
         "aadhaarBack": null, // Aadhaar is captured as a single scan, no separate back side
-       "panCard": null,
+        "panCard": null,
         "termsAccepted": true,
         "organizationName": business?.firmName || employee?.employerName || null,
         "officeEmail": null,
@@ -151,6 +154,11 @@ const buildFinnauxPayload = async (
         'createdAt': application?.createdAt,
         'updatedAt': application?.updatedAt,
         'reloan': application?.reloan,
+        'UTM_Source': utm?.utmSource,
+        'UTM_Medium': utm?.utmMedium,
+        'UTM_campaign': utm?.utmCampaign,
+        'UTM_terms': utm?.utmTerm,
+        'UTM_content': utm?.utmContent,
 
     };
     logger.info(`[FINNAUX MAPPING] ✅ Payload built for appId=${appId}`, {
