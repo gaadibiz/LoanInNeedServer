@@ -18,22 +18,42 @@ const requestPhoneOtp = asyncHandler(async (req, res) => {
 
 // Verify OTP
 const verifyPhoneOtp = asyncHandler(async (req, res) => {
-  const { phone, code } = req.body;
+  const { phone, code, utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent } = req.body;
   // Pass attribution if available (from middleware)
   const attribution = req.attribution || null;
+  const utm = { utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent };
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
-  const result = await authService.verifyPhoneOtp(phone, code, attribution);
+  const result = await authService.verifyPhoneOtp(phone, code, attribution, utm);
+  let {user} = result
   res.json(result);
+  (async () => {
+    try {
+      // Persist UTM attribution params (if the client sent any) for this user
+      await saveUtmIfPresent(user.id, utm);
+    } catch (error) {
+      console.log(error);
+    }
+    try {
+      console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
+      if (user) {
+        await sendLoanApplicationToBumchum(user.id, '');
+      }
+    } catch (error) {
+      console.log(error, "here is the error");
+    }
+
+  })();
 });
 
 //Register phone number without verification
 const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
-  console.log(req.body,"---->")
-  const { phone } = req.body;
+  console.log(req.body, "---->")
+  const { phone, utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent } = req.body;
   // Pass attribution if available (from middleware)
   const attribution = req.attribution || null;
+  const utm = { utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent };
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
-  const result = await authService.registerPhone(phone, attribution);
+  const result = await authService.registerPhone(phone, attribution, utm);
 
   // Merge in eligibility check (Step 2 payload may already be present in req.body).
   // Registration has already succeeded at this point, so we always respond 200
@@ -72,7 +92,7 @@ const MASTER_OTP = '261102';
 const verifyAadhaarOtp = asyncHandler(async (req, res) => {
   const { aadhaarNumber, otp } = req.body;
   const userId = req.user?.id;
-  
+
   if (!userId) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
@@ -109,10 +129,10 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
   }
 
   console.log(`[AUTH] Aadhaar Verified successfully for user: ${userId}`);
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: "Aadhaar verified successfully",
-    data: aadhaarDetails 
+    data: aadhaarDetails
   });
 });
 

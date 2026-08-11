@@ -212,6 +212,18 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
         throw new Error('User record not found in database.');
     }
 
+    let utm = await prisma.utm.findUnique({
+        where: { userId },
+        select: {
+            utmSource: true,
+            utmMedium: true,
+            utmCampaign: true,
+            utmId: true,
+            utmTerm: true,
+            utmContent: true,
+        }
+    });
+
     const phonePrefillData = user.phonePrefillDetail?.response || {};
     return buildFinnauxPayload(
         application,
@@ -223,7 +235,8 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
         phonePrefillData,
         latestLocation,
         panVerification,
-        ipAddress
+        ipAddress,
+        utm
     );
 };
 

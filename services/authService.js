@@ -4,8 +4,26 @@ const smsOtpService = require('../utils/smsOtpService');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { sendLoanApplicationToBumchum } = require('../services/loanService');
+const UtmModel = require('../models/utmModel');
 
 const TEST_PHONE_NUMBER = process.env.TEST_PHONE_NUMBER || null;
+
+// ==============================
+// Save UTM attribution params for a user, if any were sent
+// ==============================
+async function saveUtmIfPresent(userId, utm) {
+  if (!utm) return;
+
+  const hasUtm = Object.values(utm).some((value) => !!value);
+  if (!hasUtm) return;
+
+  try {
+    await UtmModel.saveUtm(userId, utm);
+    logger.info('UTM attribution saved for user %s: %o', userId, utm);
+  } catch (error) {
+    logger.error('Failed to save UTM attribution for user %s', userId, error);
+  }
+}
 
 // ==============================
 // Send OTP to Phone (SMS API)
@@ -19,7 +37,6 @@ async function requestPhoneOtp(phone) {
     logger.warn('Invalid phone number format: %s', targetPhone);
     throw new BadRequestError('Phone number must include country code, e.g., +919830069363');
   }
-
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({ where: { phone: targetPhone } });
   const isExistingUser = !!existingUser;
@@ -32,6 +49,7 @@ async function requestPhoneOtp(phone) {
 
   // Use new SMS OTP service
   await smsOtpService.sendOtp(targetPhone);
+
   logger.info('OTP sent successfully to %s (existingUser=%s)', targetPhone, isExistingUser);
 
   return { message: 'OTP sent successfully.', isExistingUser };
@@ -40,7 +58,7 @@ async function requestPhoneOtp(phone) {
 // ==============================
 // Verify OTP (SMS API) and Create or Update User
 // ==============================
-async function verifyPhoneOtp(phone, code, attribution = null) {
+async function verifyPhoneOtp(phone, code, attribution = null, utm = {}) {
   const targetPhone = phone;
   logger.info('Verifying OTP for phone: %s', targetPhone);
 
@@ -64,12 +82,14 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
   }
 
   // Check if user already exists
-  let user = await prisma.user.findUnique({ where: { phone: targetPhone } });
+  let user = await prisma.user.findUnique({ where: { phone: targetPhone }, select: { id: true, role: true } });
   if (user) {
     logger.info(`[AUTH SERVICE] Found user: ${user.phone}, Role: ${user.role}`);
   } else {
     logger.info(`[AUTH SERVICE] User not found for phone: ${targetPhone}, creating new...`);
   }
+
+
 
   if (!user) {
     // ✅ Fixed Concurrency Bug: Let Postgres generate the unique ID first, then update customUserId
@@ -116,6 +136,7 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
     logger.info(`Existing user attributed to Partner ${attribution.partnerId}`);
   }
 
+
   logger.info(`[AUTH SERVICE] Generating token for User: ${user.phone}, Role: ${user.role}`);
   const token = generateToken(user);
 
@@ -124,15 +145,6 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
   const hasPan = !!(await prisma.panVerification.findUnique({ where: { userId: user.id } }));
   const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
   const isProfileComplete = hasName && hasPan && hasAadhaar;
-
-  try {
-    console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
-    if (user) {
-      await sendLoanApplicationToBumchum(user.id, '');
-    }
-  } catch (error) {
-    console.log(error, "here is the error");
-  }
 
   return {
     message: 'Phone verified successfully.',
@@ -152,7 +164,7 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
 // ==============================
 // Register Phone number and Create or Update User
 // ==============================
-async function registerPhone(phone, attribution = null) {
+async function registerPhone(phone, attribution = null, utm = null) {
   logger.info('Register phone OTP for: %s', phone);
   const targetPhone = phone;
   logger.info('Requested phone: %s', targetPhone);
@@ -160,6 +172,9 @@ async function registerPhone(phone, attribution = null) {
   if (!targetPhone) {
     throw new BadRequestError('Phone is required.');
   }
+
+  // Persist UTM attribution params (if the client sent any) for this user
+  await saveUtmIfPresent(user.id, utm);
 
   // Check if user already exists
   let user = await prisma.user.findUnique({ where: { phone: targetPhone } });
