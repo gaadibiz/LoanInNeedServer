@@ -58,7 +58,7 @@ async function requestPhoneOtp(phone) {
 // ==============================
 // Verify OTP (SMS API) and Create or Update User
 // ==============================
-async function verifyPhoneOtp(phone, code, attribution = null, utm = {}) {
+async function verifyPhoneOtp(phone, code, attribution = null) {
   const targetPhone = phone;
   logger.info('Verifying OTP for phone: %s', targetPhone);
 
@@ -149,6 +149,7 @@ async function verifyPhoneOtp(phone, code, attribution = null, utm = {}) {
   return {
     message: 'Phone verified successfully.',
     user: {
+      userId: user.id,
       id: user.customUserId,
       phone: user.phone,
       role: user.role,
@@ -164,7 +165,7 @@ async function verifyPhoneOtp(phone, code, attribution = null, utm = {}) {
 // ==============================
 // Register Phone number and Create or Update User
 // ==============================
-async function registerPhone(phone, attribution = null, utm = null) {
+async function registerPhone(phone, attribution = null) {
   logger.info('Register phone OTP for: %s', phone);
   const targetPhone = phone;
   logger.info('Requested phone: %s', targetPhone);
@@ -173,10 +174,7 @@ async function registerPhone(phone, attribution = null, utm = null) {
     throw new BadRequestError('Phone is required.');
   }
 
-  // Persist UTM attribution params (if the client sent any) for this user
-  await saveUtmIfPresent(user.id, utm);
-
-  // Check if user already exists
+// Check if user already exists
   let user = await prisma.user.findUnique({ where: { phone: targetPhone } });
   if (user) {
     logger.info(`[AUTH SERVICE] Found user: ${user.phone}, Role: ${user.role}`);
