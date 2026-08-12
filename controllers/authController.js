@@ -25,6 +25,7 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   const utm = { utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent };
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
   const result = await authService.verifyPhoneOtp(phone, code, attribution, utm);
+  res.json(result);
   let {user} = result;
   (async () => {
     

@@ -212,14 +212,6 @@ async function saveFullKYC(userId, data) {
     { timeout: parseInt(process.env.DB_TRANSACTION_TIMEOUT_MS) || 50000 } // Configurable timeout
   );
 
-  (async () => {
-    try {
-      await checkAndPushBumchumIfReady(userId);
-    } catch (error) {
-      logger.error(`[BUMCHUM] Failed to sync after KYC submit for User ${userId}: ${error.message}`);
-    }
-  })();
-
   return result;
 }
 

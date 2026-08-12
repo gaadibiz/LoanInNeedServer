@@ -11,6 +11,7 @@ const kycService = require('../services/kycService'); // Import generic service 
 
 
 const surepassService = require('../services/surepassService'); // Import Surepass Service
+const { checkAndPushBumchumIfReady } = require('../services/loanService');
 
 /**
  * Controller to handle full KYC submission (Employment + Address + Loan)
@@ -43,11 +44,19 @@ exports.submitKYC = async (req, res, next) => {
 
     logger.info('✅ [KYC] Full KYC saved successfully for userId=%s', userId);
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: 'Full KYC details saved successfully ✔️',
       data: result
     });
+
+    (async () => {
+    try {
+      await checkAndPushBumchumIfReady(userId);
+    } catch (error) {
+      logger.error(`[BUMCHUM] Failed to sync after KYC submit for User ${userId}: ${error.message}`);
+    }
+  })();
 
   } catch (error) {
     // ✅ Fixed log to always use userId
