@@ -7,6 +7,7 @@ const aadhaarService = require('../services/aadharService');
 const AadhaarModel = require('../models/aadhaarModel');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const UserModel = require('../models/userModel');
+const { sendLoanApplicationToBumchum } = require('../services/loanService');
 
 require('dotenv').config()
 // Request OTP
@@ -24,19 +25,19 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   const utm = { utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent };
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
   const result = await authService.verifyPhoneOtp(phone, code, attribution, utm);
-  let {user} = result
-  res.json(result);
+  let {user} = result;
   (async () => {
+    
     try {
       // Persist UTM attribution params (if the client sent any) for this user
-      await authService.saveUtmIfPresent(user.id, utm);
+      await authService.saveUtmIfPresent(user.userId, utm);
     } catch (error) {
-      console.log(error,"[ERROR] Error saving UTM params");
+      console.log(error, "[ERROR] Error saving UTM params");
     }
     try {
       console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
       if (user) {
-        await sendLoanApplicationToBumchum(user.id, '');
+        await sendLoanApplicationToBumchum(user.userId, '');
       }
     } catch (error) {
       console.log(error, "[ERROR] Error sending loan application to Bumchum");
@@ -48,18 +49,18 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
 //Register phone number without verification
 const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   console.log(req.body, "---->")
-  const { phone, utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent } = req.body;
+  const { phone} = req.body;
   // Pass attribution if available (from middleware)
   const attribution = req.attribution || null;
-  const utm = { utmSource, utmMedium, utmCampaign, utmId, utmTerm, utmContent };
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
-  const result = await authService.registerPhone(phone, attribution, utm);
+  const result = await authService.registerPhone(phone, attribution);
 
   // Merge in eligibility check (Step 2 payload may already be present in req.body).
   // Registration has already succeeded at this point, so we always respond 200
   // regardless of the eligibility outcome.
   const { statusCode, ...eligibility } = evaluateEligibility(req.body);
   res.json({ ...result, ...eligibility });
+
 });
 
 // Validate Aadhaar existence via Surepass (no DB write — for real-time frontend check)
