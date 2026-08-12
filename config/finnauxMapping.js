@@ -142,11 +142,11 @@ const buildFinnauxPayload = async (
         "reason": application?.reason || null,
         "employeeName": application?.employeeName || null,
         "ipAddress": ipAddress || null,
-        "utmSource": null,
-        "utmMedium": null,
-        "utmCampaign": null,
-        "utmTerms": null,
-        "utmContent": null,
+        "utmSource": utm?.utmSource || null,
+        "utmMedium": utm?.utmMedium || null,
+        "utmCampaign": utm?.utmCampaign || null,
+        "utmTerms": utm?.utmTerm || null,
+        "utmContent": utm?.utmContent || null,
         "riskFactor": null, // Not collected yet
         'phonePrefill': phonePrefillData || {},
         'extras': {},
@@ -154,12 +154,6 @@ const buildFinnauxPayload = async (
         'createdAt': application?.createdAt,
         'updatedAt': application?.updatedAt,
         'reloan': application?.reloan,
-        'UTM_Source': utm?.utmSource,
-        'UTM_Medium': utm?.utmMedium,
-        'UTM_campaign': utm?.utmCampaign,
-        'UTM_terms': utm?.utmTerm,
-        'UTM_content': utm?.utmContent,
-
     };
     logger.info(`[FINNAUX MAPPING] ✅ Payload built for appId=${appId}`, {
         payload: {
