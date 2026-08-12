@@ -261,4 +261,4 @@ async function registerPhone(phone, attribution = null, utm = null) {
   };
 }
 
-module.exports = { requestPhoneOtp, verifyPhoneOtp, registerPhone };
+module.exports = { requestPhoneOtp, verifyPhoneOtp, registerPhone,saveUtmIfPresent };

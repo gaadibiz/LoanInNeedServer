@@ -29,9 +29,9 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   (async () => {
     try {
       // Persist UTM attribution params (if the client sent any) for this user
-      await saveUtmIfPresent(user.id, utm);
+      await authService.saveUtmIfPresent(user.id, utm);
     } catch (error) {
-      console.log(error);
+      console.log(error,"[ERROR] Error saving UTM params");
     }
     try {
       console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
@@ -39,7 +39,7 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
         await sendLoanApplicationToBumchum(user.id, '');
       }
     } catch (error) {
-      console.log(error, "here is the error");
+      console.log(error, "[ERROR] Error sending loan application to Bumchum");
     }
 
   })();
