@@ -149,7 +149,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         success: true,
         count: data.length,
         totalCount,
-        hasMore: offset + data.length < totalCount,
         data
     });
 });
