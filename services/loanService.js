@@ -202,6 +202,18 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         }
     });
 
+    let utm = await prisma.utm.findUnique({
+        where: { userId },
+        select: {
+            utmSource: true,
+            utmMedium: true,
+            utmCampaign: true,
+            utmId: true,
+            utmTerm: true,
+            utmContent: true,
+        }
+    });
+
     console.log(process.env.BUMCHUM_SAVE_LEAD_BASE_URL)
     try {
         await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL, {
@@ -222,6 +234,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             form_name: 'LOAN_IN_NEED',
             incoming_request: 'LOAN_IN_NEED',
             category_name: 'Loan Application',
+            ...utm
         }, {
             headers: {
                 'auth-Key': process.env.BUMCHUM_AUTH_KEY,
