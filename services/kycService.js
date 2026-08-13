@@ -194,8 +194,8 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Queue for Finnaux Integration ----------
-      const finnauxRawRequest = await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx);
-      await tx.finnauxIntegrationJob.create({
+      const finnauxRawRequest = data.submitted==='true'? await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx):null
+      finnauxRawRequest ? (await tx.finnauxIntegrationJob.create({
         data: {
           ipAddress: data?.ipAddress || '',
           userId,
@@ -203,7 +203,7 @@ async function saveFullKYC(userId, data) {
           status: 'PENDING',
           rawRequest: JSON.parse(JSON.stringify(finnauxRawRequest))
         }
-      });
+      })) : null;
       logger.info('✅ Finnaux Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Return ----------
