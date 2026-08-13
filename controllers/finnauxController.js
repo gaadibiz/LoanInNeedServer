@@ -99,13 +99,11 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
  * @access  Private (API Key)
  */
 const MAX_FINNAUX_RANGE_DAYS = 31;
-const DEFAULT_FINNAUX_PAGE_LIMIT = 10;
-const MAX_FINNAUX_PAGE_LIMIT = 100;
 
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const { id } = req.params
 
-    const { from, to, page, pageLimit } = req.query;
+    const { from, to } = req.query;
 
     const hasId = !!id;
     const hasDateRange = !!from && !!to;
@@ -131,17 +129,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         }
     }
 
-
-
-    //const rangeDays = (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
-    // if (rangeDays > MAX_FINNAUX_RANGE_DAYS) {
-    //     throw new BadRequestError(`Date range too large. Maximum allowed range is ${MAX_FINNAUX_RANGE_DAYS} days — split the request into smaller windows.`);
-    // }
-
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limit = Math.min(MAX_FINNAUX_PAGE_LIMIT, Math.max(1, parseInt(pageLimit, 10) || DEFAULT_FINNAUX_PAGE_LIMIT));
-    const offset = (pageNum - 1) * limit;
-
     const where = !id && (fromDate && toDate) ? { createdAt: { gte: fromDate, lte: toDate } } : id ? { applicationId: parseInt(id) } : {}
 
     const [totalCount, jobs] = await Promise.all([
@@ -149,8 +136,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         prisma.finnauxIntegrationJob.findMany({
             where,
             orderBy: { createdAt: 'asc' },
-            skip: offset,
-            take: limit,
             select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true }
         })
     ]);
@@ -164,8 +149,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         success: true,
         count: data.length,
         totalCount,
-        page: pageNum,
-        pageLimit: limit,
         hasMore: offset + data.length < totalCount,
         data
     });
