@@ -1,4 +1,5 @@
 const PhonePrefillModel = require('../models/phonePrefillModel');
+const addressDetail = require('../models/adressModel');
 const UserModel = require('../models/userModel');
 const PanModel = require('../models/panModel');
 const signzyService = require('./signzyService');
@@ -46,6 +47,23 @@ class PhonePrefillService {
 
     const response = await signzyService.getPhonePrefillDetails(requestPayload);
 
+    let primaryAddress = {};
+    response?.address?.map(async (address) => {
+      if (address.Type === 'Primary') {
+        try {
+          primaryAddress = {
+            "state": address.State,
+            "postalCode": address.Postal,
+            "currentAddress": address.Address,
+            "permanentAddress": address.Address,
+          }
+          await addressDetail.upsertAddress(userId, primaryAddress)
+        } catch (e) {
+          console.log(e, "----><")
+        }
+      }
+    })
+
     const saved = await PhonePrefillModel.savePrefillDetails(userId, {
       phoneNumber: user.phone,
       pan: requestPayload.pan,
@@ -59,8 +77,6 @@ class PhonePrefillService {
     return response;
   }
 
-
-
   /**
    * Get previously saved prefill details for a user.
    */
@@ -70,16 +86,5 @@ class PhonePrefillService {
     return record;
   }
 }
-
-// const phonePrefillService = new PhonePrefillService();
-
-// (async () => {
-//   try {
-//     const details = await phonePrefillService.fetchAndSavePrefillDetails(1);
-//     console.log(details);
-//   } catch (err) {
-//     console.error(err);
-//   }
-// })();
 
 module.exports = new PhonePrefillService();
