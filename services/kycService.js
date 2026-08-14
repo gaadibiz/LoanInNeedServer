@@ -15,7 +15,7 @@ async function saveFullKYC(userId, data) {
   if (!userId) {
     throw new BadRequestError('User ID is required ❌');
   }
-
+  console.log(data,"DATA PRESENTS HERE")
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
   const result = await prisma.$transaction(
     async tx => {
@@ -194,8 +194,8 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Queue for Finnaux Integration ----------
-      const finnauxRawRequest =  (await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx))
-      (await tx.finnauxIntegrationJob.create({
+      const finnauxRawRequest= await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx)
+     await tx.finnauxIntegrationJob.create({
         data: {
           ipAddress: data?.ipAddress || '',
           userId,
@@ -203,7 +203,7 @@ async function saveFullKYC(userId, data) {
           status: 'PENDING',
           rawRequest: JSON.parse(JSON.stringify(finnauxRawRequest))
         }
-      })) 
+      })
       logger.info('✅ Finnaux Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Return ----------
@@ -214,5 +214,23 @@ async function saveFullKYC(userId, data) {
 
   return result;
 }
+
+(async()=>{
+  await saveFullKYC(5,{
+      companyName: '-',
+  companyAddress: 'Bangalore',
+  monthlyIncome: 30000,
+  stability: 'STABLE',
+  currentAddress: '',
+  currentAddressType: 'OWNER_SELF_OR_FAMILY',
+  permanentAddress: '',
+  currentPostalCode: '',
+  loanAmount: 50000,
+  purpose: 'Education',
+  employmentType: 'SALARIED',
+  ipAddress: '106.219.123.198',
+  submitted: true
+  })
+  })();
 
 module.exports = { saveFullKYC };
