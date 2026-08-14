@@ -194,8 +194,9 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Queue for Finnaux Integration ----------
-      const finnauxRawRequest= await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx)
-     await tx.finnauxIntegrationJob.create({
+      const isSubmitted = data.submitted === true || data.submitted === 'true';
+      const finnauxRawRequest = isSubmitted ? (await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx)): null
+      isSubmitted ? (await tx.finnauxIntegrationJob.create({
         data: {
           ipAddress: data?.ipAddress || '',
           userId,
@@ -203,7 +204,7 @@ async function saveFullKYC(userId, data) {
           status: 'PENDING',
           rawRequest: JSON.parse(JSON.stringify(finnauxRawRequest))
         }
-      })
+      })) : null
       logger.info('✅ Finnaux Integration Job queued for userId=%s appId=%s', userId, application.id);
 
       // ---------- Return ----------
@@ -214,23 +215,5 @@ async function saveFullKYC(userId, data) {
 
   return result;
 }
-
-(async()=>{
-  await saveFullKYC(5,{
-      companyName: '-',
-  companyAddress: 'Bangalore',
-  monthlyIncome: 30000,
-  stability: 'STABLE',
-  currentAddress: '',
-  currentAddressType: 'OWNER_SELF_OR_FAMILY',
-  permanentAddress: '',
-  currentPostalCode: '',
-  loanAmount: 50000,
-  purpose: 'Education',
-  employmentType: 'SALARIED',
-  ipAddress: '106.219.123.198',
-  submitted: true
-  })
-  })();
 
 module.exports = { saveFullKYC };

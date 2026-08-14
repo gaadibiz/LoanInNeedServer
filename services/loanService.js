@@ -388,24 +388,6 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
         logger.error(`[LOAN] Failed to queue LOS Integration Job for App ${application.id}: ${error.message}`);
     }
 
-    // --- FINNAUX INTEGRATION ---
-    try {
-        const rawRequest = await buildFinnauxJobPayload(userId, application.id, ipAddress);
-        await prisma.finnauxIntegrationJob.create({
-            data: {
-                userId,
-                ipAddress: ipAddress,
-                applicationId: application.id,
-                status: 'PENDING',
-                ...updated_documents,
-                rawRequest: JSON.parse(JSON.stringify(rawRequest))
-            }
-        });
-        logger.info(`[LOAN] Created Finnaux Integration Job for Application ${application.id}`);
-    } catch (error) {
-        logger.error(`[LOAN] Failed to queue Finnaux Integration Job for App ${application.id}: ${error.message}`);
-    }
-
     // 4. Log Event
     if (partnerId) {
         await prisma.attributionLog.create({
