@@ -59,6 +59,20 @@ function evaluateEligibility({
     return { statusCode: 400, error: "Invalid eligibility parameters provided." };
 }
 
+// Builds the frontend /signup deep link, carrying forward the Step 2 payload
+// so the user isn't asked to re-enter it after registering their phone.
+function buildSignupRedirectUrl({ loanAmount, purposeOfLoan, occupation, monthlySalaryRange, salaryReceivedIn, city, phone } = {}) {
+    const FRONTEND_URL = (process.env.FRONTEND_URL || "https://test.loaninneed.in") + '/login'
+
+    const params = { loanAmount, purposeOfLoan, occupation, monthlySalaryRange, salaryReceivedIn, city, phone };
+    const query = Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => `${key}=${encodeURI(value)}`)
+        .join('&');
+
+    return `${FRONTEND_URL}/signup${query ? `?${query}` : ''}`;
+}
+
 async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
     console.log(userId);
     const user = await prisma.user.findUnique({
@@ -425,6 +439,7 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
 module.exports = {
     createLoanApplication,
     evaluateEligibility,
+    buildSignupRedirectUrl,
     sendLoanApplicationToBumchum,
     checkAndPushBumchumIfReady
 };

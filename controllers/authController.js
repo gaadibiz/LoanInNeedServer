@@ -1,6 +1,6 @@
 // controllers/authController.js
 const authService = require('../services/authService');
-const { evaluateEligibility } = require('../services/loanService');
+const { evaluateEligibility, buildSignupRedirectUrl } = require('../services/loanService');
 const asyncHandler = require('express-async-handler'); // cleaner try/catch
 const surepassService = require('../services/surepassService');
 const aadhaarService = require('../services/aadharService');
@@ -60,7 +60,8 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   // Registration has already succeeded at this point, so we always respond 200
   // regardless of the eligibility outcome.
   const { statusCode, ...eligibility } = evaluateEligibility(req.body);
-  res.json({ ...result, ...eligibility });
+  const redirectUrl = buildSignupRedirectUrl({ ...req.body, phone });
+  res.json({ ...result, ...eligibility, redirectUrl });
 
 });
 

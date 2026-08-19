@@ -236,15 +236,6 @@ async function registerPhone(phone, attribution = null) {
   const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
   const isProfileComplete = hasName && hasPan && hasAadhaar;
 
-  try {
-    console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
-    if (user) {
-      await sendLoanApplicationToBumchum(user.id, '');
-    }
-  } catch (error) {
-    console.log(error, "here is the error");
-  }
-
   return {
     message: 'Phone verified successfully.',
     user: {
