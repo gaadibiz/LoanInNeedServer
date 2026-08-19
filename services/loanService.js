@@ -62,7 +62,7 @@ function evaluateEligibility({
 // Builds the frontend /signup deep link, carrying forward the Step 2 payload
 // so the user isn't asked to re-enter it after registering their phone.
 function buildSignupRedirectUrl({ loanAmount, purposeOfLoan, occupation, monthlySalaryRange, salaryReceivedIn, city, phone } = {}) {
-    const FRONTEND_URL = (process.env.FRONTEND_URL || "https://test.loaninneed.in") 
+    const FRONTEND_URL = process.env.FRONTEND_URL || "https://test.loaninneed.in"
 
     const params = { loanAmount, purposeOfLoan, occupation, monthlySalaryRange, salaryReceivedIn, city, phone };
     const query = Object.entries(params)
@@ -70,7 +70,7 @@ function buildSignupRedirectUrl({ loanAmount, purposeOfLoan, occupation, monthly
         .map(([key, value]) => `${key}=${encodeURI(value)}`)
         .join('&');
 
-    return `${FRONTEND_URL}/signup${query ? `?${query}` : ''}`;
+    return `${FRONTEND_URL}/login${query ? `?${query}` : ''}`;
 }
 
 async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
