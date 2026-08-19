@@ -69,7 +69,6 @@ function buildSignupRedirectUrl({ loanAmount, purposeOfLoan, occupation, monthly
         .filter(([, value]) => value !== undefined && value !== null && value !== '')
         .map(([key, value]) => `${key}=${encodeURI(value)}`)
         .join('&');
-
     return `${FRONTEND_URL}/login${query ? `?${query}` : ''}`;
 }
 
