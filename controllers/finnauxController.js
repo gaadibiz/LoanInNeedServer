@@ -247,8 +247,8 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         reason
     } = req.body
     req.body.id = id
-    let finnauxApplicationNumber = applicationNo
-    req.body.finnauxApplicationNumber = applicationNo
+    let finnauxApplicationNumber =  applicationNo
+    req.body.finnauxApplicationNumber =  applicationNo
 
     if (!id || !status) {
         throw new BadRequestError('Both "id" and "status" are required in the request body.');
@@ -308,6 +308,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         data: [{
             id: updatedApplication.id,
             status: updatedApplication.status,
+            applicationNumber:updatedApplication.finnauxApplicationNumber,
             applicationNo: updatedApplication.finnauxApplicationNumber,
             ...req.body
         }]
