@@ -5,6 +5,7 @@ const PanModel = require('../models/panModel');
 const signzyService = require('./signzyService');
 const logger = require('../utils/logger');
 const { BadRequestError, NotFoundError } = require('../GlobalExceptionHandler/exception');
+const prisma = require('../utils/prismaClient');
 
 class PhonePrefillService {
   /**
@@ -20,7 +21,7 @@ class PhonePrefillService {
   }
 
   /**
-   * Fetch prefill details for a user from Signzy (using their phone/name/PAN
+   * Fetch prefill details for a user from Signzy (using their phone/name
    * already on file) and persist the raw response as-is in a dedicated table.
    */
   async fetchAndSavePrefillDetails(userId) {
@@ -39,14 +40,18 @@ class PhonePrefillService {
     }
     let phone = getLastTenDigits(user.phone);
     const requestPayload = {
-      phoneNumber: phone,
-      firstName,
-      lastName,
-      pan: panRecord?.panNumber,
+      mobileNumber: phone,
+      fullName: 'SATHISH KUMAR',
+      consent: {
+        consentFlag: 'true',
+        consentTimestamp: 1100,
+        consentIpAddress: '684D:1111:222:3333:4444:5555:6:77',
+        consentMessageId: 'CM_1',
+      },
     };
 
     const response = await signzyService.getPhonePrefillDetails(requestPayload);
-
+    
     let primaryAddress = {};
     response?.address?.map(async (address) => {
       if (address.Type === 'Primary') {
@@ -66,7 +71,7 @@ class PhonePrefillService {
 
     const saved = await PhonePrefillModel.savePrefillDetails(userId, {
       phoneNumber: user.phone,
-      pan: requestPayload.pan,
+      pan: panRecord?.panNumber,
       firstName,
       lastName,
       response,

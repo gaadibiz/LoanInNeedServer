@@ -113,13 +113,12 @@ class SignZyService {
    * @param {{ phoneNumber: string, firstName: string, lastName?: string, pan?: string }} params
    * @returns {Promise<Object>} the raw `response` object from Signzy
    */
-  async getPhonePrefillDetails({ phoneNumber, firstName, lastName, pan }) {
+  async getPhonePrefillDetails({ mobileNumber, fullName,consent }) {
     try {
       const response = await this.phonePrefillBreaker.fire({
-        phoneNumber,
-        firstName,
-        ...(lastName ? { lastName } : {}),
-        ...(pan ? { pan } : {}),
+        mobileNumber,
+        fullName,
+        consent,
       });
 
       const result = response?.data?.response;
