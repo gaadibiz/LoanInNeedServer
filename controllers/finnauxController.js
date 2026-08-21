@@ -230,6 +230,16 @@ const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
  */
 const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    /**{
+    "employeeName": "Test",
+    "id": "24",
+    "status": "PENDING",
+    "employeeId": "",
+    "applicationNumber": "ABC",
+    "reason": "test",
+    "loanNo": "LoanAcNo"
+	
+  } */
     let {
         employeeName,
         status,
@@ -298,7 +308,8 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         data: [{
             id: updatedApplication.id,
             status: updatedApplication.status,
-            applicationNo: updatedApplication.finnauxApplicationNumber
+            applicationNo: updatedApplication.finnauxApplicationNumber,
+            ...req.body
         }]
     });
 });
