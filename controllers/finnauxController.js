@@ -146,7 +146,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     ]);
 
     let documents = id ? await getBase64Documents(id) : {};
-    let data = jobs.map(job => ({ ...job.rawRequest, ...documents,phonePrefill:{} }));
+    let data = jobs.map(job => ({ ...job.rawRequest, ...documents}));
 
     //  const data = await buildFinnauxJobPayloadsBatch(jobs);
 
