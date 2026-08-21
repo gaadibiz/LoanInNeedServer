@@ -134,7 +134,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const where = {
         ...(!id && fromDate && toDate ? {
             createdAt: { gte: fromDate, lte: toDate },
-            rawRequest: { path: ['status'], equals: 'PENDING' }
         } : id ? { applicationId: parseInt(id) } : {}),
     };
 
