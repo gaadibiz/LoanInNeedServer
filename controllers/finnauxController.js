@@ -98,7 +98,6 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
  * @route   GET /api/finnaux/payloads?from=<ISO date>&to=<ISO date>&page=&pageLimit=
  * @access  Private (API Key)
  */
-const MAX_FINNAUX_RANGE_DAYS = 31;
 
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const { id } = req.params
@@ -147,7 +146,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     ]);
 
     let documents = id ? await getBase64Documents(id) : {};
-    let data = jobs.map(job => ({ ...job.rawRequest, ...documents }));
+    let data = jobs.map(job => ({ ...job.rawRequest, ...documents,phonePrefill:{} }));
 
     //  const data = await buildFinnauxJobPayloadsBatch(jobs);
 
