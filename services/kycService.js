@@ -177,7 +177,7 @@ async function saveFullKYC(userId, data) {
       logger.info('✅ LoanApplication synced for userId=%s appId=%s', userId, application.id);
 
       try {
-        await phonePrefillService.fetchAndSavePrefillDetails(userId);
+        await phonePrefillService.fetchAndSavePrefillDetails(userId, tx);
         logger.info(`[LOAN] Phone prefill details fetched and saved for User ${userId}`);
       } catch (error) {
         logger.error(`[LOAN] Failed to fetch/save phone prefill details for User ${userId}: ${error.message}`);

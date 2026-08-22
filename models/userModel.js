@@ -17,8 +17,8 @@ const UserModel = {
   },
 
   // Find user by ID
-  async findUserById(id) {
-    return prisma.user.findUnique({ where: { id: Number(id) } });
+  async findUserById(id, tx = prisma) {
+    return tx.user.findUnique({ where: { id: Number(id) } });
   },
 
   // Update user (transactional)

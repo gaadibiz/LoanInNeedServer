@@ -24,15 +24,15 @@ class PhonePrefillService {
    * Fetch prefill details for a user from Signzy (using their phone/name
    * already on file) and persist the raw response as-is in a dedicated table.
    */
-  async fetchAndSavePrefillDetails(userId) {
-    const user = await UserModel.findUserById(userId);
+  async fetchAndSavePrefillDetails(userId, tx = prisma) {
+    const user = await UserModel.findUserById(userId, tx);
     if (!user) throw new NotFoundError('User not found');
     if (!user.phone) throw new BadRequestError('User phone number is required for prefill');
 
     const { firstName, lastName } = this.splitName(user.name);
     if (!firstName) throw new BadRequestError('User first name is required for prefill');
 
-    const panRecord = await PanModel.findByUserId(userId);
+    const panRecord = await PanModel.findByUserId(userId, tx);
 
     function getLastTenDigits(phone) {
       const digits = phone.replace(/\D/g, '');
@@ -53,21 +53,20 @@ class PhonePrefillService {
     const response = await signzyService.getPhonePrefillDetails(requestPayload);
     
     let primaryAddress = {};
-    response?.address?.map(async (address) => {
-      if (address.Type === 'Primary') {
-        try {
-          primaryAddress = {
-            "state": address.State,
-            "postalCode": address.Postal,
-            "currentAddress": address.Address,
-            "permanentAddress": address.Address,
-          }
-          await addressDetail.upsertAddress(userId, primaryAddress)
-        } catch (e) {
-          console.log(e, "----><")
+    const primaryAddressEntry = response?.address?.find((address) => address.Type === 'Primary');
+    if (primaryAddressEntry) {
+      try {
+        primaryAddress = {
+          "state": primaryAddressEntry.State,
+          "postalCode": primaryAddressEntry.Postal,
+          "currentAddress": primaryAddressEntry.Address,
+          "permanentAddress": primaryAddressEntry.Address,
         }
+        await addressDetail.upsertAddress(userId, primaryAddress, tx)
+      } catch (e) {
+        console.log(e, "----><")
       }
-    })
+    }
 
     const saved = await PhonePrefillModel.savePrefillDetails(userId, {
       phoneNumber: user.phone,
@@ -75,7 +74,7 @@ class PhonePrefillService {
       firstName,
       lastName,
       response,
-    });
+    }, tx);
 
     logger.info(`[PHONE_PREFILL] Details fetched and saved for user ${userId}`);
 
