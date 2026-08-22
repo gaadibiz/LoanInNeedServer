@@ -51,9 +51,14 @@ class PhonePrefillService {
     };
 
     const response = await signzyService.getPhonePrefillDetails(requestPayload);
-    
+
     let primaryAddress = {};
-    const primaryAddressEntry = response?.address?.find((address) => address.Type === 'Primary');
+    let primaryAddressEntry = response?.address?.find((address) => address.Type === 'Primary');
+    if (!primaryAddressEntry && response?.address?.length) {
+      primaryAddressEntry = response.address.reduce((latest, address) => {
+        return new Date(address?.ReportedDate) > new Date(latest?.ReportedDate) ? address : latest;
+      });
+    }
     if (primaryAddressEntry) {
       try {
         primaryAddress = {
