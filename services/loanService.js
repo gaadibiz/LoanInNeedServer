@@ -164,6 +164,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         select: {
             city: true,
             state: true,
+            permanentAddress:true,
+            currentAddressType:true,
             postalCode: true,
         }
     });
