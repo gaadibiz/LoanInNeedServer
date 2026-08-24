@@ -5,7 +5,7 @@ const { sendApplicationToFinnaux } = require('./finnauxApiClient');
 const { default: axios } = require('axios');
 
 // Maximum times a job will be attempted before marking as permanently FAILED
-const MAX_FAILURES = 7;
+const MAX_FAILURES = 2;
 
 // Cap on concurrent payload builds so a large date-range export doesn't fire
 // hundreds of simultaneous document downloads at DigitalOcean Spaces.
