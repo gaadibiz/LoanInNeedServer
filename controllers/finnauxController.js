@@ -141,12 +141,12 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         prisma.finnauxIntegrationJob.findMany({
             where,
             orderBy: { createdAt: 'asc' },
-            select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true }
+            select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true,rawResponse:true }
         })
     ]);
 
     let documents = id ? await getBase64Documents(id) : {};
-    let data = jobs.map(job => ({ ...job.rawRequest, ...documents}));
+    let data = jobs.map(job => ({ ...job.rawRequest, ...documents,...job.rawResponse}));
 
     //  const data = await buildFinnauxJobPayloadsBatch(jobs);
 
