@@ -118,6 +118,7 @@ const buildFinnauxPayload = async (
         "landmark": null, // Not collected yet
         "pinCode": address?.postalCode || null,
         "area": address?.city || null,
+        "city": address?.city || null,
         "district": null, // Not collected yet
         "state": address?.state || null,
         "geolocation": {
