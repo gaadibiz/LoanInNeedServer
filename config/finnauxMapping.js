@@ -114,7 +114,7 @@ const buildFinnauxPayload = async (
         "ifscCode": null, // Not collected yet
         "bankName": null, // Not collected yet
         "address1": address?.currentAddress || null,
-        "address2": '',
+        "address2": '' ,
         "landmark": null, // Not collected yet
         "pinCode": address?.postalCode || null,
         "area": address?.city || null,
