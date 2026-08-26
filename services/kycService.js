@@ -15,7 +15,7 @@ async function saveFullKYC(userId, data) {
   if (!userId) {
     throw new BadRequestError('User ID is required ❌');
   }
-  console.log(data,"DATA PRESENTS HERE")
+
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
   const result = await prisma.$transaction(
     async tx => {

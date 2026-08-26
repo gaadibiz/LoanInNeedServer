@@ -156,7 +156,6 @@ class AadhaarService {
     let eAadhaar;
     try {
       eAadhaar = await signzyService.getEAadhaarDetails(requestId);
-      console.log("RAW_EAADHAR", eAadhaar)
     } catch (err) {
       await UserModel.updateUser(user.id, { digilockerStatus: 'FETCH_FAILED' });
       logger.error(`[DIGILOCKER] Get e-Aadhaar failed for user ${user.id}, requestId=${requestId}: ${err.message}`);

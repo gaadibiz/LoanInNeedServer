@@ -45,7 +45,6 @@ class SurepassService {
       };
     }
 
-    console.log(panNumber.toUpperCase(),"----------------")
 
     try {
       const response = await this.panBreaker.fire({

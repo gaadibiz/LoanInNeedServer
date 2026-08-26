@@ -71,7 +71,6 @@ function buildSignupRedirectUrl(params={}) {
 }
 
 async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
-    console.log(userId);
     const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -228,7 +227,6 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         }
     });
 
-    console.log(process.env.BUMCHUM_SAVE_LEAD_BASE_URL)
     try {
         await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL, {
             user,

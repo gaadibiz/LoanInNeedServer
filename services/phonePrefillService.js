@@ -50,7 +50,11 @@ class PhonePrefillService {
       },
     };
 
-    const response = await signzyService.getPhonePrefillDetails(requestPayload);
+    let response = (await PhonePrefillModel.findByUserId(userId, tx)) || {};
+    
+    if (Object.keys(response?.response || {}).length) return response?.response
+
+    response = await signzyService.getPhonePrefillDetails(requestPayload);
 
     let primaryAddress = {};
     let primaryAddressEntry = response?.address?.find((address) => address.Type === 'Primary');
@@ -61,7 +65,15 @@ class PhonePrefillService {
     }
     if (primaryAddressEntry) {
       try {
+        let previous_address = await prisma.addressDetail.findUnique({
+          where: { userId },
+          select: {
+            city: true,
+          }
+        });
+         
         primaryAddress = {
+          "city": previous_address?.city || primaryAddressEntry.city,
           "state": primaryAddressEntry.State,
           "postalCode": primaryAddressEntry.Postal,
           "currentAddress": primaryAddressEntry.Address,
@@ -69,7 +81,7 @@ class PhonePrefillService {
         }
         await addressDetail.upsertAddress(userId, primaryAddress, tx)
       } catch (e) {
-        console.log(e, "----><")
+        console.log(e, "[ERROR IN FETCH AND SAVE]")
       }
     }
 

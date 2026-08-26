@@ -352,7 +352,6 @@ const getBase64Documents = async (id) => {
             bankStatementDocumentId: true,
         }
     });
-    console.log(documentsInfo);
 
     if (!documentsInfo) {
         throw new NotFoundError(`Finnaux integration job not found for applicationId: ${id}`);
