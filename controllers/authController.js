@@ -54,7 +54,7 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   // Pass attribution if available (from middleware)
   const attribution = req.attribution || null;
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
-  const result = await authService.registerPhone(phone, attribution);
+  const result = await authService.registerPhone(phone, attribution,req.body);
 
   // Merge in eligibility check (Step 2 payload may already be present in req.body).
   // Registration has already succeeded at this point, so we always respond 200

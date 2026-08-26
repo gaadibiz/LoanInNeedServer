@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { sendLoanApplicationToBumchum } = require('../services/loanService');
 const UtmModel = require('../models/utmModel');
+const AddressModel = require('../models/adressModel');
 
 const TEST_PHONE_NUMBER = process.env.TEST_PHONE_NUMBER || null;
 
@@ -165,7 +166,7 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
 // ==============================
 // Register Phone number and Create or Update User
 // ==============================
-async function registerPhone(phone, attribution = null) {
+async function registerPhone(phone, attribution = null,data) {
   logger.info('Register phone OTP for: %s', phone);
   const targetPhone = phone;
   logger.info('Requested phone: %s', targetPhone);
@@ -174,7 +175,7 @@ async function registerPhone(phone, attribution = null) {
     throw new BadRequestError('Phone is required.');
   }
 
-// Check if user already exists
+  // Check if user already exists
   let user = await prisma.user.findUnique({ where: { phone: targetPhone } });
   if (user) {
     logger.info(`[AUTH SERVICE] Found user: ${user.phone}, Role: ${user.role}`);
@@ -236,6 +237,14 @@ async function registerPhone(phone, attribution = null) {
   const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
   const isProfileComplete = hasName && hasPan && hasAadhaar;
 
+  if (data && data?.city) {
+    try {
+      await AddressModel.upsertAddress(user.id, { city: data.city });
+    } catch (error) {
+      logger.error('Failed to save city for user %s', user.id, error);
+    }
+  }
+
   return {
     message: 'Phone verified successfully.',
     user: {
@@ -250,4 +259,4 @@ async function registerPhone(phone, attribution = null) {
   };
 }
 
-module.exports = { requestPhoneOtp, verifyPhoneOtp, registerPhone,saveUtmIfPresent };
+module.exports = { requestPhoneOtp, verifyPhoneOtp, registerPhone, saveUtmIfPresent };
