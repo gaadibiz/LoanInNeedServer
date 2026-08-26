@@ -148,8 +148,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     let documents = id ? await getBase64Documents(id) : {};
     let data = jobs.map(job => ({ ...job.rawRequest, ...documents,...job.rawResponse}));
 
-    //  const data = await buildFinnauxJobPayloadsBatch(jobs);
-
     res.status(200).json({
         success: true,
         count: data.length,
