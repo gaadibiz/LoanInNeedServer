@@ -7,6 +7,51 @@ const logger = require('../utils/logger');
 const { BadRequestError, NotFoundError } = require('../GlobalExceptionHandler/exception');
 const prisma = require('../utils/prismaClient');
 
+const STATE_CODE_TO_NAME = {
+  AN: 'Andaman and Nicobar Islands',
+  AP: 'Andhra Pradesh',
+  AR: 'Arunachal Pradesh',
+  AS: 'Assam',
+  BR: 'Bihar',
+  CH: 'Chandigarh',
+  CG: 'Chhattisgarh',
+  CT: 'Chhattisgarh',
+  DN: 'Dadra and Nagar Haveli',
+  DD: 'Daman and Diu',
+  DL: 'Delhi',
+  GA: 'Goa',
+  GJ: 'Gujarat',
+  HR: 'Haryana',
+  HP: 'Himachal Pradesh',
+  JK: 'Jammu and Kashmir',
+  JH: 'Jharkhand',
+  LA: 'Ladakh',
+  KA: 'Karnataka',
+  KL: 'Kerala',
+  LD: 'Lakshadweep',
+  MP: 'Madhya Pradesh',
+  MH: 'Maharashtra',
+  MN: 'Manipur',
+  ML: 'Meghalaya',
+  MZ: 'Mizoram',
+  NL: 'Nagaland',
+  OD: 'Odisha',
+  OR: 'Odisha',
+  PY: 'Puducherry',
+  PB: 'Punjab',
+  RJ: 'Rajasthan',
+  SK: 'Sikkim',
+  TN: 'Tamil Nadu',
+  TG: 'Telangana',
+  TS: 'Telangana',
+  TR: 'Tripura',
+  UP: 'Uttar Pradesh',
+  UK: 'Uttarakhand',
+  UL: 'Uttarakhand',
+  UA: 'Uttarakhand',
+  WB: 'West Bengal',
+};
+
 class PhonePrefillService {
   /**
    * Split a single "name" field into firstName/lastName the way the
@@ -72,9 +117,10 @@ class PhonePrefillService {
           }
         });
          
+        const stateCode = (primaryAddressEntry.State || '').trim().toUpperCase();
         primaryAddress = {
-          "city": previous_address?.city || primaryAddressEntry.city,
-          "state": primaryAddressEntry.State,
+          "city": previous_address?.city || primaryAddressEntry.City,
+          "state": STATE_CODE_TO_NAME[stateCode] || primaryAddressEntry.State,
           "postalCode": primaryAddressEntry.Postal,
           "currentAddress": primaryAddressEntry.Address,
           "permanentAddress": primaryAddressEntry.Address,
