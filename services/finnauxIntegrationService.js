@@ -51,10 +51,7 @@ const processPendingFinnauxIntegrations = async () => {
             OR: [
                 { status: 'PENDING' },
                 { status: 'FAILED', retryCount: 1, updatedAt: { lte: minus5m } },
-                { status: 'FAILED', retryCount: 2, updatedAt: { lte: minus30m } },
-                { status: 'FAILED', retryCount: 3, updatedAt: { lte: minus2h } },
-                { status: 'FAILED', retryCount: 4, updatedAt: { lte: minus12h } },
-                { status: 'FAILED', retryCount: { gte: 5, lt: MAX_FAILURES }, updatedAt: { lte: minus24h } }
+                { status: 'FAILED', retryCount: 2, updatedAt: { lte: minus30m } }
             ]
         },
         orderBy: { createdAt: 'asc' },
