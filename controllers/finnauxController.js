@@ -140,7 +140,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         prisma.finnauxIntegrationJob.count({ where }),
         prisma.finnauxIntegrationJob.findMany({
             where,
-            orderBy: { createdAt: 'asc' },
+            orderBy: { updatedAt: 'desc' },
             select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true,rawResponse:true }
         })
     ]);
