@@ -316,6 +316,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         try{
             await updateLoanApplicationToBumchum({
                 user_id:finnauxLoanApplication.userId,
+                updated_by_source:'FINNAUX',
                 id:finnauxLoanApplication.applicationId,
                 actual_status: updatedApplication.status,
                 reason: updatedApplication.reason,
