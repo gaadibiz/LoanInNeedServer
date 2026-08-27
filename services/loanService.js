@@ -61,8 +61,8 @@ function evaluateEligibility({
 
 // Builds the frontend /signup deep link, carrying forward the Step 2 payload
 // so the user isn't asked to re-enter it after registering their phone.
-function buildSignupRedirectUrl(params={}) {
-    const FRONTEND_URL = process.env.NODE_ENV==="production"? process.env.FRONTEND_URL : "https://test.loaninneed.in"
+function buildSignupRedirectUrl(params = {}) {
+    const FRONTEND_URL = process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "https://test.loaninneed.in"
     const query = Object.entries(params)
         .filter(([, value]) => value !== undefined && value !== null && value !== '')
         .map(([key, value]) => `${key}=${encodeURI(value)}`)
@@ -163,8 +163,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         select: {
             city: true,
             state: true,
-            permanentAddress:true,
-            currentAddressType:true,
+            permanentAddress: true,
+            currentAddressType: true,
             postalCode: true,
         }
     });
@@ -228,7 +228,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
     });
 
     try {
-        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL, {
+        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/create-external-leads', {
             user,
             application: application || {},
             aadhaarVerification: aadhaarVerification || {},
@@ -248,8 +248,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             category_name: 'Loan Application',
             date_of_visit: new Date().toISOString(),
             cancellation_dead_reason: application.reason || '',
-            employment_type_uuid:employeeDetail?.employmentType === 'SALARIED' ? 'e54e543d-a20e-47b5-8bf1-a087e910d92b':'3d9d2e30-2754-49f8-be31-3a14c1d720b7',
-            action_item_category_uuid:'f22bd31f-b9cb-4c8e-a07b-50f9b7083812',
+            employment_type_uuid: employeeDetail?.employmentType === 'SALARIED' ? 'e54e543d-a20e-47b5-8bf1-a087e910d92b' : '3d9d2e30-2754-49f8-be31-3a14c1d720b7',
+            action_item_category_uuid: 'f22bd31f-b9cb-4c8e-a07b-50f9b7083812',
             ...utm
         }, {
             headers: {
@@ -263,6 +263,21 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
     }
 }
 
+async function updateLoanApplicationToBumchum(data) {
+
+    try {
+        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL+ '/update-external-lead',
+            data, {
+            headers: {
+                'auth-Key': process.env.BUMCHUM_AUTH_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.error('Error sending loan application to Bumchum:', error);
+        throw error;
+    }
+}
 // Documents required by sendLoanApplicationToBumchum's payload mapping.
 const BUMCHUM_REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'];
 
@@ -438,5 +453,6 @@ module.exports = {
     evaluateEligibility,
     buildSignupRedirectUrl,
     sendLoanApplicationToBumchum,
-    checkAndPushBumchumIfReady
+    checkAndPushBumchumIfReady,
+    updateLoanApplicationToBumchum
 };

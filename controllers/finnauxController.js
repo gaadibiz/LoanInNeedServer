@@ -4,6 +4,7 @@ const logger = require('../utils/logger');
 const { NotFoundError, BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { buildFinnauxJobPayload, getBase64Documents } = require('../services/finnauxIntegrationService');
 const { default: axios } = require('axios');
+const { updateLoanApplicationToBumchum } = require('../services/loanService');
 
 /**
  * @desc    Rebuild and persist a job's rawRequest from current source data
@@ -298,7 +299,6 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
             }
         });
     }
-
     logger.info(`[FINNAUX] Updated LoanApplication ${updatedApplication.id} to status ${updatedApplication.status}`);
 
     res.status(200).json({
@@ -312,6 +312,18 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
             ...req.body
         }]
     });
+    (async()=>{
+        try{
+            await updateLoanApplicationToBumchum({
+                user_id:finnauxLoanApplication.userId,
+                id:finnauxLoanApplication.applicationId,
+                actual_status: updatedApplication.status,
+                reason: updatedApplication.reason,
+            })
+        }catch(e){
+            console.log("Error updating Loan Application to Bumchum",e)
+        }
+    })();
 });
 
 module.exports = {
