@@ -286,7 +286,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
 
     let finnauxLoanApplication = await prisma.finnauxIntegrationJob.findUnique({
         where: { applicationId: updatedApplication.id },
-        select: { rawRequest: true }
+        select: { rawRequest: true , id:true, userId:true}
     });
 
     if (finnauxLoanApplication) {
