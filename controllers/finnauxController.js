@@ -312,6 +312,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
             ...req.body
         }]
     });
+    
     (async()=>{
         try{
             await updateLoanApplicationToBumchum({
