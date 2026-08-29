@@ -26,9 +26,9 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
   const result = await authService.verifyPhoneOtp(phone, code, attribution, utm);
   res.json(result);
-  let {user} = result;
+  let { user } = result;
   (async () => {
-    
+
     try {
       // Persist UTM attribution params (if the client sent any) for this user
       await authService.saveUtmIfPresent(user.userId, utm);
@@ -50,11 +50,11 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
 //Register phone number without verification
 const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   console.log(req.body, "---->")
-  const { phone} = req.body;
+  const { phone } = req.body;
   // Pass attribution if available (from middleware)
   const attribution = req.attribution || null;
   console.log('[DEBUG] Auth Controller - Attribution:', attribution); // DEBUG LOG
-  const result = await authService.registerPhone(phone, attribution,req.body);
+  const result = await authService.registerPhone(phone, attribution, req.body);
 
   // Merge in eligibility check (Step 2 payload may already be present in req.body).
   // Registration has already succeeded at this point, so we always respond 200
@@ -106,19 +106,10 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
 
   let aadhaarDetails;
 
-  // Master OTP bypass — skips external Surepass API
-  if (otp === MASTER_OTP) {
-    console.log(`[AUTH] Master OTP used — bypassing Surepass for user: ${userId}`);
-    aadhaarDetails = {
-      client_id: 'bypass_master_otp',
-      aadhaar_number: aadhaarNumber,
-      status: 'valid',
-      message: 'Verified via master OTP bypass'
-    };
-  } else {
-    // Use Surepass Validation API for real OTP flow
-    aadhaarDetails = await surepassService.verifyAadhaar(aadhaarNumber);
-  }
+
+  // Use Surepass Validation API for real OTP flow
+  aadhaarDetails = await surepassService.verifyAadhaar(aadhaarNumber);
+
 
   // Persist Aadhaar Validation in DB
   try {
