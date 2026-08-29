@@ -42,12 +42,6 @@ async function requestPhoneOtp(phone) {
   const existingUser = await prisma.user.findUnique({ where: { phone: targetPhone } });
   const isExistingUser = !!existingUser;
 
-  // ✅ Mock OTP for Test Numbers (+9199...)
-  if (targetPhone.startsWith('+9199')) {
-    logger.info('✅ Test number detected: bypassing SMS OTP for %s', targetPhone);
-    return { message: 'OTP sent successfully (Mocked).', isExistingUser };
-  }
-
   // Use new SMS OTP service
   await smsOtpService.sendOtp(targetPhone);
 
@@ -69,13 +63,9 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
 
   // ✅ Master OTP Bypass (Emergency Access Only)
   let verificationCheck;
-  if (code === "261102") {
-    logger.info("✅ Master OTP used: bypassing SMS verification");
-    verificationCheck = { status: 'approved' };
-  } else {
-    // Use new SMS OTP service
-    verificationCheck = await smsOtpService.verifyOtp(targetPhone, code);
-  }
+
+  verificationCheck = await smsOtpService.verifyOtp(targetPhone, code);
+
 
   if (!verificationCheck || verificationCheck.status !== 'approved') {
     logger.warn('Phone OTP verification failed for: %s', targetPhone);
@@ -166,7 +156,7 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
 // ==============================
 // Register Phone number and Create or Update User
 // ==============================
-async function registerPhone(phone, attribution = null,data) {
+async function registerPhone(phone, attribution = null, data) {
   logger.info('Register phone OTP for: %s', phone);
   const targetPhone = phone;
   logger.info('Requested phone: %s', targetPhone);
