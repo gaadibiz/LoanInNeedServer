@@ -208,7 +208,8 @@ async function getCompleteProfile(userId) {
     ...userWithoutPassword,
     latestLocation,
     kycStatus,
-    documentSummary
+    documentSummary,
+    aadhaarVerified
   };
 
   logger.info(`✅ [USER SERVICE] Complete profile fetched successfully for userId: ${userId}`);
