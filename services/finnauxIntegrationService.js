@@ -205,7 +205,7 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
         }
     });
 
-    if (!user) {
+    if (!user || !application || !aadhaarVerification || !panVerification) {
         throw new Error('User record not found in database.');
     }
 

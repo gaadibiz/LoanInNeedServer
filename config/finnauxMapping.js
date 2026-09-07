@@ -126,7 +126,7 @@ const buildFinnauxPayload = async (
             "longitude": latestLocation?.longitude ?? null
         },
         "addressDocument": null, // No matching document type captured yet
-        "aadhaarNo": aadhaarVerification?.aadhaarNumber || null,
+        "aadhaarNo": aadhaarVerification?.aadhaarNumber,
         "panNo": panVerification?.panNumber || null,
         "profilePicture": null,
         "aadhaarFront": null,
