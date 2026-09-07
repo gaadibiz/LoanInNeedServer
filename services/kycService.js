@@ -22,8 +22,7 @@ async function saveFullKYC(userId, data) {
       // Fetch existing records first (within the transaction tx)
       const existingEmployment = await EmploymentModel.findByUserId(userId, tx);
       const existingAddress = await AddressModel.findByUserId(userId, tx);
-      const aadhaarVerification = await tx.aadhaarVerification.findUnique({ where: { userId }, select: { aadhaarNumber: true } });
-
+     
       // Helper to check if a value is a dummy placeholder
       const isPlaceholder = (val) => {
         if (!val) return true;
@@ -50,9 +49,7 @@ async function saveFullKYC(userId, data) {
         throw new BadRequestError('Employment data incomplete ❌ (Company Name and Income required)');
       }
 
-      if (aadhaarVerification && aadhaarVerification.aadhaarNumber) {
-        throw new BadRequestError('You have already submitted your Aadhaar number. Please update your profile instead.');
-      }
+    
 
       const monthlyIncome = Number(monthlyIncomeRaw);
       if (isNaN(monthlyIncome) || monthlyIncome < 0) {
