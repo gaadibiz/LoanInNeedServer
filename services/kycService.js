@@ -50,8 +50,8 @@ async function saveFullKYC(userId, data) {
         throw new BadRequestError('Employment data incomplete ❌ (Company Name and Income required)');
       }
 
-      if (aadhaarVerification && aadhaarVerification.aadhaarNumber) {
-        throw new BadRequestError('You have already submitted your Aadhaar number. Please update your profile instead.');
+      if (!aadhaarVerification && !aadhaarVerification.aadhaarNumber) {
+        throw new BadRequestError('Add aadhar number details');
       }
 
       const monthlyIncome = Number(monthlyIncomeRaw);
