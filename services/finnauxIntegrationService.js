@@ -206,7 +206,7 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
     });
 
     if (!user || !application || !aadhaarVerification || !panVerification) {
-        throw new Error('User record not found in database.');
+        throw new Error('User record not found in database.',user,"-USER-", application,"-APP-", aadhaarVerification,"-AADHAAR-", panVerification,"-PAN-");
     }
 
     let utm = await prisma.utm.findUnique({
