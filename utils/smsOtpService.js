@@ -10,7 +10,7 @@ const smsBreaker = createCircuitBreaker(
 
 // SMS API Configuration
 const SMS_API_URL = process.env.SMS_API_URL || 'https://omc.speqtrainnov.in/api/json/sendsms/';
-const SMS_API_KEY = process.env.SMS_API_KEY;
+const SMS_API_KEY = "Bearer " + process.env.SUREPASS_TOKEN;
 const SMS_SENDER_ID = process.env.SMS_SENDER_ID;
 const SMS_ENTITY_ID = process.env.SMS_ENTITY_ID;
 const SMS_TEMPLATE_ID = process.env.SMS_TEMPLATE_ID;
@@ -31,7 +31,7 @@ function generateOtpCode() {
 async function sendOtp(phone) {
     try {
         // Validate configuration
-        if (!SMS_API_KEY || !SMS_SENDER_ID || !SMS_ENTITY_ID || !SMS_TEMPLATE_ID) {
+        if (!SMS_API_KEY || !SMS_SENDER_ID || !SMS_TEMPLATE_ID) {
             throw new Error('SMS API configuration is incomplete. Please check environment variables.');
         }
 
@@ -50,13 +50,14 @@ async function sendOtp(phone) {
         });
 
         // DEVELOPMENT GLOBAL BYPASS
-        const ENABLE_DEV_OTP_BYPASS = process.env.ENABLE_DEV_OTP_BYPASS === 'true';
+        const ENABLE_DEV_OTP_BYPASS = false
+        //process.env.ENABLE_DEV_OTP_BYPASS === 'true';
 
         if (ENABLE_DEV_OTP_BYPASS) {
             // Set OTP to 261102 and skip external API call
             // This ensures no SMS is sent and no timeouts occur when using the bypass code.
             const DEV_BYPASS_CODE = '261102';
-            
+
             // Update the recently created OTP to be the bypass code
             await prisma.otp.updateMany({
                 where: { phone, code: otpCode, verified: false },
@@ -64,7 +65,7 @@ async function sendOtp(phone) {
             });
 
             logger.info(`🔓 [DEV BYPASS] OTP bypass enabled for ${phone}. Use code: ${DEV_BYPASS_CODE}`);
-            
+
             return {
                 status: 'pending',
                 to: phone,
@@ -79,7 +80,8 @@ async function sendOtp(phone) {
         // has {#var#} where the dynamic OTP goes. We must pass the OTP as {#var#} so
         // the gateway fills it in correctly. If we embed a plain number, the gateway
         // ignores it and substitutes its own random value into {#var#} instead.
-        const smsContent = `Dear Customer, your OTP for LOANINNEED is ${otpCode}. It is valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this OTP with anyone. -SASHIM`;
+        const smsContent = `Dear Customer,  ${otpCode} is your OTP to verify your mobile number for registration/login. This OTP is valid for 10 minutes. Please do not share it with anyone. - NFPLNA`
+        //`Dear Customer, your OTP for LOANINNEED is ${otpCode}. It is valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this OTP with anyone. -SASHIM`;
 
         // ⚠️  NOTE: Some DLT gateways require the message body to contain the literal
         // {#var#} token mapped to the variable.  If the OTP mismatch persists after
@@ -88,30 +90,48 @@ async function sendOtp(phone) {
         // inspect what OTP the gateway generated, and we must switch to their OTP API.
 
         // Prepare API request
-        const requestBody = {
-            listsms: [
-                {
-                    sms: smsContent,
-                    mobiles: phone,
-                    senderid: SMS_SENDER_ID,
-                    entityid: SMS_ENTITY_ID,
-                    tempid: SMS_TEMPLATE_ID
-                }
-            ]
+        const requestBody =
+        {
+            "template_id": SMS_TEMPLATE_ID,
+            "sender_id": SMS_SENDER_ID,
+            "mobile": phone,
+            "variables": {
+                "var1": otpCode
+            }
         };
+        // {
+        //     listsms: [
+        //         {
+        //             sms: smsContent,
+        //             mobiles: phone,
+        //             senderid: SMS_SENDER_ID,
+        //             entityid: SMS_ENTITY_ID,
+        //             tempid: SMS_TEMPLATE_ID
+        //         }
+        //     ]
+        // };
 
         // Send SMS via API
-        const response = await smsBreaker.fire(SMS_API_URL, requestBody, {
+        // const response = await smsBreaker.fire(SMS_API_URL, requestBody, {
+        //     headers: {
+        //         'key': SMS_API_KEY,
+        //         'content-type': 'application/json'
+        //     },
+        //     timeout: parseInt(process.env.SMS_GATEWAY_TIMEOUT_MS) || 10000 // Configurable SMS timeout
+        // });
+
+        // Send SMS via API
+        const response = (await smsBreaker.fire(SMS_API_URL, requestBody, {
             headers: {
-                'key': SMS_API_KEY,
+                'Authorization': SMS_API_KEY,
                 'content-type': 'application/json'
             },
             timeout: parseInt(process.env.SMS_GATEWAY_TIMEOUT_MS) || 10000 // Configurable SMS timeout
-        });
+        })).data;
 
         // 🔍 Log full raw response so we can detect if gateway generates its own OTP
         logger.info(`[SMS GATEWAY] Full response for ${phone}: ${JSON.stringify(response.data)}`);
-        logger.info(`OTP sent successfully to ${phone}. Message ID: ${response.data?.smslist?.sms?.messageid}`);
+        logger.info(`OTP sent successfully to ${phone}. Message ID: ${response.data?.smslist?.sms?.messageid || response?.data?.client_id}`);
 
         // Some DLT gateways return the actual OTP they generated in the response.
         // If present, update the DB record to match what was actually sent via SMS.
@@ -132,7 +152,7 @@ async function sendOtp(phone) {
             status: 'pending',
             to: phone,
             channel: 'sms',
-            messageId: response.data?.smslist?.sms?.messageid,
+            messageId: response.data?.smslist?.sms?.messageid || response?.data?.client_id,
             message: 'OTP sent successfully'
         };
 
@@ -150,7 +170,7 @@ async function sendOtp(phone) {
             }
         });
 
-        throw new Error(`Failed to send OTP: ${error.message}`);
+        throw new Error(`Failed to send OTP: ${error}`);
     }
 }
 
@@ -164,7 +184,7 @@ async function verifyOtp(phone, code) {
     try {
         const ENABLE_DEV_OTP_BYPASS = process.env.ENABLE_DEV_OTP_BYPASS === 'true';
         const DEV_BYPASS_CODE = '261102';
-        
+
         // DEVELOPMENT GLOBAL BYPASS
         if (ENABLE_DEV_OTP_BYPASS && code === DEV_BYPASS_CODE) {
             logger.info(`🔓 [DEV BYPASS] Fast-tracking OTP verification for ${phone} using code ${DEV_BYPASS_CODE}`);
@@ -173,7 +193,7 @@ async function verifyOtp(phone, code) {
                 where: { phone, verified: false },
                 data: { verified: true }
             });
-            
+
             return {
                 status: 'approved',
                 to: phone,
