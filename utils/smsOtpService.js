@@ -90,11 +90,12 @@ async function sendOtp(phone) {
         // inspect what OTP the gateway generated, and we must switch to their OTP API.
 
         // Prepare API request
+        let number = phone.replace('+91','')
         const requestBody =
         {
             "template_id": SMS_TEMPLATE_ID,
             "sender_id": SMS_SENDER_ID,
-            "mobile": phone,
+            "mobile": number,
             "variables": {
                 "var1": otpCode
             }
