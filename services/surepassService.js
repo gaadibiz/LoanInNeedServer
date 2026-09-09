@@ -41,7 +41,63 @@ class SurepassService {
         full_name: "PRIYANSHU ROUTH",
         gender: "MALE",
         dob: "2000-05-15",
-        status: "valid"
+        status: "valid",
+        aadhaar_linked: true,
+        masked_aadhaar: "XXXXXXXX1234"
+      };
+    }
+
+    if (panNumber.toUpperCase() === 'APEPA5553K') {
+      return {
+        client_id: "pan_comprehensive_DWbrNREAkbnWyunSkJdm",
+        pan_number: "APEPA5553K",
+        full_name: "ARPIT AWASTHI",
+        full_name_split: ["ARPIT", "", "AWASTHI"],
+        masked_aadhaar: "XXXXXXXX5052",
+        gender: "M",
+        dob: "1988-09-19",
+        aadhaar_linked: true,
+        dob_verified: false,
+        dob_check: false,
+        category: "person",
+        status: "valid",
+        less_info: false
+      };
+    }
+
+    if (panNumber.toUpperCase() === 'CEEPM9302R') {
+      return {
+        client_id: "pan_comprehensive_ceepm9302r",
+        pan_number: "CEEPM9302R",
+        full_name: "NARESH MATHA",
+        full_name_split: ["NARESH", "", "MATHA"],
+        masked_aadhaar: "XXXXXXXX9396",
+        gender: "M",
+        dob: "1992-06-11",
+        aadhaar_linked: true,
+        dob_verified: true,
+        dob_check: true,
+        category: "person",
+        status: "valid",
+        less_info: false
+      };
+    }
+
+    if (panNumber.toUpperCase() === 'TESTNULL01X') {
+      return {
+        client_id: "pan_comprehensive_null_test",
+        pan_number: "TESTNULL01X",
+        full_name: "TEST USER",
+        full_name_split: ["TEST", "", "USER"],
+        masked_aadhaar: "",
+        gender: "M",
+        dob: "1995-01-01",
+        aadhaar_linked: null,
+        dob_verified: false,
+        dob_check: false,
+        category: "person",
+        status: "valid",
+        less_info: false
       };
     }
 
@@ -73,10 +129,10 @@ class SurepassService {
    * @returns {Promise<Object>} confirmation details 
    */
   async verifyAadhaar(aadhaarNumber) {
-    if (aadhaarNumber === '123456789012') {
+    if (aadhaarNumber === '123456789012' || aadhaarNumber === '797408469396' || aadhaarNumber.endsWith('5052') || aadhaarNumber.endsWith('9396')) {
       return {
         client_id: "mock_client_demo123",
-        aadhaar_number: "123456789012",
+        aadhaar_number: aadhaarNumber,
         status: "valid"
       };
     }

@@ -5,6 +5,7 @@ const asyncHandler = require('express-async-handler'); // cleaner try/catch
 const surepassService = require('../services/surepassService');
 const aadhaarService = require('../services/aadharService');
 const AadhaarModel = require('../models/aadhaarModel');
+const PanModel = require('../models/panModel');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const UserModel = require('../models/userModel');
 const { sendLoanApplicationToBumchum } = require('../services/loanService');
@@ -73,9 +74,38 @@ const validateAadhaarExists = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'A valid 12-digit Aadhaar number is required' });
   }
 
-  try {
-    const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
+  const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
+  const userId = req.user?.id;
 
+  if (userId) {
+    const panRecord = await PanModel.findByUserId(userId);
+    if (!panRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify your PAN card before validating Aadhaar.'
+      });
+    }
+
+    if (!panRecord.aadhaar_linked) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aadhaar is not linked to your PAN card.'
+      });
+    }
+
+    if (panRecord.masked_aadhaar) {
+      const maskedLast4 = panRecord.masked_aadhaar.replace(/\D/g, '').slice(-4);
+      const enteredLast4 = cleanAadhaar.slice(-4);
+      if (maskedLast4 && enteredLast4 !== maskedLast4) {
+        return res.status(400).json({
+          success: false,
+          message: 'Aadhaar number does not match the Aadhaar linked to your PAN card.'
+        });
+      }
+    }
+  }
+
+  try {
     // Check if Aadhaar is already registered to another user in our DB
     const existing = await AadhaarModel.findByAadhaarNumber(cleanAadhaar);
     if (existing && existing.userId !== req.user?.id) {
@@ -102,6 +132,21 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
 
   if (!aadhaarNumber) {
     return res.status(400).json({ success: false, message: 'Aadhaar number is required' });
+  }
+
+  const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
+  const panRecord = await PanModel.findByUserId(userId);
+  if (panRecord) {
+    if (!panRecord.aadhaar_linked) {
+      return res.status(400).json({ success: false, message: 'Aadhaar is not linked to your PAN card.' });
+    }
+    if (panRecord.masked_aadhaar) {
+      const maskedLast4 = panRecord.masked_aadhaar.replace(/\D/g, '').slice(-4);
+      const enteredLast4 = cleanAadhaar.slice(-4);
+      if (maskedLast4 && enteredLast4 !== maskedLast4) {
+        return res.status(400).json({ success: false, message: 'Aadhaar number does not match the Aadhaar linked to your PAN card.' });
+      }
+    }
   }
 
   let aadhaarDetails;

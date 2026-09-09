@@ -8,6 +8,15 @@ const PanModel = {
     const client = tx;
     return client.panVerification.findUnique({
       where: { userId },
+      select: {
+        id: true,
+        userId: true,
+        panNumber: true,
+        aadhaar_linked: true,
+        masked_aadhaar: true,
+        verified: true,
+        verifiedAt: true,
+      },
     });
   },
 
@@ -18,6 +27,15 @@ const PanModel = {
     const client = tx;
     return client.panVerification.findUnique({
       where: { panNumber },
+      select: {
+        id: true,
+        userId: true,
+        panNumber: true,
+        aadhaar_linked: true,
+        masked_aadhaar: true,
+        verified: true,
+        verifiedAt: true,
+      },
     });
   },
 
@@ -28,20 +46,29 @@ const PanModel = {
     const client = tx;
     return client.panVerification.findUnique({
       where: { id },
+      select: {
+        id: true,
+        userId: true,
+        panNumber: true,
+        aadhaar_linked: true,
+        masked_aadhaar: true,
+        verified: true,
+        verifiedAt: true,
+      },
     });
   },
 
   /**
    * Create new PAN verification record
    */
-  async createPanRecord(userId, panNumber, tx = prisma) {
+  async createPanRecord(userId, panDataOrNumber, tx = prisma) {
     const client = tx;
+    const payload =
+      typeof panDataOrNumber === 'string'
+        ? { userId, panNumber: panDataOrNumber, verified: false }
+        : { userId, verified: false, ...panDataOrNumber };
     return client.panVerification.create({
-      data: {
-        userId,
-        panNumber,
-        verified: false,
-      },
+      data: payload,
     });
   },
 

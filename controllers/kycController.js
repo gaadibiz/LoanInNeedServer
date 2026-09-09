@@ -5,11 +5,6 @@ const documentVerificationService = require('../services/documentService'); // I
 const PanModel = require('../models/panModel'); // Import PanModel for direct access
 const EmploymentModel = require('../models/employmentModel');
 const AddressModel = require('../models/adressModel');
-const LoanModel = require('../models/loanModel');
-const kycService = require('../services/kycService'); // Import generic service for access if needed
-
-
-
 const surepassService = require('../services/surepassService'); // Import Surepass Service
 const { checkAndPushBumchumIfReady } = require('../services/loanService');
 
@@ -31,13 +26,13 @@ exports.submitKYC = async (req, res, next) => {
     const userId = req.user?.id || req.params.userId;
     if (!userId) throw new BadRequestError('User not found ❌');
 
-    let ip =  req.body.ipAddress || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    let ipAddress =  typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip)
+    let ip = req.body.ipAddress || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    let ipAddress = typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip)
 
     let data = req.body;
     data.ipAddress = ipAddress;
 
-    logger.info('📝 [KYC] Full KYC submission request for userId=%s', userId,ip);
+    logger.info('📝 [KYC] Full KYC submission request for userId=%s', userId, ip);
 
 
     const result = await saveFullKYC(userId, data);
@@ -51,12 +46,12 @@ exports.submitKYC = async (req, res, next) => {
     });
 
     (async () => {
-    try {
-      await checkAndPushBumchumIfReady(userId);
-    } catch (error) {
-      logger.error(`[BUMCHUM] Failed to sync after KYC submit for User ${userId}: ${error.message}`);
-    }
-  })();
+      try {
+        await checkAndPushBumchumIfReady(userId);
+      } catch (error) {
+        logger.error(`[BUMCHUM] Failed to sync after KYC submit for User ${userId}: ${error.message}`);
+      }
+    })();
 
   } catch (error) {
     // ✅ Fixed log to always use userId
@@ -105,19 +100,21 @@ exports.verifyPAN = async (req, res, next) => {
     // Check if record exists for this specific user
     const existingPan = await PanModel.findByUserId(userId);
 
+    const panData = {
+      panNumber: panNumber.toUpperCase(),
+      aadhaar_linked: Boolean(panDetails?.aadhaar_linked),
+      masked_aadhaar: panDetails?.masked_aadhaar || null,
+      verified: true,
+      verifiedAt: new Date()
+    };
+
     let panRecord;
     if (existingPan) {
       // Update existing
-      panRecord = await PanModel.updatePanRecord(userId, {
-        panNumber: panNumber.toUpperCase(),
-        verified: true,
-        verifiedAt: new Date()
-      });
+      panRecord = await PanModel.updatePanRecord(userId, panData);
     } else {
       // Create new (directly verified)
-      panRecord = await PanModel.createPanRecord(userId, panNumber.toUpperCase());
-      // createPanRecord defaults verified to false, so we must update it immediately
-      panRecord = await PanModel.verifyPan(userId);
+      panRecord = await PanModel.createPanRecord(userId, panData);
     }
 
     logger.info('✅ [KYC] PAN verified and saved in DB for userId=%s', userId);
@@ -129,6 +126,8 @@ exports.verifyPAN = async (req, res, next) => {
       message: 'PAN verified successfully ✔️',
       data: {
         panNumber: panNumber.toUpperCase(),
+        aadhaar_linked: panData.aadhaar_linked,
+        masked_aadhaar: panData.masked_aadhaar,
         isVerified: true,
         ...panDetails
       }
@@ -258,4 +257,3 @@ exports.updateAddress = async (req, res, next) => {
     next(error);
   }
 };
-

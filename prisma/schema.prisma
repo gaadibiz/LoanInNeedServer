@@ -130,12 +130,14 @@ model AadhaarVerification {
 }
 
 model PanVerification {
-  id         Int       @id @default(autoincrement())
-  panNumber  String    @unique
-  verified   Boolean   @default(false)
-  verifiedAt DateTime?
-  userId     Int       @unique
-  user       User      @relation(fields: [userId], references: [id])
+  id             Int       @id @default(autoincrement())
+  panNumber      String    @unique
+  aadhaar_linked Boolean?  @default(false)
+  masked_aadhaar String?
+  verified       Boolean   @default(false)
+  verifiedAt     DateTime?
+  userId         Int       @unique
+  user           User      @relation(fields: [userId], references: [id])
 }
 
 model PhonePrefillDetail {
