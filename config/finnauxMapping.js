@@ -89,7 +89,7 @@ const buildFinnauxPayload = async (
     const appId = application?.id || 'UNKNOWN';
     logger.info(`[FINNAUX MAPPING] Building payload for applicationId: ${appId}`);
 
-    console.log(utm,"[UTM here]")
+    console.log(utm, "[UTM here]")
 
     const payload = {
         "loanId": application?.id || null,
@@ -113,8 +113,8 @@ const buildFinnauxPayload = async (
         "bankAccountNo": null, // Not collected yet
         "ifscCode": null, // Not collected yet
         "bankName": null, // Not collected yet
-        "address1": address?.currentAddress || null,
-        "address2": '' ,
+        "address1": " ( Entered City : " + address?.city + " ) " + address?.currentAddress || "",
+        "address2": '',
         "landmark": null, // Not collected yet
         "pinCode": address?.postalCode || null,
         "area": address?.city || null,
