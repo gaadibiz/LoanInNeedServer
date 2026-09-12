@@ -121,8 +121,10 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
                 'Both "from" and "to" must be provided together.'
             );
         }
-        fromDate = new Date(from);
-        toDate = new Date(to);
+        // fromDate = new Date(from);
+        // toDate = new Date(to);
+        fromDate = new Date(`${from}T00:00:00+05:30`);
+        toDate = new Date(`${to}T23:59:59.999+05:30`);
 
         if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
             throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
@@ -142,12 +144,12 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         prisma.finnauxIntegrationJob.findMany({
             where,
             orderBy: { updatedAt: 'desc' },
-            select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true,rawResponse:true }
+            select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true, rawResponse: true }
         })
     ]);
 
     let documents = id ? await getBase64Documents(id) : {};
-    let data = jobs.map(job => ({ ...job.rawRequest, ...documents,...job.rawResponse}));
+    let data = jobs.map(job => ({ ...job.rawRequest, ...documents, ...job.rawResponse }));
 
     res.status(200).json({
         success: true,
@@ -202,7 +204,7 @@ const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
                 const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
                 base64Data = Buffer.from(response.data, 'binary').toString('base64');
                 if (!base64Data) return null;
-                if(doctype==='bankStatements')
+                if (doctype === 'bankStatements')
                     return { bankStatement: [base64Data, doc.fileName || null] };
                 return { [doctype]: [base64Data, doc.fileName || null] };
             }
@@ -248,7 +250,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
     } = req.body
     req.body.id = id
     let finnauxApplicationNumber = applicationNumber || applicationNo
-    req.body.finnauxApplicationNumber = applicationNumber ||  applicationNo
+    req.body.finnauxApplicationNumber = applicationNumber || applicationNo
 
     if (!id || !status) {
         throw new BadRequestError('Both "id" and "status" are required in the request body.');
@@ -286,7 +288,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
 
     let finnauxLoanApplication = await prisma.finnauxIntegrationJob.findUnique({
         where: { applicationId: updatedApplication.id },
-        select: { rawRequest: true ,applicationId:true,userId:true}
+        select: { rawRequest: true, applicationId: true, userId: true }
     });
 
     if (finnauxLoanApplication) {
@@ -307,23 +309,23 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         data: [{
             id: updatedApplication.id,
             status: updatedApplication.status,
-            applicationNumber:updatedApplication.finnauxApplicationNumber,
+            applicationNumber: updatedApplication.finnauxApplicationNumber,
             applicationNo: updatedApplication.finnauxApplicationNumber,
             ...req.body
         }]
     });
-    
-    (async()=>{
-        try{
+
+    (async () => {
+        try {
             await updateLoanApplicationToBumchum({
-                user_id:finnauxLoanApplication.userId,
-                updated_by_source:'FINNAUX',
-                id:finnauxLoanApplication.applicationId,
+                user_id: finnauxLoanApplication.userId,
+                updated_by_source: 'FINNAUX',
+                id: finnauxLoanApplication.applicationId,
                 actual_status: updatedApplication.status,
                 reason: updatedApplication.reason,
             })
-        }catch(e){
-            console.log("Error updating Loan Application to Bumchum",e)
+        } catch (e) {
+            console.log("Error updating Loan Application to Bumchum", e)
         }
     })();
 });
