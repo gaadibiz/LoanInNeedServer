@@ -121,16 +121,12 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
                 'Both "from" and "to" must be provided together.'
             );
         }
-        // fromDate = new Date(from);
-        // toDate = new Date(to);
         fromDate = new Date(`${from}T00:00:00+05:30`);
         toDate = new Date(`${to}T23:59:59.999+05:30`);
 
         if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
             throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
         }
-
-        toDate.setHours(23, 59, 59, 999);
     }
 
     const where = {
@@ -138,6 +134,8 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
             createdAt: { gte: fromDate, lte: toDate },
         } : id ? { applicationId: parseInt(id) } : {}),
     };
+
+    console.log('Finnaux date filter:', { from, to, fromUTC: fromDate?.toISOString(), toUTC: toDate?.toISOString(), });
 
     const [totalCount, jobs] = await Promise.all([
         prisma.finnauxIntegrationJob.count({ where }),
