@@ -96,6 +96,7 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
     const user = await client.user.findUnique({
         where: { id: userId },
         select: {
+            id: true,
             name: true,
             email: true,
             phone: true,
@@ -174,18 +175,6 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
         }
     });
 
-    const address = await client.addressDetail.findUnique({
-        where: { userId },
-        select: {
-            currentAddress: true,
-            permanentAddress: true,
-            city: true,
-            state: true,
-            postalCode: true,
-            currentAddressType: true,
-        }
-    });
-
     const aadhaarVerification = await client.aadhaarVerification.findUnique({
         where: { userId },
         select: {
@@ -206,7 +195,7 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
     });
 
     if (!user || !application || !aadhaarVerification || !panVerification) {
-        throw new Error('User record not found in database.',user,"-USER-", application,"-APP-", aadhaarVerification,"-AADHAAR-", panVerification,"-PAN-");
+        throw new Error('User record not found in database.', user, "-USER-", application, "-APP-", aadhaarVerification, "-AADHAAR-", panVerification, "-PAN-");
     }
 
     let utm = await prisma.utm.findUnique({
@@ -227,7 +216,6 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
         user,
         employee,
         business,
-        address,
         aadhaarVerification,
         phonePrefillData,
         latestLocation,

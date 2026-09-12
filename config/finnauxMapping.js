@@ -22,6 +22,7 @@ const axios = require('axios');
 const path = require('path');
 const logger = require('../utils/logger');
 const { encodeFileToBase64 } = require('../utils/base64Encoder');
+const prisma = require('../utils/prismaClient');
 
 /**
  * Finnaux wants documents inline as base64 rather than as a fileUrl link, so
@@ -78,7 +79,6 @@ const buildFinnauxPayload = async (
     user,
     employee,
     business,
-    address,
     aadhaarVerification,
     phonePrefillData,
     latestLocation,
@@ -89,7 +89,17 @@ const buildFinnauxPayload = async (
     const appId = application?.id || 'UNKNOWN';
     logger.info(`[FINNAUX MAPPING] Building payload for applicationId: ${appId}`);
 
-    console.log(utm, "[UTM here]")
+    const address = user?.id ? await prisma.addressDetail.findUnique({
+        where: { userId: user.id },
+        select: {
+            currentAddress: true,
+            permanentAddress: true,
+            city: true,
+            state: true,
+            postalCode: true,
+            currentAddressType: true,
+        }
+    }) : null;
 
     const payload = {
         "loanId": application?.id || null,
@@ -113,7 +123,10 @@ const buildFinnauxPayload = async (
         "bankAccountNo": null, // Not collected yet
         "ifscCode": null, // Not collected yet
         "bankName": null, // Not collected yet
-        "address1": " ( Entered City : " + address?.city + " ) " + address?.currentAddress || "",
+        "address1": [
+            address?.city ? `( Entered City : ${address.city} )` : '',
+            address?.currentAddress || aadhaarVerification?.address || ''
+        ].filter(Boolean).join(' ') || '',
         "address2": '',
         "landmark": null, // Not collected yet
         "pinCode": address?.postalCode || null,
