@@ -219,7 +219,7 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
         throw new BadRequestError('Both "id" and "status" are required in the request body.');
     }
 
-    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED', 'HOLD', 'IN_PROGRESS', 'COMPLETED'];
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED', 'HOLD', 'IN_PROGRESS', 'COMPLETED', 'DISBUSTED'];
     const uppercaseStatus = status.toUpperCase();
     if (!validStatuses.includes(uppercaseStatus)) {
         throw new BadRequestError(`Invalid status value. Must be one of: ${validStatuses.join(', ')}`);
