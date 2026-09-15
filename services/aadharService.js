@@ -198,30 +198,7 @@ class AadhaarService {
 
     await prisma.$transaction(async (tx) => {
       await AadhaarModel.saveEAadhaarDetails(user.id, eAadhaar, tx);
-      await uploadDigilockerDocument(user.id, tx, {
-        value: eAadhaar.photo,
-        docType: 'DIGILOCKER_PHOTO',
-        filename: 'DIGILOCKER_PHOTO.jpg',
-        mimetype: 'image/jpeg',
-      });
-      await uploadDigilockerDocument(user.id, tx, {
-        value: eAadhaar.aadhaarJpeg,
-        docType: 'DIGILOCKER_AADHAAR',
-        filename: 'DIGILOCKER_AADHAAR.jpg',
-        mimetype: 'image/jpeg',
-      });
-      await uploadDigilockerDocument(user.id, tx, {
-        value: eAadhaar.aadhaarPdf,
-        docType: 'DIGILOCKER_AADHAAR',
-        filename: 'DIGILOCKER_AADHAAR.pdf',
-        mimetype: 'application/pdf',
-      });
-      await uploadDigilockerDocument(user.id, tx, {
-        value: eAadhaar.panCard || eAadhaar.panImage || eAadhaar.pan,
-        docType: 'DIGILOCKER_PAN',
-        filename: 'DIGILOCKER_PAN.jpg',
-        mimetype: 'image/jpeg',
-      });
+
       const { splitAddress = {} } = eAadhaar;
       const toAddressString = (value) => {
         if (value == null) return null;
@@ -239,6 +216,35 @@ class AadhaarService {
       };
       await AddressModel.upsertAddress(user.id, addressData, tx);
       await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_COMPLETED' }, tx);
+
+      try {
+        await uploadDigilockerDocument(user.id, tx, {
+          value: eAadhaar.photo,
+          docType: 'DIGILOCKER_PHOTO',
+          filename: 'DIGILOCKER_PHOTO.jpg',
+          mimetype: 'image/jpeg',
+        });
+        await uploadDigilockerDocument(user.id, tx, {
+          value: eAadhaar.aadhaarJpeg,
+          docType: 'DIGILOCKER_AADHAAR',
+          filename: 'DIGILOCKER_AADHAAR.jpg',
+          mimetype: 'image/jpeg',
+        });
+        await uploadDigilockerDocument(user.id, tx, {
+          value: eAadhaar.aadhaarPdf,
+          docType: 'DIGILOCKER_AADHAAR',
+          filename: 'DIGILOCKER_AADHAAR.pdf',
+          mimetype: 'application/pdf',
+        });
+        await uploadDigilockerDocument(user.id, tx, {
+          value: eAadhaar.panCard || eAadhaar.panImage || eAadhaar.pan,
+          docType: 'DIGILOCKER_PAN',
+          filename: 'DIGILOCKER_PAN.jpg',
+          mimetype: 'image/jpeg',
+        });
+      } catch (e) {
+        logger.error("Error uploading Digilocker documents", e)
+      }
     });
 
     logger.info(`[DIGILOCKER] e-Aadhaar fetched and saved for user ${user.id}`);

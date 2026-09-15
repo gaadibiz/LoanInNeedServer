@@ -100,6 +100,13 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
  * @access  Private (API Key)
  */
 
+const formatToIST = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return new Date(d.getTime() + 5.5 * 60 * 60 * 1000).toISOString().replace('Z', '+05:30');
+};
+
 const toFinnauxColumnNames = (user) => {
     const application = user.loanApplications[0] || {};
     const location = user.locations?.[0] || {};
@@ -145,8 +152,8 @@ const toFinnauxColumnNames = (user) => {
         loanAmount: application.loanAmount || null,
         loanPeriod: null,
         riskFactor: null,
-        createdAt: application.createdAt || null,
-        updatedAt: application.updatedAt || null,
+        createdAt: application.createdAt ? formatToIST(application.createdAt) : null,
+        updatedAt: application.updatedAt ? formatToIST(application.updatedAt) : null,
         geolocation: {
             latitude: location.latitude ?? null,
             longitude: location.longitude ?? null,
@@ -242,6 +249,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
             },
             loanApplications: {
                 where: applicationFilter,
+                orderBy: { createdAt: 'desc' },
                 include: {
                     employmentDetail: true,
                 },
@@ -261,6 +269,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
             address: true,
             loanApplications: {
                 where: applicationFilter,
+                orderBy: { createdAt: 'desc' },
                 include: {
                     employmentDetail: true,
                 },

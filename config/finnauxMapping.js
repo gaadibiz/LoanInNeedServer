@@ -30,6 +30,13 @@ const prisma = require('../utils/prismaClient');
  * from local disk) and encoded on the fly. Document fields are always
  * [base64Data, fileName], even when there's just one.
  */
+const formatToIST = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return new Date(d.getTime() + 5.5 * 60 * 60 * 1000).toISOString().replace('Z', '+05:30');
+};
+
 const getDocumentBase64 = async (doc) => {
     if (doc.fileUrl) {
         const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
@@ -165,8 +172,8 @@ const buildFinnauxPayload = async (
         'phonePrefill': {},
         'extras': {},
         'status': application?.status,
-        'createdAt': application?.createdAt,
-        'updatedAt': application?.updatedAt,
+        'createdAt': application?.createdAt ? formatToIST(application.createdAt) : null,
+        'updatedAt': application?.updatedAt ? formatToIST(application.updatedAt) : null,
         'reloan': application?.reloan,
     };
     logger.info(`[FINNAUX MAPPING] ✅ Payload built for appId=${appId}`, {
