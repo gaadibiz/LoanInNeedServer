@@ -6,9 +6,9 @@ const { SERVICE_URLS } = require('../utils/microserviceUrl');
 require('dotenv').config()
 
 const SIGNZY_TOKEN = process.env.SIGNZY_TOKEN || 'J6lbpOPjZSN3p0beAFp0ftcrCsuEPsVO' || 'UJULyodf25LFtNZGyoliwUvgvxWNYki1';
-const DIGILOCKER_CALLBACK_URL = 
-process.env.SERVER_URL + '/api/auth/aadhaar/save-verified-adhaar-details' 
-  //'https://geographic-participate-impression-dat.trycloudflare.com/api/auth/aadhaar/save-verified-adhaar-details';
+const DIGILOCKER_CALLBACK_URL =
+  process.env.SERVER_URL + '/api/auth/aadhaar/save-verified-adhaar-details'
+//'https://geographic-participate-impression-dat.trycloudflare.com/api/auth/aadhaar/save-verified-adhaar-details';
 
 class SignZyService {
   constructor() {
@@ -22,7 +22,7 @@ class SignZyService {
 
     this.digilockerRequestUrlBreaker = createCircuitBreaker(
       (data) => {
-    
+
         return this.client.post(SERVICE_URLS.requestDigilocker, { ...data, signup: true, })
       },
       'SignZy Digilocker Request URL'
@@ -60,7 +60,7 @@ class SignZyService {
           "signup": true,
           "redirectUrl": "https://www.signzy.com/",
           "redirectTime": "1",
-          "callbackUrl": DIGILOCKER_CALLBACK_URL,
+          "callbackUrl": 'https://be-prod.bumchumfinserve.com/api/auth/aadhaar/save-verified-adhaar-details',
           "successRedirectUrl": 'https://www.signzy.com/',
           "successRedirectTime": "5",
           "failureRedirectUrl": "https://www.signzy.com/",
