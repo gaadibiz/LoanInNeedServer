@@ -2,6 +2,7 @@ const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
 const { enqueueJob } = require('../utils/postgresMQ');
 const phonePrefillService = require('./phonePrefillService');
+const ipQualityService = require('./ipQualityService');
 const { buildFinnauxJobPayload } = require('./finnauxIntegrationService');
 const { default: axios } = require('axios');
 require('dotenv').config();
@@ -398,6 +399,16 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
         logger.info(`[LOAN] Phone prefill details fetched and saved for User ${userId}`);
     } catch (error) {
         logger.error(`[LOAN] Failed to fetch/save phone prefill details for User ${userId}: ${error.message}`);
+    }
+
+    // --- IP QUALITY CHECK (Signzy) ---
+    if (ipAddress) {
+        try {
+            await ipQualityService.fetchAndSaveIpQuality(userId, ipAddress);
+            logger.info(`[LOAN] IP quality details fetched and saved for User ${userId}`);
+        } catch (error) {
+            logger.error(`[LOAN] Failed to fetch/save IP quality details for User ${userId}: ${error.message}`);
+        }
     }
 
     // --- LOS INTEGRATION (MQ) ---

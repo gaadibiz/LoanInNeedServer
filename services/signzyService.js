@@ -39,6 +39,11 @@ class SignZyService {
       (data) => this.client.post(SERVICE_URLS.phonePrefill, data),
       'SignZy Phone Prefill'
     );
+
+    this.ipQualityBreaker = createCircuitBreaker(
+      (data) => this.client.post(SERVICE_URLS.ipQualityRiskScore, data),
+      'SignZy IP Quality Check'
+    );
   }
 
   /**
@@ -170,6 +175,31 @@ class SignZyService {
         logger.error(`SignZy Phone Prefill execution error: ${error.message}`);
       }
       throw new BadRequestError('Unable to fetch phone prefill details at this time');
+    }
+  }
+
+  /**
+   * Fetch IP Quality and Risk Scores for an IP address from Signzy's IP Quality Check API.
+   * @param {string} ip
+   * @returns {Promise<Object>} the result object from Signzy
+   */
+  async getIpQualityRiskScores(ip) {
+    try {
+      const response = await this.ipQualityBreaker.fire({ ip });
+      const result = response?.data?.result || response?.data;
+
+      if (!result) {
+        throw new BadRequestError('Signzy did not return IP quality details');
+      }
+
+      return result;
+    } catch (error) {
+      if (error.response?.data) {
+        logger.error(`SignZy IP Quality API Error: ${JSON.stringify(error.response.data)}`);
+      } else {
+        logger.error(`SignZy IP Quality execution error: ${error.message}`);
+      }
+      throw new BadRequestError('Unable to fetch IP quality details at this time');
     }
   }
 }

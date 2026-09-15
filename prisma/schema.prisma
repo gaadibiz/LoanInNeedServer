@@ -45,6 +45,7 @@ model User {
   locations              UserLocation[]
   losIntegrationJobs     LosIntegrationJob[]
   phonePrefillDetail     PhonePrefillDetail?
+  ipQualityDetail        IpQualityDetail?
   finnauxIntegrationJobs FinnauxIntegrationJob[]
   utm                    Utm?
 }
@@ -152,6 +153,36 @@ model PhonePrefillDetail {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id])
+}
+
+model IpQualityDetail {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  ipAddress    String
+  fraudScore   String?
+  botStatus    String?
+  isCrawler    String?
+  proxy        String?
+  vpn          String?
+  tor          String?
+  recentAbuse  String?
+  mobile       String?
+  city         String?
+  region       String?
+  countryCode  String?
+  isp          String?
+  asn          String?
+  organization String?
+  timezone     String?
+  latitude     String?
+  longitude    String?
+  host         String?
+  address      String?
+  response     Json
+  fetchedAt    DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
 }
 
 model Utm {

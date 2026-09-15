@@ -10,6 +10,7 @@ const UserModel = require('../models/userModel');
 const { buildFinnauxJobPayload } = require('./finnauxIntegrationService');
 const { checkAndPushBumchumIfReady } = require('./loanService');
 const phonePrefillService = require('./phonePrefillService');
+const ipQualityService = require('./ipQualityService');
 
 async function saveFullKYC(userId, data) {
   if (!userId) {
@@ -186,6 +187,15 @@ async function saveFullKYC(userId, data) {
         logger.info(`[LOAN] Phone prefill details fetched and saved for User ${userId}`);
       } catch (error) {
         logger.error(`[LOAN] Failed to fetch/save phone prefill details for User ${userId}: ${error.message}`);
+      }
+
+      if (data?.ipAddress) {
+        try {
+          await ipQualityService.fetchAndSaveIpQuality(userId, data.ipAddress, tx);
+          logger.info(`[LOAN] IP quality details fetched and saved for User ${userId}`);
+        } catch (error) {
+          logger.error(`[LOAN] Failed to fetch/save IP quality details for User ${userId}: ${error.message}`);
+        }
       }
       // ---------- Queue for LOS Integration ----------
       await tx.losIntegrationJob.create({
