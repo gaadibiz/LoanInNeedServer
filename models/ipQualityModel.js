@@ -1,11 +1,16 @@
 const prisma = require('../utils/prismaClient');
+const logger = require('../utils/logger');
 
 const IpQualityModel = {
   /**
    * Find IP quality record by userId
    */
   async findByUserId(userId, tx = prisma) {
-    const client = tx;
+    const client = tx || prisma;
+    if (!client?.ipQualityDetail) {
+      logger.warn('[IP_QUALITY] prisma.ipQualityDetail is not available on Prisma client. Please run "npx prisma generate".');
+      return null;
+    }
     return client.ipQualityDetail.findUnique({
       where: { userId },
     });
@@ -16,7 +21,11 @@ const IpQualityModel = {
    * IP Quality Check API, storing the parsed attributes and the raw JSON response.
    */
   async saveIpQualityDetails(userId, { ipAddress, result, response }, tx = prisma) {
-    const client = tx;
+    const client = tx || prisma;
+    if (!client?.ipQualityDetail) {
+      logger.warn('[IP_QUALITY] prisma.ipQualityDetail is not available on Prisma client. Please run "npx prisma generate".');
+      return null;
+    }
     const resObj = response || result || {};
     const resData = result || resObj?.result || resObj;
 
@@ -56,7 +65,10 @@ const IpQualityModel = {
    * Delete IP quality record by userId
    */
   async deleteByUserId(userId, tx = prisma) {
-    const client = tx;
+    const client = tx || prisma;
+    if (!client?.ipQualityDetail) {
+      return null;
+    }
     return client.ipQualityDetail.delete({
       where: { userId },
     });
