@@ -181,13 +181,62 @@ const toFinnauxColumnNames = (user) => {
         isOfficeEmailVerified: false,
         employmentProofDocument: null,
         isPersonalEmailOtpVerified: false,
+        ...(user.finnauxIntegrationJobs?.[0]?.rawResponse || {})
     };
 };
 
-const toFinnauxDateRangePayload = (user) => ({
-    ...toFinnauxColumnNames(user),
-    ...(user.finnauxIntegrationJobs?.[0]?.rawResponse || {}),
-});
+const toFinnauxDateRangePayload = (user) => {
+    const application = user.loanApplications[0] || {};
+    const location = user.locations?.[0] || {};
+    const utm = user.utm || {};
+    //  const aadhaarDocument = user.documents?.find((document) => document.docType === 'AADHAAR');
+    // const panDocument = user.documents?.find((document) => document.docType === 'PAN');
+    // const salarySlipDocuments = (user.documents || [])
+    //     .filter((document) => document.docType === 'PAY_SLIP')
+    //     .map((document) => document.fileUrl)
+    //     .filter(Boolean);
+
+    return {
+        name: user.name,
+        id: application.id || null,
+        mobileNo: user.phone,
+        loanPurpose: application.loanType || null,
+        address1: user.address?.currentAddress || null,
+        area: user.address?.city || null,
+        city: user.address?.city || null,
+        state: user.address?.state || null,
+        loanId: application.id || null,
+        loanNo: application.loanAccountNumber || null,
+        reason: application.reason || null,
+        reloan: application.reloan ?? null,
+        fatherName: null,
+        loanAmount: application.loanAmount || null,
+        createdAt: application.createdAt ? formatToIST(application.createdAt) : null,
+        updatedAt: application.updatedAt ? formatToIST(application.updatedAt) : null,
+        utmCampaign: utm.utmCampaign || null,
+        utmContent: utm.utmContent || null,
+        utmTerms: utm.utmTerm || null,
+        utmMedium: utm.utmMedium || null,
+        utmSource: utm.utmSource || null,
+        employeeId: application.employeeId || null,
+        extras: {},
+        gender: user.gender,
+        status: application.status || null,
+        // panCard: panDocument?.fileUrl || null,
+        pinCode: user.address?.postalCode || null,
+        address2: user.address?.permanentAddress || '',
+        bankName: null,
+        district: null,
+        ifscCode: null,
+        landmark: null,
+        geolocation: {
+            latitude: location.latitude ?? null,
+            longitude: location.longitude ?? null,
+        },
+        employeeName: application.employeeName || null,
+        ...(user.finnauxIntegrationJobs?.[0]?.rawResponse || {})
+    };
+};
 
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const id = req.params.id;
@@ -297,7 +346,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
             ...toFinnauxDateRangePayload(user),
             ...documents,
         }))
-        : users.map(toFinnauxDateRangePayload);
+        : users.map(toFinnauxColumnNames);
 
     res.status(200).json({
         success: true,
