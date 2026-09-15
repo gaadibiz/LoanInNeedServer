@@ -343,10 +343,10 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const documents = id ? await getBase64Documents(id) : {};
     const data = id
         ? users.map((user) => ({
-            ...toFinnauxDateRangePayload(user),
+            ...toFinnauxColumnNames(user),
             ...documents,
         }))
-        : users.map(toFinnauxColumnNames);
+        : users.map(toFinnauxDateRangePayload);
 
     res.status(200).json({
         success: true,
