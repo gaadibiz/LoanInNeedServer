@@ -100,8 +100,90 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
  * @access  Private (API Key)
  */
 
+const toFinnauxColumnNames = (user) => {
+    const application = user.loanApplications[0] || {};
+    const location = user.locations?.[0] || {};
+    const utm = user.utm || {};
+    const aadhaarDocument = user.documents?.find((document) => document.docType === 'AADHAAR');
+    const panDocument = user.documents?.find((document) => document.docType === 'PAN');
+    const salarySlipDocuments = (user.documents || [])
+        .filter((document) => document.docType === 'PAY_SLIP')
+        .map((document) => document.fileUrl)
+        .filter(Boolean);
+
+    return {
+        id: application.id || null,
+        dob: user.dob,
+        area: user.address?.city || null,
+        city: user.address?.city || null,
+        name: user.name,
+        panNo: user.panVerification?.panNumber || null,
+        aadhaarNo: user.aadhaarVerification?.aadhaarNumber || null,
+        state: user.address?.state || null,
+        extras: {},
+        gender: user.gender,
+        loanId: application.id || null,
+        loanNo: application.loanAccountNumber || null,
+        reason: application.reason || null,
+        reloan: application.reloan ?? null,
+        status: application.status || null,
+        panCard: panDocument?.fileUrl || null,
+        pinCode: user.address?.postalCode || null,
+        address1: user.address?.currentAddress || null,
+        address2: user.address?.permanentAddress || '',
+        bankName: null,
+        district: null,
+        ifscCode: null,
+        landmark: null,
+        mobileNo: user.phone,
+        utmTerms: utm.utmTerm || null,
+        utmMedium: utm.utmMedium || null,
+        utmSource: utm.utmSource || null,
+        employeeId: application.employeeId || null,
+        fatherName: null,
+        incomeType: application.employmentDetail?.employmentType || user.employment?.employmentType || null,
+        loanAmount: application.loanAmount || null,
+        loanPeriod: null,
+        riskFactor: null,
+        createdAt: application.createdAt || null,
+        updatedAt: application.updatedAt || null,
+        geolocation: {
+            latitude: location.latitude ?? null,
+            longitude: location.longitude ?? null,
+        },
+        loanPurpose: application.loanType || null,
+        officeEmail: null,
+        salarySlips: salarySlipDocuments.length ? salarySlipDocuments : null,
+        utmCampaign: utm.utmCampaign || null,
+        utmContent: utm.utmContent || null,
+        aadhaarFront: aadhaarDocument?.fileUrl || null,
+        aadhaarBack: null,
+        employeeName: application.employeeName || null,
+        workingYears: null,
+        bankAccountNo: null,
+        monthlyIncome: application.employmentDetail?.monthlyIncome || user.employment?.monthlyIncome || null,
+        personalEmail: user.email,
+        termsAccepted: true,
+        profilePicture: null,
+        addressDocument: null,
+        organizationName: user.employment?.employerName || null,
+        preferredEmiDate: null,
+        applicationNumber: null,
+        loanAccountNumber: application.loanAccountNumber || null,
+        isMobileOtpVerified: user.phoneVerified,
+        isOfficeEmailVerified: false,
+        employmentProofDocument: null,
+        isPersonalEmailOtpVerified: false,
+    };
+};
+
+const toFinnauxDateRangePayload = (user) => ({
+    ...toFinnauxColumnNames(user),
+    ...(user.finnauxIntegrationJobs?.[0]?.rawResponse || {}),
+});
+
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
-    const { id } = req.params
+    const id = req.params.id;
 
     const { from, to } = req.query;
 
@@ -122,38 +204,97 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
             );
         }
         fromDate = new Date(`${from}T00:00:00+05:30`);
-        toDate = new Date(`${to}T23:59:59.999+05:30`);
+        toDate = new Date(`${to}T00:00:00+05:30`);
+        toDate.setTime(toDate.getTime() + 24 * 60 * 60 * 1000);
 
         if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
             throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
         }
     }
 
+    const applicationFilter = id
+        ? { id: parseInt(id) }
+        : { createdAt: { gte: fromDate, lt: toDate } };
+    const finnauxJobFilter = id
+        ? { applicationId: parseInt(id) }
+        : { createdAt: { gte: fromDate, lt: toDate } };
+
     const where = {
-        ...(!id && fromDate && toDate ? {
-            createdAt: { gte: fromDate, lte: toDate },
-        } : id ? { applicationId: parseInt(id) } : {}),
+        loanApplications: {
+            some: applicationFilter,
+        },
     };
 
     console.log('Finnaux date filter:', { from, to, fromUTC: fromDate?.toISOString(), toUTC: toDate?.toISOString(), });
 
-    const [totalCount, jobs] = await Promise.all([
-        prisma.finnauxIntegrationJob.count({ where }),
-        prisma.finnauxIntegrationJob.findMany({
+    const userRelations = id
+        ? {
+            aadhaarVerification: true,
+            panVerification: true,
+            employment: true,
+            address: true,
+            documents: {
+                orderBy: { uploadedAt: 'desc' },
+            },
+            locations: {
+                orderBy: { capturedAt: 'desc' },
+                take: 10,
+            },
+            loanApplications: {
+                where: applicationFilter,
+                include: {
+                    employmentDetail: true,
+                },
+            },
+            loans: {
+                orderBy: { createdAt: 'desc' },
+            },
+            finnauxIntegrationJobs: {
+                where: finnauxJobFilter,
+                orderBy: { createdAt: 'desc' },
+                select: { rawResponse: true, applicationId: true, userId: true },
+            },
+            utm: true,
+            status: true,
+        }
+        : {
+            address: true,
+            loanApplications: {
+                where: applicationFilter,
+                include: {
+                    employmentDetail: true,
+                },
+            },
+            finnauxIntegrationJobs: {
+                where: finnauxJobFilter,
+                orderBy: { createdAt: 'desc' },
+                select: { rawResponse: true },
+            },
+            utm: true,
+        };
+
+    const [totalCount, users] = await Promise.all([
+        prisma.user.count({ where }),
+        prisma.user.findMany({
             where,
+            include: userRelations,
             orderBy: { updatedAt: 'desc' },
-            select: { userId: true, applicationId: true, ipAddress: true, rawRequest: true, rawResponse: true }
         })
     ]);
 
-    let documents = id ? await getBase64Documents(id) : {};
-    let data = jobs.map(job => ({ ...job.rawRequest, ...documents, ...job.rawResponse }));
+    const documents = id ? await getBase64Documents(id) : {};
+    const data = id
+        ? users.map((user) => ({
+            ...toFinnauxDateRangePayload(user),
+            ...documents,
+        }))
+        : users.map(toFinnauxDateRangePayload);
 
     res.status(200).json({
         success: true,
         count: data.length,
         totalCount,
-        data
+        data,
     });
 });
 

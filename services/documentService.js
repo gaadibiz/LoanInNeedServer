@@ -24,7 +24,8 @@ class DocumentVerificationService {
 
     const validTypes = [
       'AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT', 'PHOTO',
-      'SIGNATURE', 'GST_CERTIFICATE', 'TRADE_LICENSE', 'COMPANY_PAN'
+      'SIGNATURE', 'GST_CERTIFICATE', 'TRADE_LICENSE', 'COMPANY_PAN',
+      'DIGILOCKER_PHOTO', 'DIGILOCKER_AADHAAR', 'DIGILOCKER_PAN'
     ];
     if (!validTypes.includes(docType)) {
       throw new BadRequestError(`Invalid document type: ${docType}`);

@@ -85,24 +85,6 @@ const validateAadhaarExists = asyncHandler(async (req, res) => {
         message: 'Please verify your PAN card before validating Aadhaar.'
       });
     }
-
-    if (!panRecord.aadhaar_linked) {
-      return res.status(400).json({
-        success: false,
-        message: 'Aadhaar is not linked to your PAN card.'
-      });
-    }
-
-    if (panRecord.masked_aadhaar) {
-      const maskedLast4 = panRecord.masked_aadhaar.replace(/\D/g, '').slice(-4);
-      const enteredLast4 = cleanAadhaar.slice(-4);
-      if (maskedLast4 && enteredLast4 !== maskedLast4) {
-        return res.status(400).json({
-          success: false,
-          message: 'Aadhaar number does not match the Aadhaar linked to your PAN card.'
-        });
-      }
-    }
   }
 
   try {
@@ -112,7 +94,6 @@ const validateAadhaarExists = asyncHandler(async (req, res) => {
       return res.status(409).json({ success: false, message: 'This Aadhaar number is already registered with another account.' });
     }
 
-    await surepassService.verifyAadhaar(cleanAadhaar);
     return res.json({ success: true, message: 'Aadhaar number is valid' });
   } catch (err) {
     return res.status(422).json({ success: false, message: 'Invalid Aadhaar number. Please enter a valid Aadhaar card number.' });
@@ -134,32 +115,10 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Aadhaar number is required' });
   }
 
-  const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
-  const panRecord = await PanModel.findByUserId(userId);
-  if (panRecord) {
-    if (!panRecord.aadhaar_linked) {
-      return res.status(400).json({ success: false, message: 'Aadhaar is not linked to your PAN card.' });
-    }
-    if (panRecord.masked_aadhaar) {
-      const maskedLast4 = panRecord.masked_aadhaar.replace(/\D/g, '').slice(-4);
-      const enteredLast4 = cleanAadhaar.slice(-4);
-      if (maskedLast4 && enteredLast4 !== maskedLast4) {
-        return res.status(400).json({ success: false, message: 'Aadhaar number does not match the Aadhaar linked to your PAN card.' });
-      }
-    }
-  }
-
-  let aadhaarDetails;
-
-
-  // Use Surepass Validation API for real OTP flow
-  aadhaarDetails = await surepassService.verifyAadhaar(aadhaarNumber);
-
-
+  
   // Persist Aadhaar Validation in DB
   try {
     await aadhaarService.submitAadhaar(userId, aadhaarNumber);
-    await aadhaarService.verifyAadhaar(userId);
   } catch (err) {
     if (err.isOperational || err.statusCode === 400) {
       return res.status(err.statusCode || 400).json({ success: false, message: err.message });
@@ -171,7 +130,7 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: "Aadhaar verified successfully",
-    data: aadhaarDetails
+    data: req.body
   });
 });
 
@@ -192,10 +151,7 @@ const requestDigiLocker = asyncHandler(async (req, res) => {
   if (!userId) {
     throw new BadRequestError('userId is required');
   }
-
-  const mock = req.query.mock === 'true' && process.env.NODE_ENV !== 'production';
-
-  const digilockerDetails = await aadhaarService.requestDigilockerUrl(userId, { mock });
+  const digilockerDetails = await aadhaarService.requestDigilockerUrl(userId,req.body.aadhaarNumber);
 
   res.status(200).json({
     success: true,
@@ -213,18 +169,29 @@ const requestDigiLocker = asyncHandler(async (req, res) => {
  * logged-in user.
  */
 const saveVerifiedAadhaarDetails = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.body.internalId;
   console.log("RAW_USER_ID--------", userId)
   if (!userId) {
     throw new BadRequestError('userId is required');
   }
+  const aadhaarDetails = await AadhaarModel.findByUserId(Number(userId));
+  if (!aadhaarDetails) {
+    throw new BadRequestError('Aadhaar number is required');
+  }
 
-  const result = await aadhaarService.handleDigilockerCallback(userId, req.body.status);
+  const result = await aadhaarService.handleDigilockerCallback(
+    Number(userId),
+    req.body.status,
+    aadhaarDetails.aadhaarNumber
+  );
 
   res.status(200).json({
-    success: true,
+    status: req.body.status,
     message: result.saved ? 'Aadhaar details saved successfully' : 'Callback received',
-    data: result.data
+    data: {
+      ...req.body,
+      ...result
+    }
   });
 });
 

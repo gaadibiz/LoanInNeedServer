@@ -217,7 +217,7 @@ const buildFinnauxJobPayload = async (userId, applicationId, ipAddress, client =
         employee,
         business,
         aadhaarVerification,
-        phonePrefillData,
+        {},
         latestLocation,
         panVerification,
         ipAddress,
@@ -327,7 +327,17 @@ const markJobFailed = async (job, errorMessage) => {
     }
 };
 
-const getBase64Documents = async (id) => {
+const getBase64Documents = async (id, preloadedDocuments = null) => {
+    if (preloadedDocuments) {
+        const documentsByType = new Map();
+        for (const document of preloadedDocuments) {
+            if (!documentsByType.has(document.docType)) {
+                documentsByType.set(document.docType, document);
+            }
+        }
+        return encodeFinnauxDocuments([...documentsByType.values()]);
+    }
+
     let documentsInfo = await prisma.finnauxIntegrationJob.findUnique({
         where: { applicationId: parseInt(id) }, select: {
             userId: true,
@@ -346,7 +356,10 @@ const getBase64Documents = async (id) => {
     if (!documentsInfo.aadharDocumentId || !documentsInfo.panDocumentId || !documentsInfo.salarySlipDocumentId || !documentsInfo.bankStatementDocumentId) {
         userDocuments = await prisma.userDocument.findMany({
             where: {
-                userId: documentsInfo.userId
+                userId: documentsInfo.userId,
+                docType: {
+                    in: ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'],
+                },
             },
             select: {
                 docType: true,
@@ -380,7 +393,11 @@ const getBase64Documents = async (id) => {
         });
     }
 
-    let documentBase64 = {}
+    return encodeFinnauxDocuments(userDocuments);
+}
+
+const encodeFinnauxDocuments = async (userDocuments) => {
+    const documentBase64 = {};
     await Promise.all(userDocuments.map(async (doc) => {
         let base64Data = null;
         let doctype = doc.docType === 'AADHAAR' ? 'aadhaarFront' : doc.docType === 'PAN' ? 'panCard' : doc.docType === 'PAY_SLIP' ? 'salarySlips' : doc.docType === 'BANK_STATEMENT' ? 'bankStatement' : doc.docType;
@@ -397,8 +414,8 @@ const getBase64Documents = async (id) => {
             return null;
         }
     }));
-    return documentBase64
-}
+    return documentBase64;
+};
 
 module.exports = {
     processPendingFinnauxIntegrations,

@@ -162,7 +162,7 @@ const buildFinnauxPayload = async (
         "utmTerms": utm?.utmTerm || null,
         "utmContent": utm?.utmContent || null,
         "riskFactor": null, // Not collected yet
-        'phonePrefill': phonePrefillData || {},
+        'phonePrefill': {},
         'extras': {},
         'status': application?.status,
         'createdAt': application?.createdAt,

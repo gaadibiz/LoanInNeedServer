@@ -259,7 +259,6 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         });
     } catch (error) {
         console.error('Error sending loan application to Bumchum:', error);
-        throw error;
     }
 }
 

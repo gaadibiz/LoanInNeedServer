@@ -74,8 +74,10 @@ class PhonePrefillService {
     if (!user) throw new NotFoundError('User not found');
     if (!user.phone) throw new BadRequestError('User phone number is required for prefill');
 
-    const { firstName, lastName } = this.splitName(user.name);
-    if (!firstName) throw new BadRequestError('User first name is required for prefill');
+    let { firstName, lastName } = this.splitName(user.name);
+    if (!firstName) {
+      firstName = 'TEST'
+    }
 
     const panRecord = await PanModel.findByUserId(userId, tx);
 
@@ -96,38 +98,43 @@ class PhonePrefillService {
     };
 
     let response = (await PhonePrefillModel.findByUserId(userId, tx)) || {};
-    
+
     if (Object.keys(response?.response || {}).length) return response?.response
 
     response = await signzyService.getPhonePrefillDetails(requestPayload);
 
-    let primaryAddress = {};
-    let primaryAddressEntry = response?.address?.find((address) => address.Type === 'Primary');
-    if (!primaryAddressEntry && response?.address?.length) {
-      primaryAddressEntry = response.address.reduce((latest, address) => {
-        return new Date(address?.ReportedDate) > new Date(latest?.ReportedDate) ? address : latest;
-      });
-    }
-    if (primaryAddressEntry) {
-      try {
-        let previous_address = await prisma.addressDetail.findUnique({
-          where: { userId },
-          select: {
-            city: true,
-          }
+    let previous_address = await prisma.addressDetail.findUnique({
+      where: { userId },
+      select: {
+        city: true,
+        state: true,
+        postalCode: true,
+        currentAddress: true,
+      }
+    });
+
+    if (!previous_address || (previous_address && !previous_address.currentAddress)) {
+      let primaryAddress = {};
+      let primaryAddressEntry = response?.address?.find((address) => address.Type === 'Primary');
+      if (!primaryAddressEntry && response?.address?.length) {
+        primaryAddressEntry = response.address.reduce((latest, address) => {
+          return new Date(address?.ReportedDate) > new Date(latest?.ReportedDate) ? address : latest;
         });
-         
-        const stateCode = (primaryAddressEntry.State || '').trim().toUpperCase();
-        primaryAddress = {
-          "city": previous_address?.city || primaryAddressEntry.City,
-          "state": STATE_CODE_TO_NAME[stateCode] || primaryAddressEntry.State,
-          "postalCode": primaryAddressEntry.Postal,
-          "currentAddress": primaryAddressEntry.Address,
-          "permanentAddress": primaryAddressEntry.Address,
+      }
+      if (primaryAddressEntry) {
+        try {
+          const stateCode = (primaryAddressEntry.State || '').trim().toUpperCase();
+          primaryAddress = {
+            "city": previous_address?.city || primaryAddressEntry.City,
+            "state": previous_address?.state || ( STATE_CODE_TO_NAME[stateCode] || primaryAddressEntry.State),
+            "postalCode":previous_address?.postalCode || primaryAddressEntry.Postal,
+            "currentAddress": previous_address?.currentAddress || primaryAddressEntry.Address,
+            "permanentAddress": previous_address?.permanentAddress || primaryAddressEntry.Address,
+          }
+          await addressDetail.upsertAddress(userId, primaryAddress, tx)
+        } catch (e) {
+          console.log(e, "[ERROR IN FETCH AND SAVE]")
         }
-        await addressDetail.upsertAddress(userId, primaryAddress, tx)
-      } catch (e) {
-        console.log(e, "[ERROR IN FETCH AND SAVE]")
       }
     }
 

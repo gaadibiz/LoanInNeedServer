@@ -31,7 +31,6 @@ router.post('/aadhaar/request-digilocker',
 // Called by our frontend (authenticated) after the user lands back from the
 // Digilocker consent flow — fetches and saves the e-Aadhaar for req.user.id
 router.post('/aadhaar/save-verified-adhaar-details',
-    protect,
     authController.saveVerifiedAadhaarDetails
 );
 

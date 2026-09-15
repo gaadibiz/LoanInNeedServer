@@ -13,6 +13,7 @@ const dotenv = require('dotenv');
 const rateLimit = require('express-rate-limit');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
+const authController = require('./controllers/authController');
 const kycRoutes = require('./routes/kycRoutes'); // ✅ Added KYC routes
 const documentVerificationRoutes = require('./routes/documentVerificationRoutes'); // ✅ Added Document routes
 const selfieRoutes = require('./routes/selfieRoutes'); // ✅ Added Selfie routes
@@ -114,6 +115,8 @@ app.use(require('./middleware/idempotencyMiddleware'));
 // ✅ Route handlers
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
+// Keep callback URLs issued before the /api prefix change working.
+app.get('/auth/aadhaar/save-verified-adhaar-details', authController.saveVerifiedAadhaarDetails);
 app.use('/api/kyc', kycRoutes); // ✅ Mounted KYC
 app.use('/api/document', documentVerificationRoutes); // ✅ Mounted Document Verification
 app.use('/api/selfie', selfieRoutes); // ✅ Mounted Selfie routes

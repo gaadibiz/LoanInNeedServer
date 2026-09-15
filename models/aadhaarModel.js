@@ -8,6 +8,11 @@ const AadhaarModel = {
     const client = tx;
     return client.aadhaarVerification.findUnique({
       where: { userId },
+      select:{
+        aadhaarNumber:true,
+        userId:true,
+        verified:true,
+      }
     });
   },
 
@@ -87,11 +92,9 @@ const AadhaarModel = {
       photoUrl: eAadhaar.photo,
       aadhaarJpegUrl: eAadhaar.aadhaarJpeg,
       splitAddress: eAadhaar.splitAddress,
-      rawResponse: eAadhaar.rawResponse,
+      rawResponse: eAadhaar,
       eAadhaarFetchedAt: new Date(),
     };
-
-    console.log(data,eAadhaar)
     return client.aadhaarVerification.upsert({
       where: { userId },
       update: data,

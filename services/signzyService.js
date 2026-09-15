@@ -3,14 +3,17 @@ const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { createCircuitBreaker } = require('../utils/circuitBreaker');
 const { SERVICE_URLS } = require('../utils/microserviceUrl');
+require('dotenv').config()
 
-const SIGNZY_BASE_URL = process.env.SIGNZY_PREFIX || 'https://api-preproduction.signzy.app';
-const SIGNZY_TOKEN = process.env.SIGNZY_TOKEN || 'UJULyodf25LFtNZGyoliwUvgvxWNYki1';
+const SIGNZY_TOKEN = process.env.SIGNZY_TOKEN || 'J6lbpOPjZSN3p0beAFp0ftcrCsuEPsVO' || 'UJULyodf25LFtNZGyoliwUvgvxWNYki1';
+const DIGILOCKER_CALLBACK_URL = 
+process.env.SERVER_URL + '/api/auth/aadhaar/save-verified-adhaar-details' 
+  //'https://geographic-participate-impression-dat.trycloudflare.com/api/auth/aadhaar/save-verified-adhaar-details';
 
 class SignZyService {
   constructor() {
     this.client = axios.create({
-      baseURL: SIGNZY_BASE_URL,
+      baseURL: '',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': SIGNZY_TOKEN
@@ -18,12 +21,17 @@ class SignZyService {
     });
 
     this.digilockerRequestUrlBreaker = createCircuitBreaker(
-      (data) => this.client.post(SERVICE_URLS.requestDigilocker, data),
+      (data) => {
+    
+        return this.client.post(SERVICE_URLS.requestDigilocker, { ...data, signup: true, })
+      },
       'SignZy Digilocker Request URL'
     );
 
     this.digilockerGetEAadhaarBreaker = createCircuitBreaker(
-      (data) => this.client.post(SERVICE_URLS.getEAadhaar, data),
+      (data) => {
+        return this.client.post(SERVICE_URLS.getEAadhaar, data)
+      },
       'SignZy Digilocker Get e-Aadhaar'
     );
 
@@ -39,14 +47,41 @@ class SignZyService {
    * @returns {Promise<{ url: string, requestId: string }>}
    */
   async createDigilockerUrl(userId) {
+    const consentValidTill = Math.floor(Date.now() / 1000) + 600;
+
     try {
-      const response = await this.digilockerRequestUrlBreaker.fire({
-        successRedirectUrl: `${process.env.FRONTEND_URL}/signup`,
-        failureRedirectUrl: `${process.env.FRONTEND_URL}/signup`,
-        docType: ['ADHAR'],
-        purpose: 'kyc',
-        internalId: String(userId),
-      });
+      const response = await this.digilockerRequestUrlBreaker.fire(
+        {
+          "signup": true,
+          "redirectUrl": "https://www.signzy.com/",
+          "redirectTime": "1",
+          "callbackUrl": DIGILOCKER_CALLBACK_URL,
+          "successRedirectUrl": 'https://www.signzy.com/',
+          "successRedirectTime": "5",
+          "failureRedirectUrl": "https://www.signzy.com/",
+          "failureRedirectTime": "5",
+          "logoVisible": "true",
+          "logo": "https://enr-biolerplate-7may26.s3.ap-south-1.amazonaws.com/company_outlet_logo/navneen_2026-08-22_04-25-56.jpeg",
+          "supportEmailVisible": "true",
+          "supportEmail": "support@signzy.com",
+          "docType": [
+            "PANCR",
+            "ADHAR"
+          ],
+          "pinlessAuthentication": true,
+          "consentValidTill": Math.floor(Date.now() / 1000) + 60000,
+          "shortenUrl": true,
+          "purpose": "kyc",
+          "getScope": true,
+          "showLoaderState": true,
+          "internalId": `${userId}`,
+          "companyName": "Signzy",
+          "favIcon": "https://enr-biolerplate-7may26.s3.ap-south-1.amazonaws.com/company_outlet_logo/favicon_2026-09-03_06-30-06.png",
+          "getBase64Files": false,
+          "getEAadhaarPdf": true,
+          "getEAadhaarJpeg": true
+        }
+      );
 
       const result = response?.data?.result;
 
@@ -70,13 +105,13 @@ class SignZyService {
    * @param {string} requestId
    * @returns {Promise<Object>} flattened e-Aadhaar fields + rawResponse for audit
    */
-  async getEAadhaarDetails(requestId) {
+  async getEAadhaarDetails(requestId, aadhaarNumber) {
     try {
       const response = await this.digilockerGetEAadhaarBreaker.fire({
         requestId,
-        extraDigitalCertificateParams: false,
-        getBase64Files: false,
-        getEAadhaarPdf: false,
+        extraDigitalCertificateParams: true,
+        getBase64Files: true,
+        getEAadhaarPdf: true,
         getEAadhaarJpeg: true,
       });
 
@@ -87,7 +122,7 @@ class SignZyService {
       }
 
       return {
-        uid: result.uid,
+        uid: aadhaarNumber,
         name: result.name,
         dob: result.dob,
         gender: result.gender,
@@ -113,7 +148,7 @@ class SignZyService {
    * @param {{ phoneNumber: string, firstName: string, lastName?: string, pan?: string }} params
    * @returns {Promise<Object>} the raw `response` object from Signzy
    */
-  async getPhonePrefillDetails({ mobileNumber, fullName,consent }) {
+  async getPhonePrefillDetails({ mobileNumber, fullName, consent }) {
     try {
       const response = await this.phonePrefillBreaker.fire({
         mobileNumber,

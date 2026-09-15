@@ -373,6 +373,7 @@ enum LoanStatus {
   HOLD
   IN_PROGRESS
   COMPLETED
+  DISBUSTED
 }
 
 enum EmploymentType {
@@ -404,6 +405,9 @@ enum DocumentType {
   GST_CERTIFICATE
   TRADE_LICENSE
   COMPANY_PAN
+  DIGILOCKER_PHOTO
+  DIGILOCKER_AADHAAR
+  DIGILOCKER_PAN
 }
 
 enum DocumentUploadStatus {
