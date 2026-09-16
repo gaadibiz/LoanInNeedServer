@@ -82,7 +82,6 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             dob: true,
             gender: true,
             profileType: true,
-            aadhaarVerification: true,
             panVerification: true
         }
     });
