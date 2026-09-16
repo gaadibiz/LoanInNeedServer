@@ -126,8 +126,8 @@ class PhonePrefillService {
           const stateCode = (primaryAddressEntry.State || '').trim().toUpperCase();
           primaryAddress = {
             "city": previous_address?.city || primaryAddressEntry.City,
-            "state": previous_address?.state || ( STATE_CODE_TO_NAME[stateCode] || primaryAddressEntry.State),
-            "postalCode":previous_address?.postalCode || primaryAddressEntry.Postal,
+            "state": previous_address?.state || (STATE_CODE_TO_NAME[stateCode] || primaryAddressEntry.State),
+            "postalCode": previous_address?.postalCode || primaryAddressEntry.Postal,
             "currentAddress": previous_address?.currentAddress || primaryAddressEntry.Address,
             "permanentAddress": previous_address?.permanentAddress || primaryAddressEntry.Address,
           }

@@ -210,36 +210,30 @@ class AadhaarService {
         city: toAddressString(splitAddress.city),
         state: toAddressString(splitAddress.state),
         postalCode: toAddressString(splitAddress.pincode),
-        currentAddress: [addressLine, district, landmark].filter(Boolean).join(' ') || null,
+        permanentAddress: [addressLine, district, landmark].filter(Boolean).join(' ') || null,
       };
       await AddressModel.upsertAddress(user.id, addressData, tx);
       await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_COMPLETED' }, tx);
 
       try {
-        await uploadDigilockerDocument(user.id, tx, {
+        eAadhaar?.photo ? await uploadDigilockerDocument(user.id, tx, {
           value: eAadhaar.photo,
           docType: 'DIGILOCKER_PHOTO',
           filename: 'DIGILOCKER_PHOTO.jpg',
           mimetype: 'image/jpeg',
-        });
-        await uploadDigilockerDocument(user.id, tx, {
-          value: eAadhaar.aadhaarJpeg,
+        }) : null
+        eAadhaar?.rawResponse?.aadhaarJpeg ? await uploadDigilockerDocument(user.id, tx, {
+          value: eAadhaar.rawResponse.aadhaarJpeg,
           docType: 'DIGILOCKER_AADHAAR',
           filename: 'DIGILOCKER_AADHAAR.jpg',
           mimetype: 'image/jpeg',
-        });
-        await uploadDigilockerDocument(user.id, tx, {
-          value: eAadhaar.aadhaarPdf,
+        }) : null
+        eAadhaar?.rawResponse?.aadhaarPdf ? await uploadDigilockerDocument(user.id, tx, {
+          value: eAadhaar.rawResponse.aadhaarPdf,
           docType: 'DIGILOCKER_AADHAAR',
           filename: 'DIGILOCKER_AADHAAR.pdf',
           mimetype: 'application/pdf',
-        });
-        await uploadDigilockerDocument(user.id, tx, {
-          value: eAadhaar.panCard || eAadhaar.panImage || eAadhaar.pan,
-          docType: 'DIGILOCKER_PAN',
-          filename: 'DIGILOCKER_PAN.jpg',
-          mimetype: 'image/jpeg',
-        });
+        }) : null
       } catch (e) {
         logger.error("Error uploading Digilocker documents", e)
       }

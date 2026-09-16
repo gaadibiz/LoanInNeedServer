@@ -113,6 +113,7 @@ const toFinnauxColumnNames = (user) => {
     const utm = user.utm || {};
     const aadhaarDocument = user.documents?.find((document) => document.docType === 'AADHAAR');
     const panDocument = user.documents?.find((document) => document.docType === 'PAN');
+    const bankStatement = user.documents?.find((document) => document.docType === 'BANK_STATEMENT');
     const salarySlipDocuments = (user.documents || [])
         .filter((document) => document.docType === 'PAY_SLIP')
         .map((document) => document.fileUrl)
@@ -136,8 +137,8 @@ const toFinnauxColumnNames = (user) => {
         status: application.status || null,
         panCard: panDocument?.fileUrl || null,
         pinCode: user.address?.postalCode || null,
-        address1: user.address?.currentAddress || null,
-        address2: user.address?.permanentAddress || '',
+        address1: user.address?.permanentAddress || null,
+        address2: '',
         bankName: null,
         district: null,
         ifscCode: null,
@@ -201,7 +202,7 @@ const toFinnauxDateRangePayload = (user) => {
         id: application.id || null,
         mobileNo: user.phone,
         loanPurpose: application.loanType || null,
-        address1: user.address?.currentAddress || null,
+        address1: user.address?.permanentAddress || null,
         area: user.address?.city || null,
         city: user.address?.city || null,
         state: user.address?.state || null,
@@ -224,7 +225,7 @@ const toFinnauxDateRangePayload = (user) => {
         status: application.status || null,
         // panCard: panDocument?.fileUrl || null,
         pinCode: user.address?.postalCode || null,
-        address2: user.address?.permanentAddress || '',
+        address2: '',
         bankName: null,
         district: null,
         ifscCode: null,
