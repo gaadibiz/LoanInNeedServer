@@ -17,13 +17,19 @@ async function saveFullKYC(userId, data) {
     throw new BadRequestError('User ID is required ❌');
   }
 
+  data.currentAddress = [
+    data.addressLine,
+    data.pinCode,
+    data.city,
+    data.state
+  ].filter(Boolean).join(', ');
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
   const result = await prisma.$transaction(
     async tx => {
       // Fetch existing records first (within the transaction tx)
       const existingEmployment = await EmploymentModel.findByUserId(userId, tx);
       const existingAddress = await AddressModel.findByUserId(userId, tx);
-      const aadhaarVerification = await tx.aadhaarVerification.findUnique({ where: { userId },select: { aadhaarNumber: true } });
+      const aadhaarVerification = await tx.aadhaarVerification.findUnique({ where: { userId }, select: { aadhaarNumber: true } });
 
       // Helper to check if a value is a dummy placeholder
       const isPlaceholder = (val) => {
@@ -165,7 +171,7 @@ async function saveFullKYC(userId, data) {
 
       // If this user already has a prior application, flag this one as a re-apply
       // (reason: '1') so Finnaux can see it's not the user's first application.
-      const priorApplication =( await tx.loanApplication.findFirst({ where: { userId} })) || {};
+      const priorApplication = (await tx.loanApplication.findFirst({ where: { userId } })) || {};
 
       // This ensures that the LOS system (which queries LoanApplication) sees all entries.
       const application = await tx.loanApplication.create({
@@ -210,7 +216,7 @@ async function saveFullKYC(userId, data) {
 
       // ---------- Queue for Finnaux Integration ----------
       const isSubmitted = data.submitted === true || data.submitted === 'true';
-      const finnauxRawRequest = isSubmitted ? (await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx)): null
+      const finnauxRawRequest = isSubmitted ? (await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx)) : null
       isSubmitted ? (await tx.finnauxIntegrationJob.create({
         data: {
           ipAddress: data?.ipAddress || '',
