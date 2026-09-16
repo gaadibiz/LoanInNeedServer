@@ -228,6 +228,28 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         }
     });
 
+    const ipQualityDetail = await prisma.ipQualityDetail.findUnique({
+        where: { userId },
+        select: {
+            proxy: true,
+            botStatus: true,
+            vpn: true,
+            tor: true,
+            countryCode: true,
+            mobile: true,
+            region: true,
+            city: true,
+            latitude: true,
+            longitude: true,
+            recentAbuse: true,
+            ipAddress: true,
+            fraudScore: true,
+            organization: true,
+            host: true,
+            address: true
+        }
+    });
+
     try {
         await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/create-external-leads', {
             user,
@@ -249,6 +271,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             category_name: 'Loan Application',
             date_of_visit: new Date().toISOString(),
             cancellation_dead_reason: application.reason || '',
+            ipQualityDetail: ipQualityDetail,
             employment_type_uuid: employeeDetail?.employmentType === 'SALARIED' ? 'e54e543d-a20e-47b5-8bf1-a087e910d92b' : '3d9d2e30-2754-49f8-be31-3a14c1d720b7',
             action_item_category_uuid: 'f22bd31f-b9cb-4c8e-a07b-50f9b7083812',
             ...utm
@@ -266,7 +289,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
 async function updateLoanApplicationToBumchum(data) {
 
     try {
-        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL+ '/update-external-lead',
+        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/update-external-lead',
             data, {
             headers: {
                 'auth-Key': process.env.BUMCHUM_AUTH_KEY,
