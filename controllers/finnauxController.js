@@ -113,6 +113,7 @@ const toFinnauxColumnNames = (user) => {
     const utm = user.utm || {};
     const aadhaarDocument = user.documents?.find((document) => document.docType === 'AADHAAR');
     const panDocument = user.documents?.find((document) => document.docType === 'PAN');
+    const ipQualityDetail = user.ipQualityDetail || {}
     const bankStatement = user.documents?.find((document) => document.docType === 'BANK_STATEMENT');
     const salarySlipDocuments = (user.documents || [])
         .filter((document) => document.docType === 'PAY_SLIP')
@@ -159,6 +160,12 @@ const toFinnauxColumnNames = (user) => {
             latitude: location.latitude ?? null,
             longitude: location.longitude ?? null,
         },
+        countryCode: ipQualityDetail.countryCode ?? null,
+        ipAddress: ipQualityDetail.ipAddress ?? null,
+        IPAddress: ipQualityDetail.ipAddress ?? null,
+        fraudScore: ipQualityDetail.fraudScore ?? null,
+        vpn: ipQualityDetail.vpn ?? null,
+        IPStatus: (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P',
         loanPurpose: application.loanType || null,
         officeEmail: null,
         salarySlips: salarySlipDocuments.length ? salarySlipDocuments : null,
@@ -190,6 +197,8 @@ const toFinnauxDateRangePayload = (user) => {
     const application = user.loanApplications[0] || {};
     const location = user.locations?.[0] || {};
     const utm = user.utm || {};
+    const ipQualityDetail = user.ipQualityDetail || {}
+    console.log(ipQualityDetail)
     //  const aadhaarDocument = user.documents?.find((document) => document.docType === 'AADHAAR');
     // const panDocument = user.documents?.find((document) => document.docType === 'PAN');
     // const salarySlipDocuments = (user.documents || [])
@@ -202,38 +211,44 @@ const toFinnauxDateRangePayload = (user) => {
         id: application.id || null,
         mobileNo: user.phone,
         loanPurpose: application.loanType || null,
-        address1: user.address?.permanentAddress || null,
-        area: user.address?.city || null,
-        city: user.address?.city || null,
-        state: user.address?.state || null,
+        //  address1: user.address?.permanentAddress || null,
+        //  area: user.address?.city || null,
+        // city: user.address?.city || null,
+        // state: user.address?.state || null,
         loanId: application.id || null,
         loanNo: application.loanAccountNumber || null,
         reason: application.reason || null,
         reloan: application.reloan ?? null,
-        fatherName: null,
+        // fatherName: null,
         loanAmount: application.loanAmount || null,
         createdAt: application.createdAt ? formatToIST(application.createdAt) : null,
         updatedAt: application.updatedAt ? formatToIST(application.updatedAt) : null,
-        utmCampaign: utm.utmCampaign || null,
-        utmContent: utm.utmContent || null,
-        utmTerms: utm.utmTerm || null,
+        // utmCampaign: utm.utmCampaign || null,
+        //  utmContent: utm.utmContent || null,
+        // utmTerms: utm.utmTerm || null,
         utmMedium: utm.utmMedium || null,
-        utmSource: utm.utmSource || null,
+        // utmSource: utm.utmSource || null,
         employeeId: application.employeeId || null,
-        extras: {},
+        //extras: {},
         gender: user.gender,
         status: application.status || null,
         // panCard: panDocument?.fileUrl || null,
-        pinCode: user.address?.postalCode || null,
-        address2: '',
+        // pinCode: user.address?.postalCode || null,
+        //     address2: '',
         bankName: null,
-        district: null,
+        // district: null,
         ifscCode: null,
-        landmark: null,
+        //  landmark: null,
         geolocation: {
-            latitude: location.latitude ?? null,
-            longitude: location.longitude ?? null,
+            latitude: ipQualityDetail.latitude || null,
+            longitude: ipQualityDetail.longitude || null,
         },
+        countryCode: ipQualityDetail.countryCode || null,
+        ipAddress: ipQualityDetail.ipAddress || null,
+        IPAddress: ipQualityDetail.ipAddress || null,
+        fraudScore: ipQualityDetail.fraudScore || null,
+        vpn: ipQualityDetail.vpn || null,
+        IPStatus: (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P',
         employeeName: application.employeeName || null,
         ...(user.finnauxIntegrationJobs?.[0]?.rawResponse || {})
     };
@@ -312,11 +327,12 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
                 orderBy: { createdAt: 'desc' },
                 select: { rawResponse: true, applicationId: true, userId: true },
             },
+            ipQualityDetail: true,
             utm: true,
             status: true,
         }
         : {
-            address: true,
+            // address: true,
             loanApplications: {
                 where: applicationFilter,
                 orderBy: { createdAt: 'desc' },
@@ -329,17 +345,20 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
                 orderBy: { createdAt: 'desc' },
                 select: { rawResponse: true },
             },
-            utm: true,
+            ipQualityDetail: true,
+            utm: {
+                select: {
+                    utmMedium: true,
+                }
+            },
         };
 
-    const [totalCount, users] = await Promise.all([
-        prisma.user.count({ where }),
+    const users = await
         prisma.user.findMany({
             where,
             include: userRelations,
             orderBy: { updatedAt: 'desc' },
         })
-    ]);
 
     const documents = id ? await getBase64Documents(id) : {};
     const data = id
@@ -352,7 +371,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         count: data.length,
-        totalCount,
+        totalCount: users.length,
         data,
     });
 });
