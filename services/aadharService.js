@@ -228,12 +228,7 @@ class AadhaarService {
           filename: 'DIGILOCKER_AADHAAR.jpg',
           mimetype: 'image/jpeg',
         }) : null
-        eAadhaar?.rawResponse?.aadhaarPdf ? await uploadDigilockerDocument(user.id, tx, {
-          value: eAadhaar.rawResponse.aadhaarPdf,
-          docType: 'DIGILOCKER_AADHAAR',
-          filename: 'DIGILOCKER_AADHAAR.pdf',
-          mimetype: 'application/pdf',
-        }) : null
+
       } catch (e) {
         logger.error("Error uploading Digilocker documents", e)
       }
