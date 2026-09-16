@@ -157,8 +157,8 @@ const toFinnauxColumnNames = (user) => {
         createdAt: application.createdAt ? formatToIST(application.createdAt) : null,
         updatedAt: application.updatedAt ? formatToIST(application.updatedAt) : null,
         geolocation: {
-            latitude: location.latitude ?? null,
-            longitude: location.longitude ?? null,
+            latitude: ipQualityDetail.latitude ?? null,
+            longitude: ipQualityDetail.longitude ?? null,
         },
         countryCode: ipQualityDetail.countryCode ?? null,
         ipAddress: ipQualityDetail.ipAddress ?? null,
@@ -274,8 +274,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         },
     };
 
-    console.log('Finnaux date filter:', { from, to, fromUTC: fromDate?.toISOString(), toUTC: toDate?.toISOString(), });
-
     const userRelations = id
         ? {
             aadhaarVerification: true,
@@ -284,10 +282,6 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
             address: true,
             documents: {
                 orderBy: { uploadedAt: 'desc' },
-            },
-            locations: {
-                orderBy: { capturedAt: 'desc' },
-                take: 10,
             },
             loanApplications: {
                 where: applicationFilter,
