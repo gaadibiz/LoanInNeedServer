@@ -402,7 +402,7 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
                 orderBy: { updatedAt: 'desc' },
             })
 
-        let data = users.map(toFinnauxColumnNames)
+        let data = users.map(toFinnauxDateRangePayload)
         res.status(200).json({
             success: true,
             count: data.length,
