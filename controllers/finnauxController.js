@@ -157,8 +157,8 @@ const toFinnauxColumnNames = (user) => {
         createdAt: application.createdAt ? formatToIST(application.createdAt) : null,
         updatedAt: application.updatedAt ? formatToIST(application.updatedAt) : null,
         geolocation: {
-            latitude: ipQualityDetail.latitude ?? null,
-            longitude: ipQualityDetail.longitude ?? null,
+            latitude: location.latitude ?? null,
+            longitude: location.longitude ?? null,
         },
         countryCode: ipQualityDetail.countryCode ?? null,
         ipAddress: ipQualityDetail.ipAddress ?? null,
@@ -274,144 +274,83 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         },
     };
 
-    const userRelations =
-    // !id
-    //     ? {
-    //         aadhaarVerification: true,
-    //         panVerification: true,
-    //         employment: true,
-    //         address: true,
-    //         documents: {
-    //             orderBy: { uploadedAt: 'desc' },
-    //         },
-    //         locations: {
-    //             orderBy: { capturedAt: 'desc' },
-    //             take: 10,
-    //         },
-    //         loanApplications: {
-    //             where: applicationFilter,
-    //             orderBy: { createdAt: 'desc' },
-    //             include: {
-    //                 employmentDetail: true,
-    //             },
-    //         },
-    //         loans: {
-    //             orderBy: { createdAt: 'desc' },
-    //         },
-    //         finnauxIntegrationJobs: {
-    //             where: finnauxJobFilter,
-    //             orderBy: { createdAt: 'desc' },
-    //             select: { rawResponse: true, applicationId: true, userId: true },
-    //         },
-    //         ipQualityDetail: true,
-    //         utm: true,
-    //         status: true,
-    //     }
-    //     :
-    {
-        loanApplications: {
-            where: applicationFilter,
-            orderBy: { createdAt: 'desc' },
-            include: {
-                employmentDetail: true,
-            },
-        },
-        finnauxIntegrationJobs: {
-            where: finnauxJobFilter,
-            orderBy: { createdAt: 'desc' },
-            select: { rawResponse: true },
-        },
-        ipQualityDetail: true,
-        utm: {
-            select: {
-                utmMedium: true,
-            }
-        },
-    };
+    console.log('Finnaux date filter:', { from, to, fromUTC: fromDate?.toISOString(), toUTC: toDate?.toISOString(), });
 
-    if (id) {
-        let users = (await prisma.finnauxIntegrationJob.findUnique(
-            {
-                where: {
-                    applicationId: Number(id)
-                },
-                select: {
-                    userId: true,
-                    applicationId: true,
-                    rawRequest: true,
-                    rawResponse: true
-                }
-            }
-        ))
-        let ipQualityDetail = await prisma.ipQualityDetail.findUnique({
-            where: { userId: Number(users.userId) },
-            select: {
-                fraudScore: true,
-                recentAbuse: true,
-                ipAddress: true,
-                countryCode: true,
-                city: true,
-                latitude: true,
-                longitude: true,
-                isp: true,
-                vpn: true,
+    const userRelations = id
+        ? {
+            aadhaarVerification: true,
+            panVerification: true,
+            employment: true,
+            address: true,
+            documents: {
+                orderBy: { uploadedAt: 'desc' },
             },
-        })
-        const documents = await getBase64Documents(Number(id));
-        users = {
-            ...users.rawRequest, ...users.rawResponse, ...documents, geolocation: {
-                latitude: ipQualityDetail.latitude ?? null,
-                longitude: ipQualityDetail.longitude ?? null,
+            locations: {
+                orderBy: { capturedAt: 'desc' },
+                take: 10,
             },
-            countryCode: ipQualityDetail.countryCode ?? null,
-            iPAddress: ipQualityDetail.ipAddress ?? null,
-            fraudScore: ipQualityDetail.fraudScore ?? null,
-            vpn: ipQualityDetail.vpn ?? null,
-            IPStatus: (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P',
-        };
-        res.status(200).json({
-            success: true,
-            totalCount: 1,
-            count: 1,
-            data: users,
-        });
-    } else {
-        let users = await
-            prisma.user.findMany({
-                where,
+            loanApplications: {
+                where: applicationFilter,
+                orderBy: { createdAt: 'desc' },
                 include: {
-                    loanApplications: {
-                        where: applicationFilter,
-                        orderBy: { createdAt: 'desc' },
-                        include: {
-                            employmentDetail: true,
-                        },
-                    },
-                    finnauxIntegrationJobs: {
-                        where: finnauxJobFilter,
-                        orderBy: { createdAt: 'desc' },
-                        select: { rawResponse: true },
-                    },
-                    ipQualityDetail: true,
-                    utm: {
-                        select: {
-                            utmMedium: true,
-                        }
-                    },
+                    employmentDetail: true,
                 },
-                orderBy: { updatedAt: 'desc' },
-            })
+            },
+            loans: {
+                orderBy: { createdAt: 'desc' },
+            },
+            finnauxIntegrationJobs: {
+                where: finnauxJobFilter,
+                orderBy: { createdAt: 'desc' },
+                select: { rawResponse: true, applicationId: true, userId: true },
+            },
+            ipQualityDetail: true,
+            utm: true,
+            status: true,
+        }
+        : {
+            // address: true,
+            loanApplications: {
+                where: applicationFilter,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    employmentDetail: true,
+                },
+            },
+            finnauxIntegrationJobs: {
+                where: finnauxJobFilter,
+                orderBy: { createdAt: 'desc' },
+                select: { rawResponse: true },
+            },
+            ipQualityDetail: true,
+            utm: {
+                select: {
+                    utmMedium: true,
+                }
+            },
+        };
 
-        let data = users.map(toFinnauxDateRangePayload)
-        res.status(200).json({
-            success: true,
-            count: data.length,
-            totalCount: users.length,
-            data,
-        });
+    const users = await
+        prisma.user.findMany({
+            where,
+            include: userRelations,
+            orderBy: { updatedAt: 'desc' },
+        })
 
-    }
+    const documents = id ? await getBase64Documents(id) : {};
+    const data = id
+        ? users.map((user) => ({
+            ...toFinnauxColumnNames(user),
+            ...documents,
+        }))
+        : users.map(toFinnauxDateRangePayload);
 
+    res.status(200).json({
+        success: true,
+        count: data.length,
+        totalCount: users.length,
+        data,
+    });
 });
 
 const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
