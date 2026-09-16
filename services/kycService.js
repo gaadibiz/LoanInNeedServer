@@ -23,6 +23,8 @@ async function saveFullKYC(userId, data) {
     data.city,
     data.state
   ].filter(Boolean).join(', ');
+  data.city = ''
+  data.state = ''
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
   const result = await prisma.$transaction(
     async tx => {
