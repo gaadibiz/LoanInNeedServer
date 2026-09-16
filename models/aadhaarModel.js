@@ -8,10 +8,10 @@ const AadhaarModel = {
     const client = tx;
     return client.aadhaarVerification.findUnique({
       where: { userId },
-      select:{
-        aadhaarNumber:true,
-        userId:true,
-        verified:true,
+      select: {
+        aadhaarNumber: true,
+        userId: true,
+        verified: true,
       }
     });
   },
@@ -23,6 +23,11 @@ const AadhaarModel = {
     const client = tx;
     return client.aadhaarVerification.findUnique({
       where: { aadhaarNumber },
+      select: {
+        aadhaarNumber: true,
+        userId: true,
+        verified: true,
+      }
     });
   },
 

@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="LoanInNeed Backend Tests" tests="116" failures="2" errors="0" time="28.448">
-  <testsuite name="__tests__/integration/functional.test.js" errors="0" failures="1" skipped="0" timestamp="2026-09-15T10:48:47" time="4.769" tests="3">
-    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-001: Should reject invalid user registration payloads" time="0.964">
+<testsuites name="LoanInNeed Backend Tests" tests="116" failures="3" errors="0" time="32.421">
+  <testsuite name="__tests__/integration/functional.test.js" errors="0" failures="1" skipped="0" timestamp="2026-09-16T09:54:49" time="5.425" tests="3">
+    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-001: Should reject invalid user registration payloads" time="0.773">
     </testcase>
-    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-004: Should validate bad inputs for loan application" time="0.299">
+    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-004: Should validate bad inputs for loan application" time="0.331">
     </testcase>
-    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-005: Role-Based Access Control (RBAC) Enforcement" time="0.337">
+    <testcase classname="Functional Testing Suite (TC-FUNC)" name="TC-FUNC-005: Role-Based Access Control (RBAC) Enforcement" time="0.42">
       <failure>Error: expect(received).toBe(expected) // Object.is equality
 
 Expected: 401
 Received: 404
-    at Object.toBe (/Users/monika/Documents/loanInNeed/LoanInNeedServer/__tests__/integration/functional.test.js:33:33)
+    at Object.&lt;anonymous&gt; (/Users/monika/Documents/loanInNeed/LoanInNeedServer/__tests__/integration/functional.test.js:30:29)
     at processTicksAndRejections (node:internal/process/task_queues:95:5)</failure>
     </testcase>
   </testsuite>
-  <testsuite name="__tests__/unit/losMapping.spec.js" errors="0" failures="1" skipped="0" timestamp="2026-09-15T10:48:52" time="2.946" tests="88">
-    <testcase classname="LOS Mapping Tables › employmentMap" name="should map SALARIED to 342" time="0.001">
+  <testsuite name="__tests__/unit/losMapping.spec.js" errors="0" failures="1" skipped="0" timestamp="2026-09-16T09:54:54" time="3.506" tests="88">
+    <testcase classname="LOS Mapping Tables › employmentMap" name="should map SALARIED to 342" time="0">
     </testcase>
-    <testcase classname="LOS Mapping Tables › employmentMap" name="should map SELF_EMPLOYED to 343" time="0.001">
+    <testcase classname="LOS Mapping Tables › employmentMap" name="should map SELF_EMPLOYED to 343" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › employmentMap" name="should map STUDENT to 345 (corrected from 344)" time="0.001">
     </testcase>
-    <testcase classname="LOS Mapping Tables › employmentMap" name="should map UNEMPLOYED to 346 (corrected from 345)" time="0.001">
+    <testcase classname="LOS Mapping Tables › employmentMap" name="should map UNEMPLOYED to 346 (corrected from 345)" time="0">
     </testcase>
-    <testcase classname="LOS Mapping Tables › employmentMap" name="should map OTHER to 342 (default to SALARIED)" time="0.001">
+    <testcase classname="LOS Mapping Tables › employmentMap" name="should map OTHER to 342 (default to SALARIED)" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › salutationMap" name="should map MALE to 273 (Mr.)" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › salutationMap" name="should map FEMALE to 274 (Mrs.)" time="0">
     </testcase>
-    <testcase classname="LOS Mapping Tables › salutationMap" name="should map PREFER_NOT_TO_SAY to 273 (default to Mr.)" time="0.001">
+    <testcase classname="LOS Mapping Tables › salutationMap" name="should map PREFER_NOT_TO_SAY to 273 (default to Mr.)" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map MEDICAL_EMERGENCY to 49" time="0">
     </testcase>
@@ -37,7 +37,7 @@ Received: 404
     </testcase>
     <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map HOME_RENOVATION to 51" time="0">
     </testcase>
-    <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map DEBT_CONSOLIDATION to 50" time="0.001">
+    <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map DEBT_CONSOLIDATION to 50" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map WEDDING to 101" time="0">
     </testcase>
@@ -45,7 +45,7 @@ Received: 404
     </testcase>
     <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map TRAVEL to 52" time="0">
     </testcase>
-    <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map OTHER to 53" time="0.001">
+    <testcase classname="LOS Mapping Tables › purposeOfLoanMap" name="should map OTHER to 53" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › genderMap" name="should map MALE to 45" time="0">
     </testcase>
@@ -57,17 +57,17 @@ Received: 404
     </testcase>
     <testcase classname="LOS Mapping Tables › addressTypeMap" name="should map CURRENT to 335" time="0">
     </testcase>
-    <testcase classname="LOS Mapping Tables › addressTypeMap" name="should map PERMANENT to 336" time="0.001">
+    <testcase classname="LOS Mapping Tables › addressTypeMap" name="should map PERMANENT to 336" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › residentTypeMap" name="should map OWNER_SELF_OR_FAMILY to 319" time="0">
     </testcase>
     <testcase classname="LOS Mapping Tables › residentTypeMap" name="should map RENTED to 318" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set ProductID to 13" time="0">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set ProductID to 13" time="0.001">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set LoanAmountRequired from application" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set PayDayDate as ISO string (30 days from now)" time="0.001">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set PayDayDate as ISO string (30 days from now)" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set PurposeOfLoanID from loanType" time="0">
     </testcase>
@@ -75,7 +75,7 @@ Received: 404
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set SalutationID from gender" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Gender from gender" time="0.001">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Gender from gender" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set QualificationID to static 314" time="0">
     </testcase>
@@ -85,11 +85,11 @@ Received: 404
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should extract LastName from 3-part name" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set MobileNo from user.phone (stripped of +91)" time="0">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set MobileNo from user.phone (stripped of +91)" time="0.001">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Email from user.email" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set PanSSN from panVerification" time="0.001">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set PanSSN from panVerification" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set AdharDrivingNo from aadhaarVerification" time="0">
     </testcase>
@@ -97,7 +97,7 @@ Received: 404
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Address.AddressTypeID to 334 (Communication)" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Address.ResidentType from currentAddressType" time="0.001">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Address.ResidentType from currentAddressType" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Address.AddressLine1 from currentAddress" time="0">
     </testcase>
@@ -105,11 +105,11 @@ Received: 404
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Address.PinZipCode from postalCode" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Address.PhoneNo from user.phone" time="0.001">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should set Address.PhoneNo from user.phone" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should NOT include OrganizationID" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should NOT include KYC_Individual" time="0">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should NOT include KYC_Individual" time="0.001">
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should NOT include IsJointApplication" time="0">
     </testcase>
@@ -119,17 +119,17 @@ Received: 404
     </testcase>
     <testcase classname="buildNewLosPayload › Full data (happy path)" name="should NOT include InterestRate" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should NOT include Address.CityName" time="0.001">
+    <testcase classname="buildNewLosPayload › Full data (happy path)" name="should NOT include Address.CityName" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Name splitting edge cases" name="should handle 2-part name (FirstName + LastName, MiddleName = NA)" time="0.001">
     </testcase>
-    <testcase classname="buildNewLosPayload › Name splitting edge cases" name="should handle single-word name" time="0">
+    <testcase classname="buildNewLosPayload › Name splitting edge cases" name="should handle single-word name" time="0.001">
     </testcase>
     <testcase classname="buildNewLosPayload › Name splitting edge cases" name="should handle 4-part name (multiple middle names)" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Name splitting edge cases" name="should handle empty name" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Name splitting edge cases" name="should handle null name" time="0.001">
+    <testcase classname="buildNewLosPayload › Name splitting edge cases" name="should handle null name" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Fallback/default values" name="should default AdharDrivingNo to NA when aadhaar not verified" time="0">
     </testcase>
@@ -139,11 +139,11 @@ Received: 404
     </testcase>
     <testcase classname="buildNewLosPayload › Fallback/default values" name="should default SalutationID to 273 when gender is missing" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Fallback/default values" name="should set SalutationID to 274 for FEMALE" time="0.001">
+    <testcase classname="buildNewLosPayload › Fallback/default values" name="should set SalutationID to 274 for FEMALE" time="0">
     </testcase>
     <testcase classname="buildNewLosPayload › Fallback/default values" name="should default Address fields when address is null" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Fallback/default values" name="should default LoanAmountRequired to 5000 when missing" time="0">
+    <testcase classname="buildNewLosPayload › Fallback/default values" name="should default LoanAmountRequired to 5000 when missing" time="0.001">
     </testcase>
     <testcase classname="buildNewLosPayload › Fallback/default values" name="should map PurposeOfLoanID for EDUCATION to 48" time="0">
     </testcase>
@@ -157,7 +157,7 @@ Received: 404
     </testcase>
     <testcase classname="buildNewLosPayload › Fallback/default values" name="should map RENTED address type to ResidentType 318" time="0">
     </testcase>
-    <testcase classname="buildNewLosPayload › Payload structure validation" name="should produce exactly the expected top-level keys" time="0.003">
+    <testcase classname="buildNewLosPayload › Payload structure validation" name="should produce exactly the expected top-level keys" time="0.002">
       <failure>Error: expect(received).toEqual(expected) // deep equality
 
 - Expected  - 0
@@ -176,7 +176,7 @@ Received: 404
     &quot;SalutationID&quot;,
 +   &quot;TotalMonthlyIncome&quot;,
   ]
-    at Object.&lt;anonymous&gt; (/Users/monika/Documents/loanInNeed/LoanInNeedServer/__tests__/unit/losMapping.spec.js:395:43)
+    at Object.toEqual (/Users/monika/Documents/loanInNeed/LoanInNeedServer/__tests__/unit/losMapping.spec.js:508:49)
     at Promise.then.completed (/Users/monika/Documents/loanInNeed/LoanInNeedServer/node_modules/jest-circus/build/utils.js:298:28)
     at new Promise (&lt;anonymous&gt;)
     at callAsyncCircusFn (/Users/monika/Documents/loanInNeed/LoanInNeedServer/node_modules/jest-circus/build/utils.js:231:10)
@@ -207,7 +207,7 @@ Received: 404
     </testcase>
     <testcase classname="losClean" name="should strip single quotes" time="0">
     </testcase>
-    <testcase classname="losClean" name="should collapse whitespace" time="0.001">
+    <testcase classname="losClean" name="should collapse whitespace" time="0">
     </testcase>
     <testcase classname="losClean" name="should return null/undefined unchanged" time="0">
     </testcase>
@@ -221,69 +221,74 @@ Received: 404
     </testcase>
     <testcase classname="validatePayload" name="should detect commas in flat fields" time="0">
     </testcase>
-    <testcase classname="validatePayload" name="should detect commas in nested fields" time="0.001">
+    <testcase classname="validatePayload" name="should detect commas in nested fields" time="0">
     </testcase>
   </testsuite>
-  <testsuite name="__tests__/integration/database.test.js" errors="0" failures="0" skipped="0" timestamp="2026-09-15T10:48:55" time="3.88" tests="2">
-    <testcase classname="Database Testing Suite (TC-DB)" name="TC-DB-001: Should rollback transactions on failure" time="0.927">
+  <testsuite name="__tests__/integration/database.test.js" errors="0" failures="1" skipped="0" timestamp="2026-09-16T09:54:58" time="4.406" tests="2">
+    <testcase classname="Database Testing Suite (TC-DB)" name="TC-DB-001: Should rollback transactions on failure" time="1.066">
     </testcase>
-    <testcase classname="Database Testing Suite (TC-DB)" name="TC-DB-002: Query by indexed field (email) should be fast" time="0.072">
-    </testcase>
-  </testsuite>
-  <testsuite name="__tests__/unit/middleware/authMiddleware.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-15T10:48:59" time="2.971" tests="5">
-    <testcase classname="🔐 AuthMiddleware Unit Tests" name="✅ should authenticate valid token" time="0.003">
-    </testcase>
-    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request without token" time="0.001">
-    </testcase>
-    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token format" time="0.001">
-    </testcase>
-    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token" time="0">
-    </testcase>
-    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request if user not found in DB" time="0">
+    <testcase classname="Database Testing Suite (TC-DB)" name="TC-DB-002: Query by indexed field (email) should be fast" time="0.109">
+      <failure>Error: expect(received).toBeLessThan(expected)
+
+Expected: &lt; 100
+Received:   108
+    at Object.&lt;anonymous&gt; (/Users/monika/Documents/loanInNeed/LoanInNeedServer/__tests__/integration/database.test.js:41:21)</failure>
     </testcase>
   </testsuite>
-  <testsuite name="__tests__/unit/services/locationService.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-15T10:49:02" time="3.801" tests="5">
+  <testsuite name="__tests__/unit/services/locationService.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-16T09:55:02" time="3.805" tests="5">
     <testcase classname="📍 LocationService Unit Tests › saveLocation" name="✅ should save location successfully" time="0.028">
     </testcase>
-    <testcase classname="📍 LocationService Unit Tests › saveLocation" name="❌ should reject location without latitude" time="0.002">
+    <testcase classname="📍 LocationService Unit Tests › saveLocation" name="❌ should reject location without latitude" time="0.005">
     </testcase>
-    <testcase classname="📍 LocationService Unit Tests › saveLocation" name="❌ should reject location without longitude" time="0.001">
+    <testcase classname="📍 LocationService Unit Tests › saveLocation" name="❌ should reject location without longitude" time="0.002">
     </testcase>
-    <testcase classname="📍 LocationService Unit Tests › getLatestLocation" name="✅ should return latest location" time="0.001">
+    <testcase classname="📍 LocationService Unit Tests › getLatestLocation" name="✅ should return latest location" time="0">
     </testcase>
     <testcase classname="📍 LocationService Unit Tests › getLatestLocation" name="✅ should return null if no location exists" time="0">
     </testcase>
   </testsuite>
-  <testsuite name="__tests__/unit/hash.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-15T10:49:06" time="3.025" tests="4">
-    <testcase classname="🔒 Hash Utility" name="✅ should hash a password successfully" time="0.084">
+  <testsuite name="__tests__/unit/utils/jwt.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-16T09:55:06" time="3.595" tests="5">
+    <testcase classname="🎫 JWT Utility Tests › generateToken" name="✅ should generate a valid JWT token" time="0.011">
     </testcase>
-    <testcase classname="🔒 Hash Utility" name="✅ should compare correct password successfully" time="0.05">
+    <testcase classname="🎫 JWT Utility Tests › generateToken" name="✅ should include expiration in token" time="0.004">
     </testcase>
-    <testcase classname="🔒 Hash Utility" name="❌ should fail comparison with incorrect password" time="0.05">
+    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="✅ should verify a valid token" time="0.003">
+    </testcase>
+    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="❌ should reject invalid token" time="0.005">
+    </testcase>
+    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="❌ should reject expired token" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__/unit/hash.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-16T09:55:10" time="3.83" tests="4">
+    <testcase classname="🔒 Hash Utility" name="✅ should hash a password successfully" time="0.085">
+    </testcase>
+    <testcase classname="🔒 Hash Utility" name="✅ should compare correct password successfully" time="0.052">
+    </testcase>
+    <testcase classname="🔒 Hash Utility" name="❌ should fail comparison with incorrect password" time="0.051">
     </testcase>
     <testcase classname="🔒 Hash Utility" name="❌ should throw error if password is missing" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="__tests__/unit/jwt.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-15T10:49:09" time="2.931" tests="4">
-    <testcase classname="🛡️ JWT Utility" name="✅ should generate a valid JWT token" time="0.006">
+  <testsuite name="__tests__/unit/middleware/authMiddleware.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-16T09:55:14" time="3.3" tests="5">
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="✅ should authenticate valid token" time="0.002">
     </testcase>
-    <testcase classname="🛡️ JWT Utility" name="✅ should verify a valid JWT token" time="0.003">
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request without token" time="0">
     </testcase>
-    <testcase classname="🛡️ JWT Utility" name="❌ should fail verification for invalid token" time="0.003">
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token format" time="0">
     </testcase>
-    <testcase classname="🛡️ JWT Utility" name="❌ should fail verification for expired token" time="0.013">
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request with invalid token" time="0.001">
+    </testcase>
+    <testcase classname="🔐 AuthMiddleware Unit Tests" name="❌ should reject request if user not found in DB" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="__tests__/unit/utils/jwt.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-15T10:49:12" time="3.04" tests="5">
-    <testcase classname="🎫 JWT Utility Tests › generateToken" name="✅ should generate a valid JWT token" time="0.003">
+  <testsuite name="__tests__/unit/jwt.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-16T09:55:17" time="3.534" tests="4">
+    <testcase classname="🛡️ JWT Utility" name="✅ should generate a valid JWT token" time="0.002">
     </testcase>
-    <testcase classname="🎫 JWT Utility Tests › generateToken" name="✅ should include expiration in token" time="0.002">
+    <testcase classname="🛡️ JWT Utility" name="✅ should verify a valid JWT token" time="0.001">
     </testcase>
-    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="✅ should verify a valid token" time="0.002">
+    <testcase classname="🛡️ JWT Utility" name="❌ should fail verification for invalid token" time="0.005">
     </testcase>
-    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="❌ should reject invalid token" time="0.001">
-    </testcase>
-    <testcase classname="🎫 JWT Utility Tests › verifyToken" name="❌ should reject expired token" time="0.002">
+    <testcase classname="🛡️ JWT Utility" name="❌ should fail verification for expired token" time="0.013">
     </testcase>
   </testsuite>
 </testsuites>

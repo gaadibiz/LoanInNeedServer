@@ -146,6 +146,21 @@ class AadhaarService {
    * against the user so the frontend can later resolve it after redirect.
    */
   async requestDigilockerUrl(userId, aadhaarNumber) {
+    if (!aadhaarNumber) {
+      throw new BadRequestError("Aadhaar number is required");
+    }
+
+    const cleanedNumber = aadhaarNumber.toString().replace(/\s/g, '');
+
+    if (!this.validateAadhaarFormat(cleanedNumber)) {
+      throw new BadRequestError("Invalid Aadhaar number format. Must be 12 digits starting with 2-9");
+    }
+
+    const existingAadhaar = await AadhaarModel.findByAadhaarNumber(cleanedNumber);
+    if (existingAadhaar && existingAadhaar.userId !== userId) {
+      throw new BadRequestError("This Aadhaar number is already registered with another account.");
+    }
+
     let digilockerDetails = await signzyService.createDigilockerUrl(userId);
     await UserModel.updateUser(userId, {
       digilockerRequestId: digilockerDetails.requestId,
@@ -153,10 +168,17 @@ class AadhaarService {
     });
 
     let aadhaarDetails = await AadhaarModel.findByUserId(userId);
-    if (aadhaarDetails) {
-      await AadhaarModel.updateAadhaarRecord(userId, { aadhaarNumber: aadhaarNumber, verified: false, verifiedAt: null })
-    } else {
-      await AadhaarModel.createAadhaarRecord(userId, aadhaarNumber)
+    try {
+      if (aadhaarDetails) {
+        await AadhaarModel.updateAadhaarRecord(userId, { aadhaarNumber: cleanedNumber, verified: false, verifiedAt: null });
+      } else {
+        await AadhaarModel.createAadhaarRecord(userId, cleanedNumber);
+      }
+    } catch (err) {
+      if (err.code === 'P2002') {
+        throw new BadRequestError("This Aadhaar number is already registered with another account.");
+      }
+      throw err;
     }
 
     logger.info(`[DIGILOCKER] URL created for user ${userId}, requestId=${digilockerDetails.requestId}`);
@@ -193,46 +215,52 @@ class AadhaarService {
       throw err;
     }
 
+    try {
+      await prisma.$transaction(async (tx) => {
+        await AadhaarModel.saveEAadhaarDetails(user.id, eAadhaar, tx);
 
-    await prisma.$transaction(async (tx) => {
-      await AadhaarModel.saveEAadhaarDetails(user.id, eAadhaar, tx);
+        const { splitAddress = {} } = eAadhaar;
+        const toAddressString = (value) => {
+          if (value == null) return null;
+          if (Array.isArray(value)) return value.flat(Infinity).filter(Boolean).join(' ');
+          return String(value);
+        };
+        const addressLine = toAddressString(splitAddress.addressLine);
+        const district = toAddressString(splitAddress.district);
+        const landmark = toAddressString(splitAddress.landMark);
+        const addressData = {
+          city: toAddressString(splitAddress.city),
+          state: toAddressString(splitAddress.state),
+          postalCode: toAddressString(splitAddress.pincode),
+          permanentAddress: [addressLine, district, landmark].filter(Boolean).join(' ') || null,
+        };
+        await AddressModel.upsertAddress(user.id, addressData, tx);
+        await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_COMPLETED' }, tx);
 
-      const { splitAddress = {} } = eAadhaar;
-      const toAddressString = (value) => {
-        if (value == null) return null;
-        if (Array.isArray(value)) return value.flat(Infinity).filter(Boolean).join(' ');
-        return String(value);
-      };
-      const addressLine = toAddressString(splitAddress.addressLine);
-      const district = toAddressString(splitAddress.district);
-      const landmark = toAddressString(splitAddress.landMark);
-      const addressData = {
-        city: toAddressString(splitAddress.city),
-        state: toAddressString(splitAddress.state),
-        postalCode: toAddressString(splitAddress.pincode),
-        permanentAddress: [addressLine, district, landmark].filter(Boolean).join(' ') || null,
-      };
-      await AddressModel.upsertAddress(user.id, addressData, tx);
-      await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_COMPLETED' }, tx);
+        try {
+          eAadhaar?.photo ? await uploadDigilockerDocument(user.id, tx, {
+            value: eAadhaar.photo,
+            docType: 'DIGILOCKER_PHOTO',
+            filename: 'DIGILOCKER_PHOTO.jpg',
+            mimetype: 'image/jpeg',
+          }) : null
+          eAadhaar?.rawResponse?.aadhaarJpeg ? await uploadDigilockerDocument(user.id, tx, {
+            value: eAadhaar.rawResponse.aadhaarJpeg,
+            docType: 'DIGILOCKER_AADHAAR',
+            filename: 'DIGILOCKER_AADHAAR.jpg',
+            mimetype: 'image/jpeg',
+          }) : null
 
-      try {
-        eAadhaar?.photo ? await uploadDigilockerDocument(user.id, tx, {
-          value: eAadhaar.photo,
-          docType: 'DIGILOCKER_PHOTO',
-          filename: 'DIGILOCKER_PHOTO.jpg',
-          mimetype: 'image/jpeg',
-        }) : null
-        eAadhaar?.rawResponse?.aadhaarJpeg ? await uploadDigilockerDocument(user.id, tx, {
-          value: eAadhaar.rawResponse.aadhaarJpeg,
-          docType: 'DIGILOCKER_AADHAAR',
-          filename: 'DIGILOCKER_AADHAAR.jpg',
-          mimetype: 'image/jpeg',
-        }) : null
-
-      } catch (e) {
-        logger.error("Error uploading Digilocker documents", e)
+        } catch (e) {
+          logger.error("Error uploading Digilocker documents", e)
+        }
+      });
+    } catch (err) {
+      if (err.code === 'P2002') {
+        throw new BadRequestError("This Aadhaar number is already registered with another account.");
       }
-    });
+      throw err;
+    }
 
     logger.info(`[DIGILOCKER] e-Aadhaar fetched and saved for user ${user.id}`);
 
