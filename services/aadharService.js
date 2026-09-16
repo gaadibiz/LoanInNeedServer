@@ -82,9 +82,7 @@ class AadhaarService {
         // Update existing record — try to update with real number
         try {
           return await AadhaarModel.updateAadhaarRecord(userId, {
-            aadhaarNumber: finalAadhaar,
-            verified: false,
-            verifiedAt: null
+            aadhaarNumber: finalAadhaar
           }, tx);
         } catch (err) {
           if (err.code === 'P2002') {
