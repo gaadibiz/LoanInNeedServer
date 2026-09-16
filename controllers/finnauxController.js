@@ -198,47 +198,24 @@ const toFinnauxDateRangePayload = (user) => {
     const location = user.locations?.[0] || {};
     const utm = user.utm || {};
     const ipQualityDetail = user.ipQualityDetail || {}
-    console.log(ipQualityDetail)
-    //  const aadhaarDocument = user.documents?.find((document) => document.docType === 'AADHAAR');
-    // const panDocument = user.documents?.find((document) => document.docType === 'PAN');
-    // const salarySlipDocuments = (user.documents || [])
-    //     .filter((document) => document.docType === 'PAY_SLIP')
-    //     .map((document) => document.fileUrl)
-    //     .filter(Boolean);
 
     return {
         name: user.name,
         id: application.id || null,
         mobileNo: user.phone,
         loanPurpose: application.loanType || null,
-        //  address1: user.address?.permanentAddress || null,
-        //  area: user.address?.city || null,
-        // city: user.address?.city || null,
-        // state: user.address?.state || null,
         loanId: application.id || null,
         loanNo: application.loanAccountNumber || null,
         reason: application.reason || null,
         reloan: application.reloan ?? null,
-        // fatherName: null,
         loanAmount: application.loanAmount || null,
         createdAt: application.createdAt ? formatToIST(application.createdAt) : null,
         updatedAt: application.updatedAt ? formatToIST(application.updatedAt) : null,
-        // utmCampaign: utm.utmCampaign || null,
-        //  utmContent: utm.utmContent || null,
-        // utmTerms: utm.utmTerm || null,
         utmMedium: utm.utmMedium || null,
-        // utmSource: utm.utmSource || null,
-        employeeId: application.employeeId || null,
-        //extras: {},
         gender: user.gender,
         status: application.status || null,
-        // panCard: panDocument?.fileUrl || null,
-        // pinCode: user.address?.postalCode || null,
-        //     address2: '',
         bankName: null,
-        // district: null,
         ifscCode: null,
-        //  landmark: null,
         geolocation: {
             latitude: ipQualityDetail.latitude || null,
             longitude: ipQualityDetail.longitude || null,
