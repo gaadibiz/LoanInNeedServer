@@ -23,8 +23,7 @@ async function saveFullKYC(userId, data) {
     data.city,
     data.state
   ].filter(Boolean).join(', ');
-  data.city = ''
-  data.state = ''
+
   // Increase transaction timeout to 30s to avoid "transaction already closed" errors
   const result = await prisma.$transaction(
     async tx => {
@@ -50,9 +49,6 @@ async function saveFullKYC(userId, data) {
       const currentAddress = !isPlaceholder(data.currentAddress) ? data.currentAddress : (existingAddress && existingAddress.currentAddress ? existingAddress.currentAddress : data.currentAddress);
       const currentAddressType = !isPlaceholder(data.currentAddressType) ? data.currentAddressType : (existingAddress && existingAddress.currentAddressType ? existingAddress.currentAddressType : data.currentAddressType);
       const permanentAddress = !isPlaceholder(data.permanentAddress) ? data.permanentAddress : (existingAddress && existingAddress.permanentAddress ? existingAddress.permanentAddress : data.permanentAddress);
-      const city = !isPlaceholder(data.currentCity || data.city) ? (data.currentCity || data.city) : (existingAddress && existingAddress.city ? existingAddress.city : (data.currentCity || data.city));
-      const state = !isPlaceholder(data.currentState || data.state) ? (data.currentState || data.state) : (existingAddress && existingAddress.state ? existingAddress.state : null);
-      const postalCode = !isPlaceholder(data.currentPostalCode || data.postalCode || data.pinCode) ? (data.currentPostalCode || data.postalCode || data.pinCode) : (existingAddress && existingAddress.postalCode ? existingAddress.postalCode : (data.currentPostalCode || data.postalCode || data.pinCode));
 
       // ---------- Employment ----------
       if (!companyName || !monthlyIncomeRaw) {
@@ -127,9 +123,6 @@ async function saveFullKYC(userId, data) {
       const addrPayload = {
         currentAddress: currentAddress || null,
         permanentAddress: permanentAddress || null,
-        city: city || null,
-        state: state || null,
-        postalCode: postalCode || null,
         currentAddressType: addressTypeValue,
       };
 

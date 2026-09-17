@@ -216,6 +216,8 @@ model EmploymentDetail {
 model AddressDetail {
   id                  Int          @id @default(autoincrement())
   city                String?
+  district            String?
+  landmark            String?
   state               String?
   postalCode          String?
   userId              Int          @unique
@@ -284,6 +286,7 @@ model LoanApplication {
   attributionSource        String?
   ipAddress                String?
   reloan                   Int?
+  blacklist                Boolean                @default(false)
   employmentDetail         EmploymentDetail?      @relation("EmploymentLoanApplications", fields: [employmentDetailId], references: [id])
   user                     User                   @relation(fields: [userId], references: [id])
   losIntegrationJob        LosIntegrationJob?

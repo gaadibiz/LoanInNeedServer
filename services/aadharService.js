@@ -220,21 +220,50 @@ class AadhaarService {
         await AadhaarModel.saveEAadhaarDetails(user.id, eAadhaar, tx);
 
         const { splitAddress = {} } = eAadhaar;
-        const toAddressString = (value) => {
-          if (value == null) return null;
-          if (Array.isArray(value)) return value.flat(Infinity).filter(Boolean).join(' ');
-          return String(value);
+
+        // Helper to extract clean string whether it's a string, array, or nested array
+        const extractFirst = (val) => {
+          if (!val) return null;
+          if (Array.isArray(val)) {
+            const first = val[0];
+            return Array.isArray(first) ? (first[0] ? String(first[0]).trim() : null) : (first ? String(first).trim() : null);
+          }
+          return String(val).trim() || null;
         };
-        const addressLine = toAddressString(splitAddress.addressLine);
-        const district = toAddressString(splitAddress.district);
-        const landmark = toAddressString(splitAddress.landMark);
+
+        const city = extractFirst(splitAddress.city) || extractFirst(splitAddress.district);
+        const state = extractFirst(splitAddress.state);
+        const postalCode = splitAddress.pincode ? String(splitAddress.pincode).trim() : null;
+        const addressLine = splitAddress.addressLine ? String(splitAddress.addressLine).trim() : null;
+        const landmark = splitAddress.landMark ? String(splitAddress.landMark).trim() : null;
+        const district = extractFirst(splitAddress.district);
+
+        // If addressLine is already present, use it; otherwise fallback to joining components
+        const permanentAddress = addressLine || [landmark, city, district, state, postalCode].filter(Boolean).join(', ') || null;
+
         const addressData = {
-          city: toAddressString(splitAddress.city),
-          state: toAddressString(splitAddress.state),
-          postalCode: toAddressString(splitAddress.pincode),
-          permanentAddress: [addressLine, district, landmark].filter(Boolean).join(' ') || null,
+          district,
+          city,
+          landmark,
+          state,
+          postalCode,
+          permanentAddress,
         };
+
         await AddressModel.upsertAddress(user.id, addressData, tx);
+
+        // const { splitAddress = {} } = eAadhaar;
+
+        // const addressLine = String(splitAddress.addressLine)
+        // const district = String(splitAddress?.district?.[0]);
+        // const landmark = String(splitAddress.landMark);
+        // const addressData = {
+        //   city: String(splitAddress.city[0]),
+        //   state: String(splitAddress.state?.[0]?.[0]),
+        //   postalCode: String(splitAddress.pincode),
+        //   permanentAddress: [addressLine, district, landmark].filter(Boolean).join(' ') || null,
+        // };
+        // await AddressModel.upsertAddress(user.id, addressData, tx);
         await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_COMPLETED' }, tx);
 
         try {
