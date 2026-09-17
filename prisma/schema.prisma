@@ -125,7 +125,6 @@ model AadhaarVerification {
   photoUrl          String?
   aadhaarJpegUrl    String?
   splitAddress      Json?
-  rawResponse       Json?
   eAadhaarFetchedAt DateTime?
   user              User      @relation(fields: [userId], references: [id])
 }

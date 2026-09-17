@@ -97,7 +97,6 @@ const AadhaarModel = {
       photoUrl: eAadhaar.photo,
       aadhaarJpegUrl: eAadhaar.aadhaarJpeg,
       splitAddress: eAadhaar.splitAddress,
-      rawResponse: eAadhaar,
       eAadhaarFetchedAt: new Date(),
     };
     return client.aadhaarVerification.upsert({
