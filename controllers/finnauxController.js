@@ -154,8 +154,8 @@ const toFinnauxColumnNames = (user) => {
         loanAmount: application.loanAmount || null,
         loanPeriod: null,
         riskFactor: null,
-        createdAt: application.createdAt ? formatToIST(application.createdAt) : null,
-        updatedAt: application.updatedAt ? formatToIST(application.updatedAt) : null,
+        createdAt: application.createdAt ? application.createdAt : null,
+        updatedAt: application.updatedAt ? application.updatedAt : null,
         geolocation: {
             latitude: ipQualityDetail.latitude ?? null,
             longitude: ipQualityDetail.longitude ?? null,
