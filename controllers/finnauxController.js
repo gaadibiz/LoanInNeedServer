@@ -5,6 +5,7 @@ const { NotFoundError, BadRequestError } = require('../GlobalExceptionHandler/ex
 const { buildFinnauxJobPayload, getBase64Documents } = require('../services/finnauxIntegrationService');
 const { default: axios } = require('axios');
 const { updateLoanApplicationToBumchum } = require('../services/loanService');
+const moment = require("moment-timezone");
 
 /**
  * @desc    Rebuild and persist a job's rawRequest from current source data
@@ -100,11 +101,15 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
  * @access  Private (API Key)
  */
 
+
 const formatToIST = (date) => {
     if (!date) return null;
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return null;
-    return new Date(d.getTime() + 5.5 * 60 * 60 * 1000).toISOString().replace('Z', '+05:30');
+
+    const d = moment(date);
+
+    if (!d.isValid()) return null;
+
+    return d.tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss.SSSZ");
 };
 
 const toFinnauxColumnNames = (user) => {
