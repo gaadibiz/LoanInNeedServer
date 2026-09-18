@@ -10,7 +10,7 @@ const { encodeBufferToBase64 } = require('../utils/base64Encoder');
 const s3Client = require('../utils/s3Client');
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const { checkAndPushBumchumIfReady } = require('./loanService');
-const DocumentCompressor = require('../utils/documentCompressor');
+const sharp = require('sharp');
 
 const UPLOAD_BUCKET = 'Documents';
 
@@ -47,14 +47,24 @@ class DocumentVerificationService {
       throw new BadRequestError('File content missing');
     }
 
-    // 2.1 Compress image files (JPEG, PNG, WebP, etc.)
-    const compressed = await DocumentCompressor.compressImage(fileBuffer, file.mimetype);
-    fileBuffer = compressed.buffer;
-    const finalMimeType = compressed.mimeType || file.mimetype;
-    const finalSize = compressed.size || fileBuffer.length;
+    let compressedBuffer = fileBuffer;
+    let base64Data;
 
-    // 3. Generate Base64 (for response only)
-    const base64Data = encodeBufferToBase64(fileBuffer, finalMimeType, false);
+    if (file.mimetype.startsWith('image/')) {
+      compressedBuffer = await sharp(fileBuffer)
+        .resize({
+          width: 1600,
+          withoutEnlargement: true,
+        })
+        .jpeg({
+          quality: 70,
+          mozjpeg: true,
+        })
+        .toBuffer();
+      base64Data = compressedBuffer.toString('base64');
+    } else {
+      base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
+    }
 
     // 4 & 5. Save and Public URL
     let relativeFilePath, publicUrl;
@@ -66,11 +76,11 @@ class DocumentVerificationService {
         Key: s3Key,
         Body: fileBuffer,
         ACL: 'public-read',
-        ContentType: finalMimeType,
+        ContentType: file.mimetype,
       });
 
       await s3Client.send(command);
-      
+
       relativeFilePath = s3Key;
       // Depending on endpoint, it might be https://bucket.endpoint/key
       // Ensure we parse out the correct public URL. Assuming endpoints like https://sfo3.digitaloceanspaces.com
@@ -100,8 +110,8 @@ class DocumentVerificationService {
         fileName: file.originalname,
         filePath: relativeFilePath,
         fileUrl: publicUrl,
-        mimeType: finalMimeType,
-        size: finalSize,
+        mimeType: file.mimetype,
+        size: file.size,
         checksum: checksum,
         status: 'SUBMITTED'
       }
