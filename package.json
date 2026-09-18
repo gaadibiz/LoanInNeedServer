@@ -63,6 +63,7 @@
     "opossum": "^9.0.0",
     "pdfkit": "^0.18.0",
     "pg-boss": "^12.18.2",
+    "sharp": "^0.34.5",
     "twilio": "^4.23.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"

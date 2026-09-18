@@ -231,9 +231,124 @@ const toFinnauxDateRangePayload = (user) => {
     };
 };
 
+// const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
+//     const id = req.params.id;
+
+//     const { from, to } = req.query;
+
+//     const hasId = !!id;
+//     const hasDateRange = !!from && !!to;
+
+//     if (!hasId && !hasDateRange) {
+//         throw new BadRequestError(
+//             'Either provide "id" or both "from" and "to" query parameters.'
+//         );
+//     }
+
+//     let fromDate, toDate;
+//     if (from || to) {
+//         if ((from && !to) || (!from && to)) {
+//             throw new BadRequestError(
+//                 'Both "from" and "to" must be provided together.'
+//             );
+//         }
+//         fromDate = new Date(`${from}T00:00:00+05:30`);
+//         toDate = new Date(`${to}T00:00:00+05:30`);
+//         toDate.setTime(toDate.getTime() + 24 * 60 * 60 * 1000);
+
+//         if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+//             throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
+//         }
+//     }
+
+//     const applicationFilter = id
+//         ? { id: parseInt(id) }
+//         : { createdAt: { gte: fromDate, lt: toDate } };
+//     const finnauxJobFilter = id
+//         ? { applicationId: parseInt(id) }
+//         : { createdAt: { gte: fromDate, lt: toDate } };
+
+//     const where = {
+//         loanApplications: {
+//             some: applicationFilter,
+//         },
+//     };
+
+//     const userRelations = id
+//         ? {
+//             aadhaarVerification: true,
+//             panVerification: true,
+//             employment: true,
+//             address: true,
+//             documents: {
+//                 orderBy: { uploadedAt: 'desc' },
+//             },
+//             loanApplications: {
+//                 where: applicationFilter,
+//                 orderBy: { createdAt: 'desc' },
+//                 include: {
+//                     employmentDetail: true,
+//                 },
+//             },
+//             loans: {
+//                 orderBy: { createdAt: 'desc' },
+//             },
+//             finnauxIntegrationJobs: {
+//                 where: finnauxJobFilter,
+//                 orderBy: { createdAt: 'desc' },
+//                 select: { rawResponse: true, applicationId: true, userId: true },
+//             },
+//             ipQualityDetail: true,
+//             utm: true,
+//             status: true,
+//         }
+//         : {
+//             // address: true,
+//             loanApplications: {
+//                 where: applicationFilter,
+//                 orderBy: { createdAt: 'desc' },
+//                 include: {
+//                     employmentDetail: true,
+//                 },
+//             },
+//             finnauxIntegrationJobs: {
+//                 where: finnauxJobFilter,
+//                 orderBy: { createdAt: 'desc' },
+//                 select: { rawResponse: true },
+//             },
+//             ipQualityDetail: true,
+//             utm: {
+//                 select: {
+//                     utmMedium: true,
+//                 }
+//             },
+//         };
+
+//     const users = await
+//         prisma.user.findMany({
+//             where,
+//             include: userRelations,
+//             orderBy: { updatedAt: 'desc' },
+//         })
+
+//     const documents = id ? await getBase64Documents(id) : {};
+//     const data = id
+//         ? users.map((user) => ({
+//             ...toFinnauxColumnNames(user),
+//             ...documents,
+//         }))
+//         : users.map(toFinnauxDateRangePayload);
+
+//     res.status(200).json({
+//         success: true,
+//         count: data.length,
+//         totalCount: users.length,
+//         data,
+//     });
+// });
+
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const id = req.params.id;
-
     const { from, to } = req.query;
 
     const hasId = !!id;
@@ -245,101 +360,224 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
         );
     }
 
-    let fromDate, toDate;
-    if (from || to) {
-        if ((from && !to) || (!from && to)) {
-            throw new BadRequestError(
-                'Both "from" and "to" must be provided together.'
-            );
-        }
-        fromDate = new Date(`${from}T00:00:00+05:30`);
-        toDate = new Date(`${to}T00:00:00+05:30`);
-        toDate.setTime(toDate.getTime() + 24 * 60 * 60 * 1000);
-
-        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-            throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
-        }
+    if ((from && !to) || (!from && to)) {
+        throw new BadRequestError(
+            'Both "from" and "to" must be provided together.'
+        );
     }
 
-    const applicationFilter = id
-        ? { id: parseInt(id) }
-        : { createdAt: { gte: fromDate, lt: toDate } };
-    const finnauxJobFilter = id
-        ? { applicationId: parseInt(id) }
-        : { createdAt: { gte: fromDate, lt: toDate } };
+    let fromDate;
+    let toDate;
 
-    const where = {
-        loanApplications: {
-            some: applicationFilter,
-        },
-    };
+    if (hasDateRange) {
+        fromDate = new Date(`${from}T00:00:00+05:30`);
+        toDate = new Date(`${to}T00:00:00+05:30`);
 
-    const userRelations = id
+        if (
+            Number.isNaN(fromDate.getTime()) ||
+            Number.isNaN(toDate.getTime())
+        ) {
+            throw new BadRequestError(
+                'Invalid date format for "from" or "to" parameters.'
+            );
+        }
+
+        // Exclusive upper bound
+        toDate.setDate(toDate.getDate() + 1);
+    }
+
+    const applicationFilter = hasId
         ? {
-            aadhaarVerification: true,
-            panVerification: true,
-            employment: true,
-            address: true,
-            documents: {
-                orderBy: { uploadedAt: 'desc' },
-            },
-            loanApplications: {
-                where: applicationFilter,
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    employmentDetail: true,
-                },
-            },
-            loans: {
-                orderBy: { createdAt: 'desc' },
-            },
-            finnauxIntegrationJobs: {
-                where: finnauxJobFilter,
-                orderBy: { createdAt: 'desc' },
-                select: { rawResponse: true, applicationId: true, userId: true },
-            },
-            ipQualityDetail: true,
-            utm: true,
-            status: true,
+            id: Number(id),
         }
         : {
-            // address: true,
-            loanApplications: {
-                where: applicationFilter,
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    employmentDetail: true,
-                },
-            },
-            finnauxIntegrationJobs: {
-                where: finnauxJobFilter,
-                orderBy: { createdAt: 'desc' },
-                select: { rawResponse: true },
-            },
-            ipQualityDetail: true,
-            utm: {
-                select: {
-                    utmMedium: true,
-                }
+            createdAt: {
+                gte: fromDate,
+                lt: toDate,
             },
         };
 
-    const users = await
-        prisma.user.findMany({
-            where,
-            include: userRelations,
-            orderBy: { updatedAt: 'desc' },
-        })
+    const finnauxJobFilter = hasId
+        ? {
+            applicationId: Number(id),
+        }
+        : {
+            createdAt: {
+                gte: fromDate,
+                lt: toDate,
+            },
+        };
 
-    const documents = id ? await getBase64Documents(id) : {};
-    const data = id
-        ? users.map((user) => ({
-            ...toFinnauxColumnNames(user),
-            ...documents,
-        }))
-        : users.map(toFinnauxDateRangePayload);
+    /*
+     * ---------------------------------------------------------
+     * ID REQUEST
+     * ---------------------------------------------------------
+     */
+    if (hasId) {
+        const user = await prisma.user.findFirst({
+            where: {
+                loanApplications: {
+                    some: applicationFilter,
+                },
+            },
 
-    res.status(200).json({
+            include: {
+                aadhaarVerification: true,
+                panVerification: true,
+                employment: true,
+                address: true,
+
+                documents: {
+                    orderBy: {
+                        uploadedAt: 'desc',
+                    },
+                },
+
+                loanApplications: {
+                    where: applicationFilter,
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                    include: {
+                        employmentDetail: true,
+                    },
+                },
+
+                loans: {
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                },
+
+                finnauxIntegrationJobs: {
+                    where: finnauxJobFilter,
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                    select: {
+                        rawResponse: true,
+                        applicationId: true,
+                        userId: true,
+                    },
+                },
+
+                ipQualityDetail: true,
+                utm: true,
+                status: true,
+            },
+        });
+
+        if (!user) {
+            return res.status(200).json({
+                success: true,
+                count: 0,
+                totalCount: 0,
+                data: [],
+            });
+        }
+
+        /*
+         * KEEP DOCUMENT SECTION SAME
+         */
+        const documents = await getBase64Documents(id);
+
+        const data = [
+            {
+                ...toFinnauxColumnNames(user),
+                ...documents,
+            },
+        ];
+
+        return res.status(200).json({
+            success: true,
+            count: data.length,
+            totalCount: data.length,
+            data,
+        });
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * DATE RANGE REQUEST
+     * ---------------------------------------------------------
+     */
+
+    const users = await prisma.user.findMany({
+        where: {
+            loanApplications: {
+                some: applicationFilter,
+            },
+        },
+
+        select: {
+            name: true,
+            phone: true,
+            gender: true,
+
+            loanApplications: {
+                where: applicationFilter,
+                orderBy: {
+                    createdAt: 'desc',
+                },
+                take: 1,
+                select: {
+                    id: true,
+                    loanType: true,
+                    loanAccountNumber: true,
+                    reason: true,
+                    reloan: true,
+                    loanAmount: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    status: true,
+                    employeeName: true,
+                    employmentDetail: {
+                        select: {
+                            employmentType: true,
+                            monthlyIncome: true,
+                        },
+                    },
+                },
+            },
+
+            finnauxIntegrationJobs: {
+                where: finnauxJobFilter,
+                orderBy: {
+                    createdAt: 'desc',
+                },
+                take: 1,
+                select: {
+                    rawResponse: true,
+                },
+            },
+
+            ipQualityDetail: {
+                select: {
+                    latitude: true,
+                    longitude: true,
+                    countryCode: true,
+                    ipAddress: true,
+                    fraudScore: true,
+                    vpn: true,
+                    recentAbuse: true,
+                },
+            },
+
+            utm: {
+                select: {
+                    utmMedium: true,
+                },
+            },
+        },
+
+        orderBy: {
+            updatedAt: 'desc',
+        },
+    });
+
+    const data = users.map(toFinnauxDateRangePayload);
+
+    return res.status(200).json({
         success: true,
         count: data.length,
         totalCount: users.length,

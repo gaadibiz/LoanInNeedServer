@@ -10,6 +10,7 @@ const { encodeBufferToBase64 } = require('../utils/base64Encoder');
 const s3Client = require('../utils/s3Client');
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const { checkAndPushBumchumIfReady } = require('./loanService');
+const DocumentCompressor = require('../utils/documentCompressor');
 
 const UPLOAD_BUCKET = 'Documents';
 
@@ -46,8 +47,14 @@ class DocumentVerificationService {
       throw new BadRequestError('File content missing');
     }
 
+    // 2.1 Compress image files (JPEG, PNG, WebP, etc.)
+    const compressed = await DocumentCompressor.compressImage(fileBuffer, file.mimetype);
+    fileBuffer = compressed.buffer;
+    const finalMimeType = compressed.mimeType || file.mimetype;
+    const finalSize = compressed.size || fileBuffer.length;
+
     // 3. Generate Base64 (for response only)
-    const base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
+    const base64Data = encodeBufferToBase64(fileBuffer, finalMimeType, false);
 
     // 4 & 5. Save and Public URL
     let relativeFilePath, publicUrl;
@@ -59,7 +66,7 @@ class DocumentVerificationService {
         Key: s3Key,
         Body: fileBuffer,
         ACL: 'public-read',
-        ContentType: file.mimetype,
+        ContentType: finalMimeType,
       });
 
       await s3Client.send(command);
@@ -93,8 +100,8 @@ class DocumentVerificationService {
         fileName: file.originalname,
         filePath: relativeFilePath,
         fileUrl: publicUrl,
-        mimeType: file.mimetype,
-        size: file.size,
+        mimeType: finalMimeType,
+        size: finalSize,
         checksum: checksum,
         status: 'SUBMITTED'
       }
