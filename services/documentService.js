@@ -51,17 +51,22 @@ class DocumentVerificationService {
     let base64Data;
 
     if (file.mimetype.startsWith('image/')) {
-      compressedBuffer = await sharp(fileBuffer)
-        .resize({
-          width: 1600,
-          withoutEnlargement: true,
-        })
-        .jpeg({
-          quality: 70,
-          mozjpeg: true,
-        })
-        .toBuffer();
-      base64Data = compressedBuffer.toString('base64');
+      try {
+        compressedBuffer = await sharp(fileBuffer)
+          .resize({
+            width: 1600,
+            withoutEnlargement: true,
+          })
+          .jpeg({
+            quality: 70,
+            mozjpeg: true,
+          })
+          .toBuffer();
+        base64Data = compressedBuffer.toString('base64');
+      } catch (_) {
+        console.log("ERROR IN UPLOAD DOCUMET COMPRESSOR")
+        base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
+      }
     } else {
       base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
     }
