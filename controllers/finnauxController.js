@@ -442,18 +442,8 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
                         employmentDetail: true,
                     },
                 },
-
-                loans: {
-                    orderBy: {
-                        createdAt: 'desc',
-                    },
-                },
-
                 finnauxIntegrationJobs: {
                     where: finnauxJobFilter,
-                    orderBy: {
-                        createdAt: 'desc',
-                    },
                     select: {
                         rawResponse: true,
                         applicationId: true,
@@ -569,10 +559,12 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
                 },
             },
         },
+    });
 
-        orderBy: {
-            updatedAt: 'desc',
-        },
+    users.sort((a, b) => {
+        const timeA = a.loanApplications?.[0]?.createdAt ? new Date(a.loanApplications[0].createdAt).getTime() : 0;
+        const timeB = b.loanApplications?.[0]?.createdAt ? new Date(b.loanApplications[0].createdAt).getTime() : 0;
+        return timeB - timeA;
     });
 
     const data = users.map(toFinnauxDateRangePayload);
