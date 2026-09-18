@@ -143,7 +143,7 @@ const requestAadhaarOtp = asyncHandler(async (req, res) => {
 /**
  * POST /api/auth/aadhaar/request-digilocker
  * Generates a Digilocker consent URL for the logged-in user.
- * ?mock=true (non-prod only) skips Signzy for local/QA testing.
+ * Accepts optional custom redirect URLs: successRedirectUrl, failureRedirectUrl, redirectUrl, callbackUrl
  */
 const requestDigiLocker = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -151,7 +151,25 @@ const requestDigiLocker = asyncHandler(async (req, res) => {
   if (!userId) {
     throw new BadRequestError('userId is required');
   }
-  const digilockerDetails = await aadhaarService.requestDigilockerUrl(userId,req.body.aadhaarNumber);
+
+  const {
+    aadhaarNumber,
+    successRedirectUrl,
+    failureRedirectUrl,
+    redirectUrl,
+    callbackUrl,
+    successRedirectTime,
+    failureRedirectTime
+  } = req.body;
+
+  const digilockerDetails = await aadhaarService.requestDigilockerUrl(userId, aadhaarNumber, {
+    successRedirectUrl,
+    failureRedirectUrl,
+    redirectUrl,
+    callbackUrl,
+    successRedirectTime,
+    failureRedirectTime
+  });
 
   res.status(200).json({
     success: true,

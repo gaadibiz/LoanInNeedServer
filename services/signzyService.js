@@ -4,6 +4,8 @@ const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { createCircuitBreaker } = require('../utils/circuitBreaker');
 const { SERVICE_URLS } = require('../utils/microserviceUrl');
 require('dotenv').config()
+const FRONTEND_URL = process.env.FRONTEND_URL
+const BACKEND_URL = process.env.SERVER_URL
 
 const SIGNZY_TOKEN = process.env.SIGNZY_TOKEN || 'J6lbpOPjZSN3p0beAFp0ftcrCsuEPsVO' || 'UJULyodf25LFtNZGyoliwUvgvxWNYki1';
 const DIGILOCKER_CALLBACK_URL =
@@ -60,10 +62,10 @@ class SignZyService {
           "signup": true,
           "redirectUrl": "https://www.signzy.com/",
           "redirectTime": "1",
-          "callbackUrl": 'https://be-prod.bumchumfinserve.com/api/auth/aadhaar/save-verified-adhaar-details',
-          "successRedirectUrl": 'https://www.signzy.com/',
+          "callbackUrl": `${BACKEND_URL}/api/auth/aadhaar/save-verified-adhaar-details`,
+          "successRedirectUrl": `${FRONTEND_URL}/digilocker/callback/success`,
           "successRedirectTime": "5",
-          "failureRedirectUrl": "https://www.signzy.com/",
+          "failureRedirectUrl": `${FRONTEND_URL}/digilocker/callback/failure`,
           "failureRedirectTime": "5",
           "logoVisible": "true",
           "logo": "https://enr-biolerplate-7may26.s3.ap-south-1.amazonaws.com/company_outlet_logo/navneen_2026-08-22_04-25-56.jpeg",

@@ -144,8 +144,11 @@ class AadhaarService {
   /**
    * Generate a Digilocker consent URL via Signzy and record the requestId
    * against the user so the frontend can later resolve it after redirect.
+   * @param {number} userId
+   * @param {string} aadhaarNumber
+   * @param {Object} [options]
    */
-  async requestDigilockerUrl(userId, aadhaarNumber) {
+  async requestDigilockerUrl(userId, aadhaarNumber, options = {}) {
     if (!aadhaarNumber) {
       throw new BadRequestError("Aadhaar number is required");
     }
@@ -161,7 +164,7 @@ class AadhaarService {
       throw new BadRequestError("This Aadhaar number is already registered with another account.");
     }
 
-    let digilockerDetails = await signzyService.createDigilockerUrl(userId);
+    let digilockerDetails = await signzyService.createDigilockerUrl(userId, options);
     await UserModel.updateUser(userId, {
       digilockerRequestId: digilockerDetails.requestId,
       digilockerStatus: 'URL_CREATED',
