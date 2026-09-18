@@ -24,7 +24,7 @@ class SignZyService {
 
     this.digilockerRequestUrlBreaker = createCircuitBreaker(
       (data) => {
-
+        console.log(data, "here is the data request digilocker does")
         return this.client.post(SERVICE_URLS.requestDigilocker, { ...data, signup: true, })
       },
       'SignZy Digilocker Request URL'
