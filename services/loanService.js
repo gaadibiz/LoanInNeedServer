@@ -290,6 +290,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             date_of_visit: new Date().toISOString(),
             cancellation_dead_reason: application.reason || '',
             ipQualityDetail: ipQualityDetail,
+            IPStatus: ipQualityDetail ? (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P' : 'N/A',
             employment_type_uuid: employeeDetail?.employmentType === 'SALARIED' ? 'e54e543d-a20e-47b5-8bf1-a087e910d92b' : '3d9d2e30-2754-49f8-be31-3a14c1d720b7',
             action_item_category_uuid: 'f22bd31f-b9cb-4c8e-a07b-50f9b7083812',
             ...utm
