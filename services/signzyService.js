@@ -24,7 +24,6 @@ class SignZyService {
 
     this.digilockerRequestUrlBreaker = createCircuitBreaker(
       (data) => {
-        console.log(data, "here is the data request digilocker does")
         return this.client.post(SERVICE_URLS.requestDigilocker, { ...data, signup: true, })
       },
       'SignZy Digilocker Request URL'
@@ -63,9 +62,9 @@ class SignZyService {
           "redirectUrl": "https://www.signzy.com/",
           "redirectTime": "1",
           "callbackUrl": `https://be_prod.bumchumfinserve.com/api/auth/aadhaar/save-verified-adhaar-details`,
-          "successRedirectUrl": `https://loaninneed.in/digilocker/callback/success`,
+          "successRedirectUrl": `https://www.signzy.com/`,
           "successRedirectTime": "5",
-          "failureRedirectUrl": `https://loaninneed.in/digilocker/callback/failure`,
+          "failureRedirectUrl": `https://www.signzy.com/`,
           "failureRedirectTime": "5",
           "logoVisible": "true",
           "logo": "https://enr-biolerplate-7may26.s3.ap-south-1.amazonaws.com/company_outlet_logo/navneen_2026-08-22_04-25-56.jpeg",
