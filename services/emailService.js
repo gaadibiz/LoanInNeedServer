@@ -4,9 +4,9 @@ const logger = require('../utils/logger');
 // Retrieve SMTP Configurations with sensible defaults and fallbacks
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
-const SMTP_USER = process.env.SMTP_USER ;
+const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
-const EMAIL_FROM = process.env.EMAIL_FROM ;
+const EMAIL_FROM = process.env.EMAIL_FROM;
 const SMTP_SECURE = process.env.SMTP_SECURE === 'true' || SMTP_PORT === 465;
 
 /**
