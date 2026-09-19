@@ -82,7 +82,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             dob: true,
             gender: true,
             profileType: true,
-            panVerification: true
+            panVerification: true,
+            digilockerStatus: true,
         }
     });
     let application = applicationId ? (await prisma.loanApplication.findUnique({
@@ -147,6 +148,22 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 mime_type: doc.mimeType
             }
         }
+        if (doc.docType === 'DIGILOCKER_AADHAAR' && !documents.digilockerAadhaar) {
+            documents.digilockerAadhaar = {
+                document_name: 'DIGILOCKER_AADHAAR',
+                link: doc.fileUrl,
+                file_name: doc.fileName,
+                mime_type: doc.mimeType
+            }
+        }
+        if (doc.docType === 'DIGILOCKER_PHOTO' && !documents.digilockerPhoto) {
+            documents.digilockerPhoto = {
+                document_name: 'DIGILOCKER_PHOTO',
+                link: doc.fileUrl,
+                file_name: doc.fileName,
+                mime_type: doc.mimeType
+            }
+        }
     })
     const aadhaarVerification = await prisma.aadhaarVerification.findUnique({
         where: { userId },
@@ -156,6 +173,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             dob: true,
             gender: true,
             address: true,
+            eAadhaarFetchedAt: true,
+
         }
     });
     const addressDetail = await prisma.addressDetail.findUnique({
