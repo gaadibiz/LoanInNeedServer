@@ -211,11 +211,36 @@ const saveVerifiedAadhaarDetails = asyncHandler(async (req, res) => {
       ...result
     }
   });
+
+  (async()=>{
+    try{
+      await sendLoanApplicationToBumchum(userId,null)
+    }catch(_){
+
+    }
+  })();
+
 });
 
 
-module.exports =
-{
+// Request Email OTP
+const requestEmailOtp = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const userId = req.user?.id || req.body?.userId || null;
+  const result = await authService.requestEmailOtp(email, userId);
+  res.status(200).json(result);
+});
+
+// Verify Email OTP
+const verifyEmailOtp = asyncHandler(async (req, res) => {
+  const { email, code, otp } = req.body;
+  const otpCode = code || otp;
+  const userId = req.user?.id || req.body?.userId || null;
+  const result = await authService.verifyEmailOtp(email, otpCode, userId);
+  res.status(200).json(result);
+});
+
+module.exports = {
   requestPhoneOtp,
   verifyPhoneOtp,
   verifyAadhaarOtp,
@@ -223,5 +248,7 @@ module.exports =
   validateAadhaarExists,
   saveVerifiedAadhaarDetails,
   requestDigiLocker,
-  registerPhoneWithoutVerification
+  registerPhoneWithoutVerification,
+  requestEmailOtp,
+  verifyEmailOtp
 };

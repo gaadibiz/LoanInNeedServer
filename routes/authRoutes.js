@@ -4,9 +4,8 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 
 const attributionMiddleware = require('../middleware/attributionMiddleware');
-const { protect } = require('../middleware/authMiddleware'); // Added protect
+const { protect } = require('../middleware/authMiddleware');
 const { withConcurrencyLimit } = require('../middleware/concurrencyManager');
-
 // Phone OTP routes
 router.post('/phone/request-otp',
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before requesting an OTP.'),
@@ -16,6 +15,18 @@ router.post('/phone/verify-otp',
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before verifying your OTP.'),
     attributionMiddleware,
     authController.verifyPhoneOtp
+);
+
+// Email OTP routes
+router.post('/email/request-otp',
+    withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before requesting an OTP.'),
+    protect,
+    authController.requestEmailOtp
+);
+router.post('/email/verify-otp',
+    withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before verifying your OTP.'),
+    protect,
+    authController.verifyEmailOtp
 );
 
 router.post('/register/register-phone-without-verification',

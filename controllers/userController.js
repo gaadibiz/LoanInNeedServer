@@ -1,6 +1,7 @@
 // controllers/userController.js
 const asyncHandler = require('express-async-handler');
 const userService = require('../services/userServices');
+const authService = require('../services/authService');
 const locationService = require('../services/locationService');
 const logger = require('../utils/logger');
 const prisma = require('../utils/prismaClient');
@@ -122,6 +123,23 @@ const getLocation = asyncHandler(async (req, res) => {
   });
 });
 
+// ✅ Request Email OTP for Logged In User
+const requestEmailOtp = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
+  const { email } = req.body;
+  const result = await authService.requestEmailOtp(email, userId);
+  res.status(200).json(result);
+});
+
+// ✅ Verify Email OTP for Logged In User
+const verifyEmailOtp = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
+  const { email, code, otp } = req.body;
+  const otpCode = code || otp;
+  const result = await authService.verifyEmailOtp(email, otpCode, userId);
+  res.status(200).json(result);
+});
+
 module.exports = {
   registerUser,
   getProfile,
@@ -129,5 +147,7 @@ module.exports = {
   loginUser,
   submitLocation,
   getLocation,
-  loginAdmin
+  loginAdmin,
+  requestEmailOtp,
+  verifyEmailOtp
 };

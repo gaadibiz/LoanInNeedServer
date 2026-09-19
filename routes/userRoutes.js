@@ -22,4 +22,8 @@ router.get('/dashboard', authenticate, userController.getCompleteProfile);
 router.post('/location', authenticate, userController.submitLocation);
 router.get('/location', authenticate, userController.getLocation);
 
+// Email verification routes for authenticated user
+router.post('/email/request-otp', authenticate, userController.requestEmailOtp);
+router.post('/email/verify-otp', authenticate, userController.verifyEmailOtp);
+
 module.exports = router;

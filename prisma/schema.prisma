@@ -22,6 +22,8 @@ model User {
   verificationStatus     VerificationStatus      @default(PENDING)
   phoneVerified          Boolean                 @default(false)
   phoneVerifiedAt        DateTime?
+  emailVerified          Boolean                 @default(false)
+  emailVerifiedAt        DateTime?
   customUserId           String?                 @unique
   attributedPartnerId    Int?
   attributionDate        DateTime?
@@ -246,6 +248,17 @@ model Otp {
   createdAt DateTime @default(now())
 
   @@index([phone, expiresAt])
+}
+
+model EmailOtp {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, expiresAt])
 }
 
 model Loan {

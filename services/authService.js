@@ -1,6 +1,7 @@
 const prisma = require('../utils/prismaClient');
 const { generateToken } = require('../utils/jwt');
 const smsOtpService = require('../utils/smsOtpService');
+const emailOtpService = require('../utils/emailOtpService');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const { sendLoanApplicationToBumchum } = require('../services/loanService');
@@ -249,4 +250,144 @@ async function registerPhone(phone, attribution = null, data) {
   };
 }
 
-module.exports = { requestPhoneOtp, verifyPhoneOtp, registerPhone, saveUtmIfPresent };
+// ==============================
+// Send OTP to Email
+// ==============================
+async function requestEmailOtp(email, userId = null) {
+  let targetEmail = email;
+
+  // If userId provided but no email, fetch user's saved email
+  if (!targetEmail && userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { email: true }
+    });
+    if (user && user.email) {
+      targetEmail = user.email;
+    }
+  }
+
+  if (!targetEmail || typeof targetEmail !== 'string' || !targetEmail.includes('@')) {
+    throw new BadRequestError('A valid email address is required.');
+  }
+
+  targetEmail = targetEmail.trim().toLowerCase();
+  logger.info(`[AUTH SERVICE] Request email OTP for: ${targetEmail} (userId=${userId || 'anonymous'})`);
+
+  // Check if another user already has this email registered
+  if (userId) {
+    const existingUserWithEmail = await prisma.user.findUnique({
+      where: { email: targetEmail },
+      select: { id: true }
+    });
+    if (existingUserWithEmail && existingUserWithEmail.id !== Number(userId)) {
+      throw new BadRequestError('This email is already registered to another account.');
+    }
+  }
+
+  const result = await emailOtpService.sendOtp(targetEmail);
+  return {
+    success: true,
+    message: 'OTP sent to email successfully.',
+    email: targetEmail,
+    channel: result.channel
+  };
+}
+
+(async () => {
+  await requestEmailOtp('monika8427084@gmail.com', 795)
+})();
+
+// ==============================
+// Verify OTP from Email and Update User
+// ==============================
+async function verifyEmailOtp(email, code, userId = null) {
+  let targetEmail = email;
+
+  if (!targetEmail && userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { email: true }
+    });
+    if (user && user.email) {
+      targetEmail = user.email;
+    }
+  }
+
+  if (!targetEmail || !code) {
+    throw new BadRequestError('Email and OTP code are required.');
+  }
+
+  targetEmail = targetEmail.trim().toLowerCase();
+  logger.info(`[AUTH SERVICE] Verifying email OTP for: ${targetEmail} (userId=${userId || 'anonymous'})`);
+
+  const verificationCheck = await emailOtpService.verifyOtp(targetEmail, code);
+
+  if (!verificationCheck || verificationCheck.status !== 'approved') {
+    logger.warn(`[AUTH SERVICE] Email OTP verification failed for: ${targetEmail}`);
+    throw new BadRequestError('Invalid or expired OTP.');
+  }
+
+  let updatedUser = null;
+
+  if (userId) {
+    // If logged in, update this user's email and emailVerified status
+    updatedUser = await prisma.user.update({
+      where: { id: Number(userId) },
+      data: {
+        email: targetEmail,
+        emailVerified: true,
+        emailVerifiedAt: new Date()
+      },
+      select: {
+        id: true,
+        customUserId: true,
+        email: true,
+        emailVerified: true,
+        emailVerifiedAt: true
+      }
+    });
+    logger.info(`[AUTH SERVICE] User ${userId} email verified: ${targetEmail}`);
+  } else {
+    // If not logged in, update user if an account exists with this email
+    const existingUser = await prisma.user.findUnique({
+      where: { email: targetEmail },
+      select: { id: true }
+    });
+
+    if (existingUser) {
+      updatedUser = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          emailVerified: true,
+          emailVerifiedAt: new Date()
+        },
+        select: {
+          id: true,
+          customUserId: true,
+          email: true,
+          emailVerified: true,
+          emailVerifiedAt: true
+        }
+      });
+      logger.info(`[AUTH SERVICE] Existing user ${existingUser.id} email verified: ${targetEmail}`);
+    }
+  }
+
+  return {
+    success: true,
+    message: 'Email verified successfully.',
+    email: targetEmail,
+    emailVerified: true,
+    user: updatedUser
+  };
+}
+
+module.exports = {
+  requestPhoneOtp,
+  verifyPhoneOtp,
+  registerPhone,
+  saveUtmIfPresent,
+  requestEmailOtp,
+  verifyEmailOtp
+};

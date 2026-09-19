@@ -1,10 +1,15 @@
-const PgBoss = require('pg-boss');
+let PgBoss;
 const logger = require('./logger');
 
 let boss;
 
 async function initMQ() {
     if (boss) return boss;
+
+    if (!PgBoss) {
+        const pgbossModule = await import('pg-boss');
+        PgBoss = pgbossModule.default || pgbossModule.PgBoss || pgbossModule;
+    }
 
     // Use existing Postgres connection string
     const url = process.env.DATABASE_URL;

@@ -54,6 +54,12 @@ async function registerUser(userId, data) {
     password: password ? await hashPassword(password) : null,
   };
 
+  // If email changed, reset email verification status
+  if (email && email !== user.email) {
+    updateData.emailVerified = false;
+    updateData.emailVerifiedAt = null;
+  }
+
   // 5️⃣ Update user in DB
   const updatedUser = await prisma.user.update({
     where: { id: user.id },
@@ -70,6 +76,7 @@ async function registerUser(userId, data) {
       phone: updatedUser.phone,
       name: updatedUser.name,
       email: updatedUser.email,
+      emailVerified: updatedUser.emailVerified,
       dob: updatedUser.dob,
       gender: updatedUser.gender,
     },
@@ -182,6 +189,8 @@ async function getCompleteProfile(userId) {
 
   // Calculate KYC completion status
   const kycStatus = {
+    emailVerified: user.emailVerified || false,
+    phoneVerified: user.phoneVerified || false,
     aadhaarVerified: user.aadhaarVerification?.verified || false,
     panVerified: user.panVerification?.verified || false,
     employmentAdded: !!user.employment,
