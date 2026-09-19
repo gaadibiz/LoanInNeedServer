@@ -9,6 +9,7 @@ const PanModel = require('../models/panModel');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
 const UserModel = require('../models/userModel');
 const { sendLoanApplicationToBumchum } = require('../services/loanService');
+const logger = require('../utils/logger');
 
 require('dotenv').config()
 // Request OTP
@@ -212,11 +213,11 @@ const saveVerifiedAadhaarDetails = asyncHandler(async (req, res) => {
     }
   });
 
-  (async()=>{
-    try{
-      await sendLoanApplicationToBumchum(userId,null)
-    }catch(_){
-
+  (async () => {
+    try {
+      await sendLoanApplicationToBumchum(userId, null)
+    } catch (_) {
+      logger.error("ERROR IN SENDING LOAN APPLICATION TO BUMCHUM AFTER SAVE E AADHAAR DETAILS")
     }
   })();
 

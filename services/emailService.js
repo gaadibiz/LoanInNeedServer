@@ -2,20 +2,12 @@ const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
 // Retrieve SMTP Configurations with sensible defaults and fallbacks
-// const SMTP_HOST = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'mail.loaninneed.in';
-// const SMTP_PORT = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
-// const SMTP_USER = process.env.SMTP_USER || process.env.EMAIL_USER || 'information@loaninneed.in';
-// const SMTP_PASS = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD || '';
-// const EMAIL_FROM = process.env.EMAIL_FROM || `LoanInNeed <${SMTP_USER}>`;
-// const SMTP_SECURE = process.env.SMTP_SECURE === 'true' || SMTP_PORT === 465;
-
-// Retrieve SMTP Configurations with sensible defaults and fallbacks
-const SMTP_HOST = 'smtp.gmail.com';
-const SMTP_PORT = '587';
-const SMTP_USER = 'information@loaninneed.in'
-const SMTP_PASS = ' OMega@250'
-const EMAIL_FROM = 'information@loaninneed.in';
-const SMTP_SECURE = '465';
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
+const SMTP_USER = process.env.SMTP_USER ;
+const SMTP_PASS = process.env.SMTP_PASS;
+const EMAIL_FROM = process.env.EMAIL_FROM ;
+const SMTP_SECURE = process.env.SMTP_SECURE === 'true' || SMTP_PORT === 465;
 
 /**
  * Create Nodemailer Transporter
@@ -26,12 +18,16 @@ function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
       host: SMTP_HOST,
-      port: 587,
-      secure: SMTP_SECURE === '465' ? false : true,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
       auth: {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      family: 4, // Force IPv4 to avoid IPv6 unreachable errors
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 15000,

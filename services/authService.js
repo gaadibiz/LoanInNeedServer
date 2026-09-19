@@ -294,10 +294,6 @@ async function requestEmailOtp(email, userId = null) {
   };
 }
 
-(async () => {
-  await requestEmailOtp('monika8427084@gmail.com', 795)
-})();
-
 // ==============================
 // Verify OTP from Email and Update User
 // ==============================
