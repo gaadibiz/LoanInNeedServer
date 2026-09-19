@@ -173,7 +173,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             dob: true,
             gender: true,
             address: true,
-            eAadhaarFetchedAt: true,
+            eAadhaarFetchedAt: true
 
         }
     });
