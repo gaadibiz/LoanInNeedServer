@@ -61,7 +61,7 @@ class SignZyService {
           "signup": true,
           "redirectUrl": "https://www.signzy.com/",
           "redirectTime": "1",
-          "callbackUrl": `https://be_prod.bumchumfinserve.com/api/auth/aadhaar/save-verified-adhaar-details`,
+          "callbackUrl": DIGILOCKER_CALLBACK_URL,
           "successRedirectUrl": `https://www.signzy.com/`,
           "successRedirectTime": "5",
           "failureRedirectUrl": `https://www.signzy.com/`,
