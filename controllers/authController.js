@@ -115,7 +115,7 @@ const verifyAadhaarOtp = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Aadhaar number is required' });
   }
 
-  
+
   // Persist Aadhaar Validation in DB
   try {
     await aadhaarService.submitAadhaar(userId, aadhaarNumber);
@@ -187,7 +187,7 @@ const requestDigiLocker = asyncHandler(async (req, res) => {
  * logged-in user.
  */
 const saveVerifiedAadhaarDetails = asyncHandler(async (req, res) => {
-  const userId = req.body.internalId;
+  const userId = req.body.internalId || req.query.internalId;
   console.log("RAW_USER_ID--------", userId)
   if (!userId) {
     throw new BadRequestError('userId is required');
