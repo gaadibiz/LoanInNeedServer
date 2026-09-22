@@ -22,33 +22,21 @@ let transporter = null;
 
 function getTransporter() {
   if (!transporter) {
-    const isGmail = SMTP_HOST.includes('gmail.com');
-
     transporter = nodemailer.createTransport({
-      ...(isGmail
-        ? {
-          service: 'gmail',
-          auth: {
-            user: SMTP_USER,
-            pass: SMTP_PASS,
-          },
-        }
-        : {
-          host: SMTP_HOST,
-          port: SMTP_PORT,
-          secure: SMTP_SECURE,
-          auth: {
-            user: SMTP_USER,
-            pass: SMTP_PASS,
-          },
-        }),
+      host: SMTP_HOST || 'smtp.gmail.com',
+      port: SMTP_PORT || 465,
+      secure: SMTP_SECURE,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
       tls: {
         rejectUnauthorized: false,
       },
-      family: 4, // Force IPv4 to avoid IPv6 unreachable errors
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000,
+      family: 4, // Force IPv4 (prevents ENETUNREACH on servers without IPv6 routing)
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 25000,
     });
   }
 
