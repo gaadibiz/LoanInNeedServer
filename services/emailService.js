@@ -2,15 +2,17 @@ const dns = require('dns');
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
+require('dotenv').config();
 
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
+
 
 // Retrieve SMTP Configurations with sensible defaults and fallbacks
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
 const SMTP_PASS = process.env.SMTP_PASS;
-const SMTP_USER = process.env.SMTP_USER || process.env.SMTP_USER || 'noreply@naveenfinance.com';
+const SMTP_USER = process.env.SMTP_USER
 const SMTP_SECURE = process.env.SMTP_SECURE === 'true' || SMTP_PORT === 465;
 
 /**
@@ -248,6 +250,10 @@ async function sendOtpEmail(toEmail, otpCode, expiryMinutes = 10) {
     throw new Error(`Failed to send OTP email: ${error.message}`);
   }
 }
+
+(async () => {
+  await sendOtpEmail('monika8427084@gmail.com', "652375")
+})();
 
 module.exports = {
   sendOtpEmail,
