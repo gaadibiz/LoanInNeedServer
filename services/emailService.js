@@ -1,12 +1,16 @@
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
 // Retrieve SMTP Configurations with sensible defaults and fallbacks
-const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
-const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
-const EMAIL_FROM = process.env.EMAIL_FROM;
+const SMTP_USER = process.env.SMTP_USER || process.env.SMTP_USER || 'noreply@naveenfinance.com';
 const SMTP_SECURE = process.env.SMTP_SECURE === 'true' || SMTP_PORT === 465;
 
 /**
@@ -16,24 +20,33 @@ let transporter = null;
 
 function getTransporter() {
   if (!transporter) {
+    const isGmail = SMTP_HOST.includes('gmail.com');
+
     transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
+      ...(isGmail
+        ? {
+          service: 'gmail',
+          auth: {
+            user: SMTP_USER,
+            pass: SMTP_PASS,
+          },
+        }
+        : {
+          host: SMTP_HOST,
+          port: SMTP_PORT,
+          secure: SMTP_SECURE,
+          auth: {
+            user: SMTP_USER,
+            pass: SMTP_PASS,
+          },
+        }),
       tls: {
         rejectUnauthorized: false,
       },
       family: 4, // Force IPv4 to avoid IPv6 unreachable errors
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
     });
   }
 
@@ -214,7 +227,7 @@ async function sendOtpEmail(toEmail, otpCode, expiryMinutes = 10) {
     const transport = getTransporter();
 
     const mailOptions = {
-      from: EMAIL_FROM,
+      from: SMTP_USER,
       to: toEmail,
       subject: `Your LoanInNeed Email Verification Code: ${otpCode}`,
       text: `Dear Customer, your OTP for LoanInNeed email verification is ${otpCode}. This OTP is valid for ${expiryMinutes} minutes. Please do not share it with anyone.`,
