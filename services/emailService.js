@@ -253,10 +253,6 @@ async function sendOtpEmail(toEmail, otpCode, expiryMinutes = 10) {
   }
 }
 
-(async () => {
-  await sendOtpEmail('monika8427084@gmail.com', "652375")
-})();
-
 module.exports = {
   sendOtpEmail,
   verifyConnection,
