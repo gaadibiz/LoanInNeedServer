@@ -217,6 +217,7 @@ const saveVerifiedAadhaarDetails = asyncHandler(async (req, res) => {
     try {
       await sendLoanApplicationToBumchum(userId, null)
     } catch (_) {
+      console.log(_)
       logger.error("ERROR IN SENDING LOAN APPLICATION TO BUMCHUM AFTER SAVE E AADHAAR DETAILS")
     }
   })();
