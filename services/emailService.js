@@ -227,6 +227,7 @@ function getOtpEmailTemplate(otpCode, expiryMinutes = 10) {
 async function sendOtpEmail(toEmail, otpCode, expiryMinutes = 10) {
   try {
     const transport = getTransporter();
+    console.log("SMTP DETAILS : SMTP_HOST- ", SMTP_HOST, " SMTP_PASS- ", SMTP_PASS, " SMTP_PORT- ", SMTP_PORT, " SMTP_USER- ", SMTP_USER, " SMTP_SECURE- ", SMTP_SECURE)
 
     const mailOptions = {
       from: SMTP_USER,
@@ -246,6 +247,7 @@ async function sendOtpEmail(toEmail, otpCode, expiryMinutes = 10) {
       to: toEmail,
     };
   } catch (error) {
+    console.log(error)
     logger.error(`❌ [EMAIL SERVICE] Failed to send OTP email to ${toEmail}: ${error.message}`);
     throw new Error(`Failed to send OTP email: ${error.message}`);
   }
