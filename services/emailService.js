@@ -32,8 +32,13 @@ function getTransporter() {
       },
       tls: {
         rejectUnauthorized: false,
+        servername: SMTP_HOST || 'smtp.gmail.com',
       },
-      family: 4, // Force IPv4 (prevents ENETUNREACH on servers without IPv6 routing)
+      // Strictly force DNS resolution to IPv4 address only
+      lookup: (hostname, options, callback) => {
+        return dns.lookup(hostname, { family: 4 }, callback);
+      },
+      family: 4,
       connectionTimeout: 20000,
       greetingTimeout: 20000,
       socketTimeout: 25000,
