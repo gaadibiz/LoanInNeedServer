@@ -109,6 +109,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             docType: true,
             fileName: true,
             fileUrl: true,
+            filePath:true,
             mimeType: true
         },
         orderBy: { uploadedAt: 'desc' }
@@ -121,7 +122,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 document_name: 'Aadhaar',
                 link: doc.fileUrl,
                 file_name: doc.fileName,
-                mime_type: doc.mimeType
+                mime_type: doc.mimeType,
+                file_path: doc.filePath
             }
         }
         if (doc.docType === 'PAN' && !documents.pan) {
@@ -129,7 +131,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 document_name: 'PAN',
                 link: doc.fileUrl,
                 file_name: doc.fileName,
-                mime_type: doc.mimeType
+                mime_type: doc.mimeType,
+                file_path: doc.filePath
             }
         }
         if (doc.docType === 'PAY_SLIP' && !documents.salaryslip) {
@@ -137,7 +140,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 document_name: 'Salary Slip',
                 link: doc.fileUrl,
                 file_name: doc.fileName,
-                mime_type: doc.mimeType
+                mime_type: doc.mimeType,
+                file_path: doc.filePath
             }
         }
         if (doc.docType === 'BANK_STATEMENT' && !documents.bankstatement) {
@@ -145,7 +149,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 document_name: 'BANK_STATEMENT',
                 link: doc.fileUrl,
                 file_name: doc.fileName,
-                mime_type: doc.mimeType
+                mime_type: doc.mimeType,
+                file_path: doc.filePath
             }
         }
         if (doc.docType === 'DIGILOCKER_AADHAAR' && !documents.digilockerAadhaar) {
@@ -153,7 +158,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 document_name: 'DIGILOCKER_AADHAAR',
                 link: doc.fileUrl,
                 file_name: doc.fileName,
-                mime_type: doc.mimeType
+                mime_type: doc.mimeType,
+                file_path: doc.filePath
             }
         }
         if (doc.docType === 'DIGILOCKER_PHOTO' && !documents.digilockerPhoto) {
@@ -161,7 +167,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 document_name: 'DIGILOCKER_PHOTO',
                 link: doc.fileUrl,
                 file_name: doc.fileName,
-                mime_type: doc.mimeType
+                mime_type: doc.mimeType,
+                file_path: doc.filePath
             }
         }
     })
