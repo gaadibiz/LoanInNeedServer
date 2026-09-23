@@ -124,7 +124,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 file_name: doc.fileName,
                 mime_type: doc.mimeType,
                 document: doc.filePath,
-                attachment: [doc.filePath]
+                attachments: [doc.filePath]
             }
         }
         if (doc.docType === 'PAN' && !documents.pan) {
@@ -134,7 +134,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 file_name: doc.fileName,
                 mime_type: doc.mimeType,
                 document: doc.filePath,
-                attachment: [doc.filePath]
+                attachments: [doc.filePath]
             }
         }
         if (doc.docType === 'PAY_SLIP' && !documents.salaryslip) {
@@ -144,7 +144,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 file_name: doc.fileName,
                 mime_type: doc.mimeType,
                 document: doc.filePath,
-                   attachment: [doc.filePath]
+                attachments: [doc.filePath]
             }
         }
         if (doc.docType === 'BANK_STATEMENT' && !documents.bankstatement) {
@@ -154,7 +154,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 file_name: doc.fileName,
                 mime_type: doc.mimeType,
                 document: doc.filePath,
-                   attachment: [doc.filePath]
+                attachments: [doc.filePath]
             }
         }
         if (doc.docType === 'DIGILOCKER_AADHAAR' && !documents.digilockerAadhaar) {
@@ -164,7 +164,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 file_name: doc.fileName,
                 mime_type: doc.mimeType,
                 document: doc.filePath,
-                   attachment: [doc.filePath]
+                attachments: [doc.filePath]
             }
         }
         if (doc.docType === 'DIGILOCKER_PHOTO' && !documents.digilockerPhoto) {
@@ -174,7 +174,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 file_name: doc.fileName,
                 mime_type: doc.mimeType,
                 document: doc.filePath,
-                   attachment: [doc.filePath]
+                attachments: [doc.filePath]
             }
         }
     })
