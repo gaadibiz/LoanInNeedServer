@@ -6,6 +6,7 @@ const PanModel = require('../models/panModel'); // Import PanModel for direct ac
 const EmploymentModel = require('../models/employmentModel');
 const AddressModel = require('../models/adressModel');
 const surepassService = require('../services/surepassService'); // Import Surepass Service
+const signzyService = require('../services/signzyService'); // Import Signzy Service
 const { checkAndPushBumchumIfReady } = require('../services/loanService');
 
 /**
@@ -87,8 +88,8 @@ exports.verifyPAN = async (req, res, next) => {
       logger.info('✅ [KYC] PAN image uploaded successfully for userId=%s', userId);
     }
 
-    // 2. Surepass API PAN Verification
-    const panDetails = await surepassService.verifyPAN(panNumber.toUpperCase());
+    // 2. Signzy API PAN Verification
+    const panDetails = await signzyService.verifyPAN(panNumber.toUpperCase());
 
     // 2.5 Ensure PAN uniqueness across the system
     const existingPanByNumber = await PanModel.findByPanNumber(panNumber.toUpperCase());

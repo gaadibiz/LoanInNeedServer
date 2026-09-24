@@ -7,6 +7,8 @@ require('dotenv').config()
 const SUREPASS_BASE_URL = process.env.SUREPASS_BASE_URL || 'https://sandbox.surepass.app';
 const SUREPASS_TOKEN = process.env.SUREPASS_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NDQxNjUyNSwianRpIjoiNjU1ZGMwMTgtOWZlOC00MTdkLTgyZjItZDA1NDhmYjgyODIxIiwidHlwZSI6ImFjY2VzcyIsImlkZW50aXR5IjoiZGV2LmJ1bWN1bWZpbnNlcnZlQHN1cmVwYXNzLmlvIiwibmJmIjoxNzc0NDE2NTI1LCJleHAiOjE3NzcwMDg1MjUsImVtYWlsIjoiYnVtY3VtZmluc2VydmVAc3VyZXBhc3MuaW8iLCJ0ZW5hbnRfaWQiOiJtYWluIiwidXNlcl9jbGFpbXMiOnsic2NvcGVzIjpbInVzZXIiXX19.-KnhmxDe-pBm8vWSvFJ764VspfwM2kHu-Zf0z4sw8fI';
 
+const signzyService = require('./signzyService');
+
 class SurepassService {
   constructor() {
     this.client = axios.create({
@@ -29,32 +31,12 @@ class SurepassService {
   }
 
   /**
-   * Verify PAN via Surepass PAN Comprehensive API
+   * Verify PAN via Signzy PAN Extensive API (replaces legacy Surepass PAN)
    * @param {string} panNumber
    * @returns {Promise<Object>} user details from PAN
    */
   async verifyPAN(panNumber) {
-    // Inject MOCK response for testing frontend autofill
-
-    try {
-      const response = await this.panBreaker.fire({
-        id_number: panNumber
-      });
-
-      if (!response.data.success) {
-        throw new BadRequestError('oops Invalid Pan number');
-      }
-
-      return response.data.data; // Surepass usually wraps standard data in { data: { ... } }
-    } catch (error) {
-      if (error.response && error.response.data) {
-        logger.error(`Surepass PAN API Error: ${JSON.stringify(error.response.data)}`);
-        throw new BadRequestError('oops Invalid Pan number');
-      }
-      console.error("RAW_NATIVE_ERROR:", error);
-      logger.error('Surepass PAN execution error:', error.message);
-      throw new BadRequestError('oops Invalid Pan number');
-    }
+    return signzyService.verifyPAN(panNumber);
   }
 
   /**

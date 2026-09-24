@@ -46,6 +46,15 @@ class SignZyService {
       (data) => this.client.post(SERVICE_URLS.ipQualityRiskScore, data),
       'SignZy IP Quality Check'
     );
+
+    this.panExtensiveBreaker = createCircuitBreaker(
+      (data) => this.client.post(SERVICE_URLS.panExtensive, data, {
+        headers: {
+          'x-client-unique-id': process.env.SIGNZY_CLIENT_UNIQUE_ID || 'monika@edgenroots.net'
+        }
+      }),
+      'SignZy PAN Extensive'
+    );
   }
 
   /**
@@ -202,6 +211,45 @@ class SignZyService {
         logger.error(`SignZy IP Quality execution error: ${error.message}`);
       }
       throw new BadRequestError('Unable to fetch IP quality details at this time');
+    }
+  }
+
+  /**
+   * Verify PAN via Signzy PAN Extensive API
+   * @param {string} panNumber
+   * @returns {Promise<Object>} normalized user details from PAN
+   */
+  async verifyPAN(panNumber) {
+    try {
+      const response = await this.panExtensiveBreaker.fire({
+        panNumber: panNumber.toUpperCase(),
+        getStatusInfo: "true"
+      });
+
+      const result = response?.data?.result;
+
+      if (!result || !result.isValid) {
+        throw new BadRequestError('Invalid PAN number. Please check and resubmit.');
+      }
+
+      return {
+        ...result,
+        panNumber: result.number || panNumber.toUpperCase(),
+        aadhaar_linked: Boolean(result.aadhaarLinked),
+        masked_aadhaar: result.maskedAadhaarNumber || null,
+        dob: result.dateOfBirth || null,
+        status: result.panStatus || 'VALID'
+      };
+    } catch (error) {
+      if (error.response?.data) {
+        logger.error(`SignZy PAN API Error: ${JSON.stringify(error.response.data)}`);
+      } else {
+        logger.error(`SignZy PAN execution error: ${error.message}`);
+      }
+      if (error instanceof BadRequestError) {
+        throw error;
+      }
+      throw new BadRequestError(error.response?.data?.message || 'Invalid PAN number. Please check and resubmit.');
     }
   }
 }
