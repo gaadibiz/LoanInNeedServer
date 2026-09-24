@@ -509,8 +509,7 @@ const encodeFinnauxDocuments = async (userDocuments) => {
             if (doc.fileUrl && !documentBase64[doctype]) {
                 const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
                 base64Data = Buffer.from(response.data, 'binary').toString('base64');
-                if (!base64Data) return null
-                console.log(doc.fileUrl, "------>")
+                if (!base64Data) return null;
                 documentBase64[doctype] = doctype === 'salarySlips' ? [[base64Data, doc.fileName || null]] : [base64Data, doc.fileName || null];
             }
             return null;
