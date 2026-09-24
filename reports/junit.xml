@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="LoanInNeed Backend Tests" tests="8" failures="2" errors="0" time="3.825">
-  <testsuite name="__tests__/unit/bumchumBlockStatus.spec.js" errors="0" failures="2" skipped="0" timestamp="2026-09-24T06:21:37" time="3.799" tests="8">
-    <testcase classname="🛡️ Bumchum Block Status Unit Tests" name="should return true when Bumchum reports isBlocked: true in data.isBlocked" time="0.005">
+<testsuites name="LoanInNeed Backend Tests" tests="8" failures="0" errors="0" time="4.555">
+  <testsuite name="__tests__/unit/bumchumBlockStatus.spec.js" errors="0" failures="0" skipped="0" timestamp="2026-09-24T06:54:03" time="4.525" tests="8">
+    <testcase classname="🛡️ Bumchum Block Status Unit Tests" name="should return true when Bumchum reports isBlocked: true in data.isBlocked" time="0.004">
     </testcase>
     <testcase classname="🛡️ Bumchum Block Status Unit Tests" name="should return false when Bumchum reports isBlocked: false" time="0.001">
     </testcase>
@@ -9,25 +9,13 @@
     </testcase>
     <testcase classname="🛡️ Bumchum Block Status Unit Tests" name="should return false if neither BUMCHUM_SAVE_LEAD_BASE_URL nor BUMCHUM_BASED_URL is configured" time="0.001">
     </testcase>
-    <testcase classname="🛡️ Finnaux Controller Blacklist Filter Unit Tests" name="should exclude blacklisted loan applications when querying by ID" time="0.067">
+    <testcase classname="🛡️ Finnaux Controller Blacklist Filter Unit Tests" name="should exclude blacklisted loan applications when querying by ID" time="0.033">
     </testcase>
-    <testcase classname="🛡️ Finnaux Controller Blacklist Filter Unit Tests" name="should exclude blacklisted loan applications when querying by date range" time="0.006">
+    <testcase classname="🛡️ Finnaux Controller Blacklist Filter Unit Tests" name="should exclude blacklisted loan applications when querying by date range" time="0.015">
     </testcase>
-    <testcase classname="🛡️ sendLoanApplicationToBumchum Blacklist Unit Tests" name="should set isBlacklisted = &quot;1&quot; in payload when check-block-status returns isBlocked: true" time="0.004">
-      <failure>Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
-
-Expected: StringContaining &quot;/check-block-status-by-key&quot;, ObjectContaining {&quot;params&quot;: ObjectContaining {&quot;aadhaar_number&quot;: &quot;123456789012&quot;, &quot;contact_number&quot;: &quot;9876543210&quot;}}
-
-Number of calls: 0
-    at Object.toHaveBeenCalledWith (/Users/monika/Documents/loanInNeed/LoanInNeedServer/__tests__/unit/bumchumBlockStatus.spec.js:287:27)</failure>
+    <testcase classname="🛡️ sendLoanApplicationToBumchum Blacklist Unit Tests" name="should set isBlacklisted = &quot;1&quot; in payload when check-block-status returns isBlocked: true" time="0.011">
     </testcase>
-    <testcase classname="🛡️ sendLoanApplicationToBumchum Blacklist Unit Tests" name="should set isBlacklisted = &quot;0&quot; in payload when check-block-status returns isBlocked: false and app is not blacklisted" time="0.005">
-      <failure>Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
-
-Expected: StringContaining &quot;/create-external-leads&quot;, ObjectContaining {&quot;isBlacklisted&quot;: &quot;0&quot;}, Any&lt;Object&gt;
-
-Number of calls: 0
-    at Object.toHaveBeenCalledWith (/Users/monika/Documents/loanInNeed/LoanInNeedServer/__tests__/unit/bumchumBlockStatus.spec.js:320:28)</failure>
+    <testcase classname="🛡️ sendLoanApplicationToBumchum Blacklist Unit Tests" name="should set isBlacklisted = &quot;0&quot; in payload when check-block-status returns isBlocked: false and app is not blacklisted" time="0.009">
     </testcase>
   </testsuite>
 </testsuites>

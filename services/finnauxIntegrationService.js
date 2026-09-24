@@ -412,18 +412,16 @@ const getBase64Documents = async (id, preloadedDocuments = null) => {
 
     const applicationId = Number(id);
 
-    const documentsInfo = await prisma.finnauxIntegrationJob.findUnique({
-        where: {
-            applicationId,
-        },
-        select: {
-            userId: true,
-            aadharDocumentId: true,
-            panDocumentId: true,
-            salarySlipDocumentId: true,
-            bankStatementDocumentId: true,
-        },
-    });
+    const documentsInfo =
+        await prisma.finnauxIntegrationJob.findUnique({
+            where: {
+                applicationId,
+            },
+            select: {
+                userId: true
+            },
+        });
+
 
     if (!documentsInfo) {
         throw new NotFoundError(
@@ -431,59 +429,75 @@ const getBase64Documents = async (id, preloadedDocuments = null) => {
         );
     }
 
-    const documentIds = [
-        documentsInfo.aadharDocumentId,
-        documentsInfo.panDocumentId,
-        documentsInfo.salarySlipDocumentId,
-        documentsInfo.bankStatementDocumentId,
-    ].filter(Boolean);
+    // const documentIds = [
+    //     documentsInfo.aadharDocumentId,
+    //     documentsInfo.panDocumentId,
+    //     documentsInfo.salarySlipDocumentId,
+    //     documentsInfo.bankStatementDocumentId,
+    // ].filter(Boolean);
 
     let userDocuments;
 
-    // If Finnaux already has all document IDs,
-    // directly fetch those documents.
-    if (documentIds.length === 4) {
-        userDocuments = await prisma.userDocument.findMany({
-            where: {
-                id: {
-                    in: documentIds,
-                },
+    // // If Finnaux already has all document IDs,
+    // // directly fetch those documents.
+    // if (documentIds.length === 4) {
+    //     userDocuments = await prisma.userDocument.findMany({
+    //         where: {
+    //             id: {
+    //                 in: documentIds,
+    //             },
+    //         },
+    //         select: {
+    //             docType: true,
+    //             fileName: true,
+    //             fileUrl: true,
+    //             uploadedAt: true,
+    //         },
+    //     });
+    // } else {
+    // Fallback: fetch latest document of each required type.
+    userDocuments = await prisma.userDocument.findMany({
+        where: {
+            userId: documentsInfo.userId,
+            docType: {
+                in: [
+                    'PAY_SLIP',
+                    'BANK_STATEMENT',
+                ],
             },
-            select: {
-                docType: true,
-                fileName: true,
-                fileUrl: true,
-                uploadedAt: true,
-            },
-        });
-    } else {
-        // Fallback: fetch latest document of each required type.
-        userDocuments = await prisma.userDocument.findMany({
-            where: {
-                userId: documentsInfo.userId,
-                docType: {
-                    in: [
-                        'AADHAAR',
-                        'PAN',
-                        'PAY_SLIP',
-                        'BANK_STATEMENT',
-                    ],
-                },
-            },
-            select: {
-                docType: true,
-                fileName: true,
-                fileUrl: true,
-                uploadedAt: true,
-            },
-            orderBy: {
-                uploadedAt: 'desc',
-            },
-            distinct: ['docType'],
-        });
-    }
+        },
+        select: {
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+            uploadedAt: true,
+        },
+        orderBy: {
+            uploadedAt: 'desc',
+        },
+        distinct: ['docType'],
+    });
 
-    return encodeFinnauxDocuments(userDocuments);
+    identityDocuments = await prisma.userDocument.findMany({
+        where: {
+            userId: documentsInfo.userId,
+            docType: {
+                in: [
+                    'AADHAAR',
+                    'PAN',
+                ],
+            },
+        },
+        select: {
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+            uploadedAt: true,
+        },
+    });
+    //}
+
+    return encodeFinnauxDocuments([...userDocuments, ...identityDocuments]);
 };
 
 const encodeFinnauxDocuments = async (userDocuments) => {
@@ -495,7 +509,8 @@ const encodeFinnauxDocuments = async (userDocuments) => {
             if (doc.fileUrl && !documentBase64[doctype]) {
                 const response = await axios.get(doc.fileUrl, { responseType: 'arraybuffer' });
                 base64Data = Buffer.from(response.data, 'binary').toString('base64');
-                if (!base64Data) return null;
+                if (!base64Data) return null
+                console.log(doc.fileUrl, "------>")
                 documentBase64[doctype] = doctype === 'salarySlips' ? [[base64Data, doc.fileName || null]] : [base64Data, doc.fileName || null];
             }
             return null;
