@@ -1,7 +1,18 @@
 const axios = require('axios');
 const { checkBumchumBlockStatus } = require('../../services/loanService');
 
-jest.mock('axios');
+jest.mock('axios', () => {
+    const mockAxios = {
+        get: jest.fn(),
+        post: jest.fn(),
+        create: jest.fn().mockReturnValue({
+            get: jest.fn(),
+            post: jest.fn()
+        })
+    };
+    mockAxios.default = mockAxios;
+    return mockAxios;
+});
 
 describe('🛡️ Bumchum Block Status Unit Tests', () => {
     const originalEnv = process.env;
@@ -13,6 +24,7 @@ describe('🛡️ Bumchum Block Status Unit Tests', () => {
             BUMCHUM_SAVE_LEAD_BASE_URL: 'http://localhost:3000/api/v1/leads',
             BUMCHUM_AUTH_KEY: 'test-secret-key'
         };
+        delete process.env.BUMCHUM_BASED_URL;
     });
 
     afterAll(() => {
@@ -91,8 +103,9 @@ describe('🛡️ Bumchum Block Status Unit Tests', () => {
         expect(result).toBe(false);
     });
 
-    it('should return false if BUMCHUM_SAVE_LEAD_BASE_URL is not configured', async () => {
+    it('should return false if neither BUMCHUM_SAVE_LEAD_BASE_URL nor BUMCHUM_BASED_URL is configured', async () => {
         delete process.env.BUMCHUM_SAVE_LEAD_BASE_URL;
+        delete process.env.BUMCHUM_BASED_URL;
 
         const result = await checkBumchumBlockStatus({
             aadhaarNumber: '123456789012'
@@ -190,5 +203,126 @@ describe('🛡️ Finnaux Controller Blacklist Filter Unit Tests', () => {
             })
         );
         expect(res.status).toHaveBeenCalledWith(200);
+    });
+});
+
+describe('🛡️ sendLoanApplicationToBumchum Blacklist Unit Tests', () => {
+    let mockPrisma;
+    let loanService;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.resetModules();
+        process.env.BUMCHUM_SAVE_LEAD_BASE_URL = 'http://localhost:3000/api/v1/leads';
+        process.env.BUMCHUM_AUTH_KEY = 'test-secret-key';
+        delete process.env.BUMCHUM_BASED_URL;
+
+        mockPrisma = {
+            user: {
+                findUnique: jest.fn().mockResolvedValue({
+                    id: 1,
+                    name: 'Test User',
+                    email: 'test@example.com',
+                    phone: '9876543210',
+                    panVerification: { panNumber: 'ABCDE1234F', verified: true }
+                })
+            },
+            loanApplication: {
+                findUnique: jest.fn().mockResolvedValue({
+                    id: 5,
+                    loanAmount: 50000,
+                    loanType: 'PERSONAL',
+                    status: 'PENDING',
+                    blacklist: false,
+                    ipAddress: '1.2.3.4'
+                }),
+                update: jest.fn().mockResolvedValue({})
+            },
+            userDocument: {
+                findMany: jest.fn().mockResolvedValue([])
+            },
+            aadhaarVerification: {
+                findUnique: jest.fn().mockResolvedValue({
+                    aadhaarNumber: '123456789012',
+                    verified: true
+                })
+            },
+            addressDetail: {
+                findUnique: jest.fn().mockResolvedValue({})
+            },
+            businessDetail: {
+                findUnique: jest.fn().mockResolvedValue({})
+            },
+            employmentDetail: {
+                findUnique: jest.fn().mockResolvedValue({})
+            },
+            userLocation: {
+                findFirst: jest.fn().mockResolvedValue({})
+            },
+            phonePrefillDetail: {
+                findUnique: jest.fn().mockResolvedValue({})
+            },
+            utm: {
+                findUnique: jest.fn().mockResolvedValue({})
+            },
+            ipQualityDetail: {
+                findUnique: jest.fn().mockResolvedValue({})
+            }
+        };
+        jest.doMock('../../utils/prismaClient', () => mockPrisma);
+        loanService = require('../../services/loanService');
+    });
+
+    it('should set isBlacklisted = "1" in payload when check-block-status returns isBlocked: true', async () => {
+        axios.get.mockResolvedValueOnce({
+            data: {
+                message: 'Blocked status:',
+                data: { isBlocked: true }
+            }
+        });
+        axios.post.mockResolvedValueOnce({ data: { success: true } });
+
+        await loanService.sendLoanApplicationToBumchum(1, 5);
+
+        expect(axios.get).toHaveBeenCalledWith(
+            expect.stringContaining('/check-block-status-by-key'),
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    aadhaar_number: '123456789012',
+                    contact_number: '9876543210'
+                })
+            })
+        );
+        expect(axios.post).toHaveBeenCalledWith(
+            expect.stringContaining('/create-external-leads'),
+            expect.objectContaining({
+                isBlacklisted: '1'
+            }),
+            expect.any(Object)
+        );
+        expect(mockPrisma.loanApplication.update).toHaveBeenCalledWith({
+            where: { id: 5 },
+            data: { blacklist: true }
+        });
+    });
+
+    it('should set isBlacklisted = "0" in payload when check-block-status returns isBlocked: false and app is not blacklisted', async () => {
+        axios.get.mockResolvedValueOnce({
+            data: {
+                message: 'Blocked status:',
+                data: { isBlocked: false }
+            }
+        });
+        axios.post.mockResolvedValueOnce({ data: { success: true } });
+
+        await loanService.sendLoanApplicationToBumchum(1, 5);
+
+        expect(axios.post).toHaveBeenCalledWith(
+            expect.stringContaining('/create-external-leads'),
+            expect.objectContaining({
+                isBlacklisted: '0'
+            }),
+            expect.any(Object)
+        );
     });
 });

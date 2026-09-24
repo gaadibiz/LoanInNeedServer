@@ -116,15 +116,7 @@ const toFinnauxColumnNames = (user) => {
     const application = user.loanApplications[0] || {};
     const location = user.locations?.[0] || {};
     const utm = user.utm || {};
-    const aadhaarDocument = user.documents?.find((document) => document.docType === 'AADHAAR');
-    const panDocument = user.documents?.find((document) => document.docType === 'PAN');
     const ipQualityDetail = user.ipQualityDetail || {}
-    const bankStatement = user.documents?.find((document) => document.docType === 'BANK_STATEMENT');
-    const salarySlipDocuments = (user.documents || [])
-        .filter((document) => document.docType === 'PAY_SLIP')
-        .map((document) => document.fileUrl)
-        .filter(Boolean);
-
     return {
         id: application.id || null,
         dob: user.dob,
@@ -141,7 +133,6 @@ const toFinnauxColumnNames = (user) => {
         reason: application.reason || null,
         reloan: application.reloan ?? null,
         status: application.status || null,
-        panCard: panDocument?.fileUrl || null,
         pinCode: user.address?.postalCode || null,
         address1: user.address?.permanentAddress || null,
         address2: '',
@@ -173,10 +164,8 @@ const toFinnauxColumnNames = (user) => {
         IPStatus: (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P',
         loanPurpose: application.loanType || null,
         officeEmail: null,
-        salarySlips: salarySlipDocuments.length ? salarySlipDocuments : null,
         utmCampaign: utm.utmCampaign || null,
         utmContent: utm.utmContent || null,
-        aadhaarFront: aadhaarDocument?.fileUrl || null,
         aadhaarBack: null,
         employeeName: application.employeeName || null,
         workingYears: null,

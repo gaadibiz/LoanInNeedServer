@@ -282,6 +282,25 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         }
     });
 
+    let isBlocked = false;
+    try {
+        isBlocked = await checkBumchumBlockStatus({
+            aadhaarNumber: aadhaarVerification?.aadhaarNumber,
+            contactNumber: user?.phone,
+            email: user?.email,
+            panNumber: user?.panVerification?.panNumber,
+            ipAddress: application?.ipAddress || ipQualityDetail?.ipAddress || ''
+        });
+        if (isBlocked && applicationId) {
+            await prisma.loanApplication.update({
+                where: { id: applicationId },
+                data: { blacklist: true }
+            }).catch(e => console.error(`[BUMCHUM] Error updating blacklist status for app ${applicationId}:`, e.message));
+        }
+    } catch (error) {
+        console.error('[BUMCHUM] Error checking block status in sendLoanApplicationToBumchum:', error);
+    }
+
     try {
         await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/create-external-leads', {
             user,
@@ -309,7 +328,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             IPStatus: ipQualityDetail ? (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P' : 'N/A',
             employment_type_uuid: employeeDetail?.employmentType === 'SALARIED' ? 'e54e543d-a20e-47b5-8bf1-a087e910d92b' : '3d9d2e30-2754-49f8-be31-3a14c1d720b7',
             action_item_category_uuid: 'f22bd31f-b9cb-4c8e-a07b-50f9b7083812',
-            isBlacklisted: application.blacklist ? '1' : '0',
+            isBlacklisted: (isBlocked || application.blacklist) ? '1' : '0',
             ...utm
         }, {
             headers: {
@@ -344,13 +363,17 @@ async function updateLoanApplicationToBumchum(data) {
  */
 async function checkBumchumBlockStatus({ aadhaarNumber, contactNumber, email, panNumber, ipAddress }) {
     try {
-        const baseUrl = (process.env.BUMCHUM_BASED_URL + '/api/v1/leads/check-block-status-by-key');
-        if (!baseUrl) {
-            logger.warn('[BUMCHUM] BUMCHUM_SAVE_LEAD_BASE_URL is not configured, skipping block check');
+        const bumchumBaseUrl = process.env.BUMCHUM_BASED_URL || process.env.BUMCHUM_SAVE_LEAD_BASE_URL;
+        if (!bumchumBaseUrl) {
+            logger.warn('[BUMCHUM] Bumchum base URL is not configured, skipping block check');
             return false;
         }
 
-        const response = await axios.get(`${baseUrl}`, {
+        const baseUrl = process.env.BUMCHUM_BASED_URL
+            ? `${process.env.BUMCHUM_BASED_URL.replace(/\/+$/, '')}/api/v1/leads/check-block-status-by-key`
+            : `${process.env.BUMCHUM_SAVE_LEAD_BASE_URL.replace(/\/+$/, '')}/check-block-status-by-key`;
+
+        const response = await axios.get(baseUrl, {
             params: {
                 aadhaar_number: aadhaarNumber || '',
                 contact_number: contactNumber || '',
