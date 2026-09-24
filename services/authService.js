@@ -105,6 +105,14 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
       data: { customUserId }
     });
 
+    try {
+      console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
+      if (user) {
+        await sendLoanApplicationToBumchum(user.id, '');
+      }
+    } catch (error) {
+      console.log(error, "[ERROR] Error sending loan application to Bumchum");
+    }
     logger.info('New user created and verified: %s (customId=%s)', targetPhone, customUserId);
   } else if (!user.phoneVerified) {
     user = await prisma.user.update({
