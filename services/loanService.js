@@ -99,6 +99,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             reason: true,
             ipAddress: true,
             reason: true,
+            blacklist: true
         }
     })) : {}
 
@@ -308,6 +309,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             IPStatus: ipQualityDetail ? (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P' : 'N/A',
             employment_type_uuid: employeeDetail?.employmentType === 'SALARIED' ? 'e54e543d-a20e-47b5-8bf1-a087e910d92b' : '3d9d2e30-2754-49f8-be31-3a14c1d720b7',
             action_item_category_uuid: 'f22bd31f-b9cb-4c8e-a07b-50f9b7083812',
+            isBlacklisted: application.blacklist ? '1' : '0',
             ...utm
         }, {
             headers: {
@@ -335,6 +337,41 @@ async function updateLoanApplicationToBumchum(data) {
         throw error;
     }
 }
+
+/**
+ * Checks if applicant params (Aadhaar, Contact, Email, PAN, IP) are blocked in Bumchum.
+ * Returns true if blocked, false otherwise.
+ */
+async function checkBumchumBlockStatus({ aadhaarNumber, contactNumber, email, panNumber, ipAddress }) {
+    try {
+        const baseUrl = (process.env.BUMCHUM_BASED_URL + '/api/v1/leads/check-block-status-by-key');
+        if (!baseUrl) {
+            logger.warn('[BUMCHUM] BUMCHUM_SAVE_LEAD_BASE_URL is not configured, skipping block check');
+            return false;
+        }
+
+        const response = await axios.get(`${baseUrl}`, {
+            params: {
+                aadhaar_number: aadhaarNumber || '',
+                contact_number: contactNumber || '',
+                email: email || '',
+                pan_number: panNumber || '',
+                ip_address: ipAddress || ''
+            },
+            headers: {
+                'auth-Key': process.env.BUMCHUM_AUTH_KEY
+            },
+            timeout: 10000
+        });
+
+        const isBlocked = Boolean(response?.data?.data?.isBlocked ?? response?.data?.isBlocked);
+        return isBlocked;
+    } catch (error) {
+        logger.error(`[BUMCHUM] Error checking block status: ${error.message}`);
+        return false;
+    }
+}
+
 // Documents required by sendLoanApplicationToBumchum's payload mapping.
 const BUMCHUM_REQUIRED_DOC_TYPES = ['AADHAAR', 'PAN', 'PAY_SLIP', 'BANK_STATEMENT'];
 
@@ -434,6 +471,23 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
     // (reason: '1') so Finnaux can see it's not the user's first application.
     const priorApplication = await prisma.loanApplication.findFirst({ where: { userId } });
 
+    // Check Bumchum Block Status
+    let isBlacklisted = false;
+    try {
+        isBlacklisted = await checkBumchumBlockStatus({
+            aadhaarNumber: user?.aadhaarVerification?.aadhaarNumber,
+            contactNumber: user?.phone,
+            email: user?.email,
+            panNumber: user?.panVerification?.panNumber,
+            ipAddress: ipAddress,
+        });
+        if (isBlacklisted) {
+            logger.warn(`[LOAN] User ${userId} is blocked in Bumchum, marking application as blacklisted`);
+        }
+    } catch (error) {
+        logger.error(`[LOAN] Error checking block status for User ${userId}: ${error.message}`);
+    }
+
     const application = await prisma.loanApplication.create({
         data: {
             userId,
@@ -443,6 +497,7 @@ async function createLoanApplication(userId, loanAmount, loanType, reqAttributio
             attributedPartnerId: partnerId,
             attributionSource: attributionSource,
             ipAddress: ipAddress,
+            blacklist: isBlacklisted,
             //reloan: priorApplication ? true : false,
             //reason: priorApplication ? '1' : null
         }
@@ -521,5 +576,6 @@ module.exports = {
     buildSignupRedirectUrl,
     sendLoanApplicationToBumchum,
     checkAndPushBumchumIfReady,
-    updateLoanApplicationToBumchum
+    updateLoanApplicationToBumchum,
+    checkBumchumBlockStatus
 };

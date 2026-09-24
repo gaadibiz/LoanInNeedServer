@@ -8,7 +8,7 @@ const LoanModel = require('../models/loanModel');
 const AddressModel = require('../models/adressModel');
 const UserModel = require('../models/userModel');
 const { buildFinnauxJobPayload } = require('./finnauxIntegrationService');
-const { checkAndPushBumchumIfReady } = require('./loanService');
+const { checkAndPushBumchumIfReady, checkBumchumBlockStatus } = require('./loanService');
 const phonePrefillService = require('./phonePrefillService');
 const ipQualityService = require('./ipQualityService');
 
@@ -31,6 +31,7 @@ async function saveFullKYC(userId, data) {
       const existingEmployment = await EmploymentModel.findByUserId(userId, tx);
       const existingAddress = await AddressModel.findByUserId(userId, tx);
       const aadhaarVerification = await tx.aadhaarVerification.findUnique({ where: { userId }, select: { aadhaarNumber: true } });
+      const panVerification = await tx.panVerification.findUnique({ where: { userId }, select: { panNumber: true } });
 
       // Helper to check if a value is a dummy placeholder
       const isPlaceholder = (val) => {
@@ -155,6 +156,23 @@ async function saveFullKYC(userId, data) {
       // Fetch user data for attribution sync
       const user = await UserModel.findUserById(userId, tx);
 
+      // Check Bumchum Block Status
+      let isBlacklisted = false;
+      try {
+        isBlacklisted = await checkBumchumBlockStatus({
+          aadhaarNumber: aadhaarVerification?.aadhaarNumber,
+          contactNumber: user?.phone,
+          email: user?.email,
+          panNumber: panVerification?.panNumber,
+          ipAddress: data?.ipAddress,
+        });
+        if (isBlacklisted) {
+          logger.warn(`[KYC] User ${userId} is blocked in Bumchum, marking application as blacklisted`);
+        }
+      } catch (error) {
+        logger.error(`[KYC] Error checking block status for User ${userId}: ${error.message}`);
+      }
+
       // ---------- Sync with LoanApplication for LOS Fetching ----------
       // Map purpose to LoanType enum, default to 'OTHER'
       const purposeStr = data.purpose ? String(data.purpose).toUpperCase().replace(/\s+/g, '_') : 'OTHER';
@@ -179,9 +197,10 @@ async function saveFullKYC(userId, data) {
           attributionSource: user.attributionType || 'ORGANIC',
           ipAddress: data?.ipAddress || '',
           reloan: Object.keys(priorApplication).length > 0 ? 1 : 0,
+          blacklist: isBlacklisted,
         }
       });
-      logger.info('✅ LoanApplication synced for userId=%s appId=%s', userId, application.id);
+      logger.info('✅ LoanApplication synced for userId=%s appId=%s (blacklisted=%s)', userId, application.id, isBlacklisted);
 
       try {
         await phonePrefillService.fetchAndSavePrefillDetails(userId, tx);
@@ -209,19 +228,22 @@ async function saveFullKYC(userId, data) {
       });
       logger.info('✅ LOS Integration Job queued for userId=%s appId=%s', userId, application.id);
 
-      // ---------- Queue for Finnaux Integration ----------
+      // ---------- Queue for Finnaux Integration (skip if blacklisted) ----------
       const isSubmitted = data.submitted === true || data.submitted === 'true';
-      const finnauxRawRequest = isSubmitted ? (await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx)) : null
-      isSubmitted ? (await tx.finnauxIntegrationJob.create({
-        data: {
-          ipAddress: data?.ipAddress || '',
-          userId,
-          applicationId: application.id,
-          status: 'PENDING',
-          rawRequest: JSON.parse(JSON.stringify(finnauxRawRequest))
-        }
-      })) : null
-      logger.info('✅ Finnaux Integration Job queued for userId=%s appId=%s', userId, application.id);
+      const shouldQueueFinnaux = isSubmitted;
+      const finnauxRawRequest = shouldQueueFinnaux ? (await buildFinnauxJobPayload(userId, application.id, data?.ipAddress || '', tx)) : null;
+      if (shouldQueueFinnaux) {
+        await tx.finnauxIntegrationJob.create({
+          data: {
+            ipAddress: data?.ipAddress || '',
+            userId,
+            applicationId: application.id,
+            status: 'PENDING',
+            rawRequest: JSON.parse(JSON.stringify(finnauxRawRequest))
+          }
+        });
+        logger.info('✅ Finnaux Integration Job queued for userId=%s appId=%s', userId, application.id);
+      }
 
       // ---------- Return ----------
       return { user, employment, addressDetail, loan, application };

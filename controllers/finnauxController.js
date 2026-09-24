@@ -33,7 +33,7 @@ const triggerFinnauxIntegration = asyncHandler(async (req, res) => {
 
     let app;
     if (!job) {
-        app = await prisma.loanApplication.findUnique({ where: { id: parseInt(applicationId) } });
+        app = await prisma.loanApplication.findFirst({ where: { id: parseInt(applicationId), blacklist: false } });
         if (!app) {
             throw new NotFoundError(`LoanApplication ID ${applicationId} not found`);
         }
@@ -394,12 +394,14 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const applicationFilter = hasId
         ? {
             id: Number(id),
+            blacklist: false,
         }
         : {
             createdAt: {
                 gte: fromDate,
                 lt: toDate,
             },
+            blacklist: false,
         };
 
     const finnauxJobFilter = hasId
@@ -584,6 +586,17 @@ const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
 
 const getFinnauxUserDocuments = asyncHandler(async (req, res) => {
     const { id } = req.query;
+    if (!id) {
+        throw new BadRequestError('Query param "id" is required.');
+    }
+    const app = await prisma.loanApplication.findFirst({
+        where: { id: parseInt(id), blacklist: false },
+        select: { id: true }
+    });
+    if (!app) {
+        throw new NotFoundError(`LoanApplication ID ${id} not found`);
+    }
+
     let documentsInfo = await prisma.finnauxIntegrationJob.findUnique({
         where: { applicationId: parseInt(id) }, select: {
             aadharDocumentId: true,
