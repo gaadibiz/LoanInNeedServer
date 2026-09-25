@@ -12,6 +12,41 @@ const DIGILOCKER_CALLBACK_URL =
   process.env.SERVER_URL + '/api/auth/aadhaar/save-verified-adhaar-details'
 //'https://geographic-participate-impression-dat.trycloudflare.com/api/auth/aadhaar/save-verified-adhaar-details';
 
+// Helper: Convert any DOB format (e.g., '19-06-2001', '19/06/2001', '19.06.2001') to 'YYYY-MM-DD' ('2001-06-19')
+function formatDobToYYYYMMDD(dob) {
+  if (!dob || typeof dob !== 'string') return dob || null;
+  const trimmed = dob.trim();
+
+  // Match DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
+  const dmyMatch = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    const year = dmyMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Match YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
+  const ymdMatch = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const month = ymdMatch[2].padStart(2, '0');
+    const day = ymdMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Fallback to Date object parsing
+  const parsedDate = new Date(trimmed);
+  if (!isNaN(parsedDate.getTime())) {
+    const year = parsedDate.getUTCFullYear();
+    const month = String(parsedDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(parsedDate.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return trimmed;
+}
+
 class SignZyService {
   constructor() {
     this.client = axios.create({
@@ -137,10 +172,14 @@ class SignZyService {
         throw new BadRequestError('Signzy did not return e-Aadhaar details');
       }
 
+      const rawDob = result.dob || null;
+      const formattedDob = formatDobToYYYYMMDD(rawDob);
+
       return {
         uid: aadhaarNumber,
         name: result.name,
-        dob: result.dob,
+        dob: formattedDob,
+        dateOfBirth: formattedDob,
         gender: result.gender,
         address: result.address,
         photo: result.photo,
@@ -232,12 +271,16 @@ class SignZyService {
         throw new BadRequestError('Invalid PAN number. Please check and resubmit.');
       }
 
+      const rawDob = result.dateOfBirth || result.dob || null;
+      const formattedDob = formatDobToYYYYMMDD(rawDob);
+
       return {
         ...result,
         panNumber: result.number || panNumber.toUpperCase(),
         aadhaar_linked: Boolean(result.aadhaarLinked),
         masked_aadhaar: result.maskedAadhaarNumber || null,
-        dob: result.dateOfBirth || null,
+        dob: formattedDob,
+        dateOfBirth: formattedDob,
         status: result.panStatus || 'VALID'
       };
     } catch (error) {
