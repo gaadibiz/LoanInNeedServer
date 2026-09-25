@@ -13,7 +13,8 @@ const SMTP_HOST = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
 const SMTP_PASS = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
 const SMTP_USER = process.env.SMTP_USER || process.env.EMAIL_USER;
-const SMTP_SECURE = process.env.SMTP_SECURE === 'true' || SMTP_PORT === 465;
+// Port 587 is STARTTLS (secure MUST be false). Port 465 is direct SSL (secure is true).
+const SMTP_SECURE = SMTP_PORT === 465;
 
 /**
  * Create Nodemailer Transporter
@@ -26,7 +27,8 @@ function getTransporter() {
     const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
     const user = process.env.SMTP_USER || process.env.EMAIL_USER;
     const pass = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
-    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+    // Enforce: port 587 MUST have secure: false, port 465 MUST have secure: true
+    const secure = port === 465;
 
     transporter = nodemailer.createTransport({
       host,
@@ -44,10 +46,10 @@ function getTransporter() {
       family: 4,
       lookup: (hostname, options, callback) => {
         const cb = typeof options === 'function' ? options : callback;
-        const opts = (typeof options === 'object' && options !== null)
-          ? { ...options, family: 4 }
-          : { family: 4 };
-        return dns.lookup(hostname, opts, cb);
+        dns.lookup(hostname, { family: 4, all: false }, (err, address) => {
+          if (err) return cb(err);
+          cb(null, address, 4);
+        });
       },
       connectionTimeout: 20000,
       greetingTimeout: 20000,
