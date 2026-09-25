@@ -274,15 +274,50 @@ class SignZyService {
       const rawDob = result.dateOfBirth || result.dob || null;
       const formattedDob = formatDobToYYYYMMDD(rawDob);
 
+      let genderMapped = result.gender || '';
+      if (typeof genderMapped === 'string') {
+        const g = genderMapped.trim().toUpperCase();
+        if (g.startsWith('F')) genderMapped = 'F';
+        else if (g.startsWith('M')) genderMapped = 'M';
+      }
+
+      const normalizedPan = result.number || panNumber.toUpperCase();
+
       return {
         ...result,
-        full_name: result.name,
-        panNumber: result.number || panNumber.toUpperCase(),
-        aadhaar_linked: Boolean(result.aadhaarLinked),
+        client_id: `pan_comprehensive_${normalizedPan}`,
+        pan_number: normalizedPan,
+        panNumber: normalizedPan,
+        full_name: result.name || '',
+        full_name_split: [
+          result.firstName || '',
+          result.middleName || '',
+          result.lastName || ''
+        ],
         masked_aadhaar: result.maskedAadhaarNumber || null,
+        address: {
+          line_1: result.address?.addressLineOne || '',
+          line_2: result.address?.addressLineTwo || '',
+          street_name: result.address?.street || '',
+          zip: result.address?.pincode ? (Number(result.address.pincode) || result.address.pincode) : null,
+          city: result.address?.city || '',
+          state: result.address?.state || '',
+          country: result.address?.country || 'INDIA',
+          full: result.address?.fullAddress || ''
+        },
+        email: result.emailId || '',
+        phone_number: result.mobileNumber || '',
+        gender: genderMapped,
         dob: formattedDob,
         dateOfBirth: formattedDob,
-        status: result.panStatus || 'VALID'
+        input_dob: null,
+        aadhaar_linked: Boolean(result.aadhaarLinked),
+        dob_verified: false,
+        dob_check: false,
+        category: result.category || (result.isIndividual ? 'person' : 'company'),
+        less_info: false,
+        status: result.panStatus || 'VALID',
+        isVerified: true
       };
     } catch (error) {
       if (error.response?.data) {
