@@ -274,7 +274,7 @@ class SignZyService {
       const rawDob = result.dateOfBirth || result.dob || null;
       const formattedDob = formatDobToYYYYMMDD(rawDob);
 
-      let genderMapped = result.gender || '';
+      let genderMapped = result.gender;
       if (typeof genderMapped === 'string') {
         const g = genderMapped.trim().toUpperCase();
         if (g.startsWith('F')) genderMapped = 'F';
@@ -288,25 +288,25 @@ class SignZyService {
         client_id: `pan_comprehensive_${normalizedPan}`,
         pan_number: normalizedPan,
         panNumber: normalizedPan,
-        full_name: result.name || '',
+        full_name: result.name,
         full_name_split: [
-          result.firstName || '',
-          result.middleName || '',
-          result.lastName || ''
+          result.firstName,
+          result.middleName,
+          result.lastName
         ],
         masked_aadhaar: result.maskedAadhaarNumber || null,
         address: {
-          line_1: result.address?.addressLineOne || '',
-          line_2: result.address?.addressLineTwo || '',
-          street_name: result.address?.street || '',
+          line_1: result.address?.addressLineOne,
+          line_2: result.address?.addressLineTwo,
+          street_name: result.address?.street,
           zip: result.address?.pincode ? (Number(result.address.pincode) || result.address.pincode) : null,
-          city: result.address?.city || '',
-          state: result.address?.state || '',
-          country: result.address?.country || 'INDIA',
-          full: result.address?.fullAddress || ''
+          city: result.address?.city,
+          state: result.address?.state,
+          country: result.address?.country,
+          full: result.address?.fullAddress
         },
-        email: result.emailId || '',
-        phone_number: result.mobileNumber || '',
+        email: result.emailId,
+        phone_number: result.mobileNumber,
         gender: genderMapped,
         dob: formattedDob,
         dateOfBirth: formattedDob,
@@ -314,9 +314,9 @@ class SignZyService {
         aadhaar_linked: Boolean(result.aadhaarLinked),
         dob_verified: false,
         dob_check: false,
-        category: result.category || (result.isIndividual ? 'person' : 'company'),
+        category: result.category,
         less_info: false,
-        status: result.panStatus || 'VALID',
+        status: result.panStatus,
         isVerified: true
       };
     } catch (error) {
