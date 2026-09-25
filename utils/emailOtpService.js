@@ -1,3 +1,8 @@
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const prisma = require('./prismaClient');
 const logger = require('./logger');
 const emailService = require('../services/emailService');

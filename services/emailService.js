@@ -9,10 +9,10 @@ const logger = require('../utils/logger');
 
 
 // Retrieve SMTP Configurations with sensible defaults and fallbacks
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
-const SMTP_PASS = process.env.SMTP_PASS;
-const SMTP_USER = process.env.SMTP_USER
+const SMTP_HOST = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
+const SMTP_PASS = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
+const SMTP_USER = process.env.SMTP_USER || process.env.EMAIL_USER;
 const SMTP_SECURE = process.env.SMTP_SECURE === 'true' || SMTP_PORT === 465;
 
 /**
@@ -22,23 +22,33 @@ let transporter = null;
 
 function getTransporter() {
   if (!transporter) {
+    const host = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'smtp.gmail.com';
+    const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
+    const user = process.env.SMTP_USER || process.env.EMAIL_USER;
+    const pass = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
     transporter = nodemailer.createTransport({
-      host: SMTP_HOST || 'smtp.gmail.com',
-      port: SMTP_PORT || 465,
-      secure: SMTP_SECURE,
+      host,
+      port,
+      secure,
       auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
+        user,
+        pass,
       },
       tls: {
         rejectUnauthorized: false,
-        servername: SMTP_HOST || 'smtp.gmail.com',
+        servername: host,
       },
       // Strictly force DNS resolution to IPv4 address only
-      lookup: (hostname, options, callback) => {
-        return dns.lookup(hostname, { family: 4 }, callback);
-      },
       family: 4,
+      lookup: (hostname, options, callback) => {
+        const cb = typeof options === 'function' ? options : callback;
+        const opts = (typeof options === 'object' && options !== null)
+          ? { ...options, family: 4 }
+          : { family: 4 };
+        return dns.lookup(hostname, opts, cb);
+      },
       connectionTimeout: 20000,
       greetingTimeout: 20000,
       socketTimeout: 25000,
