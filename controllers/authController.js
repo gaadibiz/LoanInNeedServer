@@ -7,9 +7,9 @@ const aadhaarService = require('../services/aadharService');
 const AadhaarModel = require('../models/aadhaarModel');
 const PanModel = require('../models/panModel');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
-const UserModel = require('../models/userModel');
-const { sendLoanApplicationToBumchum } = require('../services/loanService');
+const { sendLoanApplicationToBumchum, checkAndPushBumchumIfReady } = require('../services/loanService');
 const logger = require('../utils/logger');
+const prisma = require('../utils/prismaClient');
 
 require('dotenv').config()
 // Request OTP
@@ -213,14 +213,13 @@ const saveVerifiedAadhaarDetails = asyncHandler(async (req, res) => {
     }
   });
 
-  // (async () => {
-  //   try {
-  //     await sendLoanApplicationToBumchum(Number(userId), null)
-  //   } catch (_) {
-  //     console.log(_)
-  //     logger.error("ERROR IN SENDING LOAN APPLICATION TO BUMCHUM AFTER SAVE E AADHAAR DETAILS")
-  //   }
-  // })();
+  (async () => {
+    try {
+      await checkAndPushBumchumIfReady(Number(userId));
+    } catch (error) {
+      logger.error(`[BUMCHUM] Failed to sync after saving verified Aadhaar details for User ${userId}: ${error.message}`);
+    }
+  })();
 
 });
 
@@ -241,6 +240,7 @@ const verifyEmailOtp = asyncHandler(async (req, res) => {
   const result = await authService.verifyEmailOtp(email, otpCode, userId);
   res.status(200).json(result);
 });
+
 
 module.exports = {
   requestPhoneOtp,

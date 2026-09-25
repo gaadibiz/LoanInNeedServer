@@ -120,6 +120,14 @@ exports.verifyPAN = async (req, res, next) => {
 
     logger.info('✅ [KYC] PAN verified and saved in DB for userId=%s', userId);
 
+    (async () => {
+      try {
+        await checkAndPushBumchumIfReady(userId);
+      } catch (error) {
+        logger.error(`[BUMCHUM] Failed to sync after PAN verification for User ${userId}: ${error.message}`);
+      }
+    })();
+
     // 4. Return Success Response with Surepass Data
     // Return verified data to the frontend for autofill
     return res.status(200).json({
@@ -196,6 +204,14 @@ exports.updateEmployment = async (req, res, next) => {
       employment = await EmploymentModel.createEmploymentDetails(userId, employmentPayload);
     }
 
+    (async () => {
+      try {
+        await checkAndPushBumchumIfReady(userId);
+      } catch (error) {
+        logger.error(`[BUMCHUM] Failed to sync after employment update for User ${userId}: ${error.message}`);
+      }
+    })();
+
     return res.status(200).json({ success: true, message: 'Employment details updated', data: employment });
   } catch (error) {
     next(error);
@@ -252,6 +268,14 @@ exports.updateAddress = async (req, res, next) => {
       }
       address = await AddressModel.createAddress(userId, addrPayload);
     }
+
+    (async () => {
+      try {
+        await checkAndPushBumchumIfReady(userId);
+      } catch (error) {
+        logger.error(`[BUMCHUM] Failed to sync after address update for User ${userId}: ${error.message}`);
+      }
+    })();
 
     return res.status(200).json({ success: true, message: 'Address details updated', data: address });
   } catch (error) {

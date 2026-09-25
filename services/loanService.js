@@ -301,8 +301,12 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         console.error('[BUMCHUM] Error checking block status in sendLoanApplicationToBumchum:', error);
     }
 
+    const saveLeadUrl = process.env.BUMCHUM_SAVE_LEAD_BASE_URL.endsWith('/create-external-leads')
+        ? process.env.BUMCHUM_SAVE_LEAD_BASE_URL
+        : `${process.env.BUMCHUM_SAVE_LEAD_BASE_URL.replace(/\/+$/, '')}/create-external-leads`;
+
     try {
-        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/create-external-leads', {
+        await axios.post(saveLeadUrl, {
             user,
             application: application || {},
             aadhaarVerification: aadhaarVerification || {},
@@ -334,17 +338,23 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             headers: {
                 'auth-Key': process.env.BUMCHUM_AUTH_KEY,
                 'Content-Type': 'application/json'
-            }
+            },
+            timeout: 120000
         });
+        return true;
     } catch (error) {
-        console.error('Error sending loan application to Bumchum:', error);
+        console.error(`[BUMCHUM] Error sending application appId=${application.id} for userId=${userId} to Bumchum:`, error?.message || error);
+        throw error;
     }
 }
 
 async function updateLoanApplicationToBumchum(data) {
+    const updateLeadUrl = process.env.BUMCHUM_SAVE_LEAD_BASE_URL.endsWith('/create-external-leads')
+        ? process.env.BUMCHUM_SAVE_LEAD_BASE_URL.replace(/\/create-external-leads$/, '/update-external-lead')
+        : `${process.env.BUMCHUM_SAVE_LEAD_BASE_URL.replace(/\/+$/, '')}/update-external-lead`;
 
     try {
-        await axios.post(process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/update-external-lead',
+        await axios.post(updateLeadUrl,
             data, {
             headers: {
                 'auth-Key': process.env.BUMCHUM_AUTH_KEY,
@@ -384,7 +394,7 @@ async function checkBumchumBlockStatus({ aadhaarNumber, contactNumber, email, pa
             headers: {
                 'auth-Key': process.env.BUMCHUM_AUTH_KEY
             },
-            timeout: 10000
+            timeout: 3000
         });
 
         const isBlocked = Boolean(response?.data?.data?.isBlocked ?? response?.data?.isBlocked);
