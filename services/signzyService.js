@@ -276,6 +276,7 @@ class SignZyService {
 
       return {
         ...result,
+        full_name: result.name,
         panNumber: result.number || panNumber.toUpperCase(),
         aadhaar_linked: Boolean(result.aadhaarLinked),
         masked_aadhaar: result.maskedAadhaarNumber || null,
