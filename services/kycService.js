@@ -184,7 +184,7 @@ async function saveFullKYC(userId, data) {
 
       // If this user already has a prior application, flag this one as a re-apply
       // (reason: '1') so Finnaux can see it's not the user's first application.
-      const priorApplication = (await tx.loanApplication.findFirst({ where: { userId } })) || {};
+      const priorApplication = (await tx.loanApplication.findFirst({ where: { userId, status: 'COMPLETED' } })) || {};
 
       // This ensures that the LOS system (which queries LoanApplication) sees all entries.
       const application = await tx.loanApplication.create({
