@@ -706,6 +706,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
         data: {
             status: uppercaseStatus,
             reason: reason || loanApplication.reason,
+            employeeName: employeeName || loanApplication.employeeName,
             finnauxApplicationNumber: req.body.applicationNumber,
             updatedAt: new Date()
         }
@@ -747,7 +748,7 @@ const updateLoanStatusFromFinnaux = asyncHandler(async (req, res) => {
                 updated_by_source: 'FINNAUX',
                 id: finnauxLoanApplication.applicationId,
                 actual_status: updatedApplication.status,
-                reason: updatedApplication.reason,
+                reason: updatedApplication?.reason,
             })
         } catch (e) {
             console.log("Error updating Loan Application to Bumchum", e)

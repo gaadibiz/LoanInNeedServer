@@ -69,7 +69,7 @@ const LoanModel = {
    */
   async updateLoanStatus(loanId, status, tx = prisma) {
     const client = tx;
-    const validStatus = ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED'];
+    const validStatus = ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED', 'HOLD', 'IN_PROGRESS', 'COMPLETED', 'DISBUSTED'];
     if (!validStatus.includes(status)) throw new BadRequestError('Invalid loan status');
 
     const loan = await client.loan.findUnique({ where: { id: loanId } });
