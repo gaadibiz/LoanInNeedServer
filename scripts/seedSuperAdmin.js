@@ -3,9 +3,9 @@ const { hashPassword } = require('../utils/hash'); // Assuming this util exists/
 const prisma = new PrismaClient();
 
 async function seed() {
-    const phone = '+919999999999';
-    const email = 'superadmin@test.com';
-    const password = 'admin123';
+    const phone = process.env.SUPER_ADMIN_PHONE || '+919999999999';
+    const email = process.env.SUPER_ADMIN_EMAIL || 'superadmin@test.com';
+    const password = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
 
     console.log('🌱 Seeding Super Admin...');
 

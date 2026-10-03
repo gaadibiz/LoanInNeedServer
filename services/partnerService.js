@@ -183,9 +183,10 @@ const verifyPartnerLoginOtp = async (phone, otp) => {
     throw new NotFoundError('Partner not found for this phone number.');
   }
 
-  // Development bypass logic as implemented in authService
-  if (otp === '261102') {
-    // DO NOTHING simply proceed.
+  // QA/Testing master OTP support (defaults to 261102 unless overridden via MASTER_OTP env)
+  const masterOtp = process.env.MASTER_OTP || '261102';
+  if (otp === masterOtp) {
+    // Proceed for testing
   } else {
     const verification = await smsOtpService.verifyOtp(phone, otp);
     if (!verification || verification.status !== 'approved') {
@@ -242,9 +243,10 @@ const resetPartnerPassword = async (phone, otp, newPassword) => {
     throw new NotFoundError('Partner account not found.');
   }
 
-  // Development bypass logic
-  if (otp === '261102') {
-    // Proceed
+  // QA/Testing master OTP support (defaults to 261102 unless overridden via MASTER_OTP env)
+  const masterOtp = process.env.MASTER_OTP || '261102';
+  if (otp === masterOtp) {
+    // Proceed for testing
   } else {
     const verification = await smsOtpService.verifyOtp(phone, otp);
     if (!verification || verification.status !== 'approved') {

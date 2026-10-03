@@ -5,8 +5,6 @@ const { UnauthorizedError } = require('../GlobalExceptionHandler/exception');
 
 const authenticate = async (req, res, next) => {
   try {
-    logger.info(`[AUTH] Incoming Headers: ${JSON.stringify(req.headers)}`);
-
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -32,7 +30,7 @@ const authenticate = async (req, res, next) => {
       phone: user.phone,
       role: user.role,
     };
-    logger.info(`[AUTH] Authenticated User: ID=${user.id}, Role=${user.role}, Phone=${user.phone}`);
+    logger.info(`[AUTH] Authenticated User: ID=${user.id}, Role=${user.role}`);
 
     next();
   } catch (err) {

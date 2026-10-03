@@ -102,7 +102,7 @@ const validateAadhaarExists = asyncHandler(async (req, res) => {
 });
 
 // Verify Aadhaar OTP (Using Surepass Validation endpoint OR master OTP bypass)
-const MASTER_OTP = '261102';
+const MASTER_OTP = process.env.MASTER_OTP || '261102';
 
 const verifyAadhaarOtp = asyncHandler(async (req, res) => {
   const { aadhaarNumber, otp } = req.body;

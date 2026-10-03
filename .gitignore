@@ -11,6 +11,8 @@ yarn-error.log*
 # Environment variables
 .env
 
+DocumentArtifact/
+
 # Build output
 dist/
 build/
@@ -29,8 +31,28 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
-# Optional: Ignore coverage reports if running tests
+# Reports and Test Results
+reports/
 coverage/
+junit.xml
+test-report.html
+jest_html_reporters.html
+jest-html-reporters-attach/
+*-report.json
+*-report.txt
+*report*.json
+*report*.txt
+*_results.json
+*_output.txt
+test_results.json
+test_output.txt
+tester_output.txt
+artillery_load_report.json
+starvation_report.txt
+infra_report.json
+heavy-load-report.json
+heavy-load-report.txt
+.clinic/
 
 # Ignore temporary files
 *.tmp

@@ -34,7 +34,10 @@ const allowedMimeTypes = [
 
 // File Filter for validation
 const fileFilter = (req, file, cb) => {
-  if (!allowedMimeTypes.includes(file.mimetype)) {
+  const ext = path.extname(file?.originalname || '').toLowerCase();
+  const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
+
+  if (!allowedMimeTypes.includes(file.mimetype) || (file?.originalname && !allowedExtensions.includes(ext))) {
     return cb(new Error("Invalid file type. Allowed: PDF, JPG, PNG."), false);
   }
   cb(null, true);
@@ -43,7 +46,7 @@ const fileFilter = (req, file, cb) => {
 // Max upload size per file (defaults to 10MB)
 const maxUploadSizeMb = parseInt(process.env.MAX_UPLOAD_SIZE_MB) || 10;
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: maxUploadSizeMb * 1024 * 1024 },
   fileFilter: fileFilter

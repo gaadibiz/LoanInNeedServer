@@ -17,9 +17,8 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  console.error(err.stack); // Log the full error stack trace only for unhandled/unexpected bugs
+  console.error(err.stack || err); // Log the full error stack trace internally
 
-  // If it's a known Prisma error or any unhandled error, expose the real message instead of hiding it!
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     status: 'error',
