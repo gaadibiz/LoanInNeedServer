@@ -283,6 +283,7 @@ async function requestEmailOtp(email, userId = null) {
   targetEmail = targetEmail.trim().toLowerCase();
 
   if (!isOfficialEmail(targetEmail)) {
+    logger.error(`[AUTH SERVICE] Email ${targetEmail} is not official.`);
     throw new BadRequestError('Only official emails are acceptable.');
   }
 
