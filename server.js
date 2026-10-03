@@ -62,32 +62,35 @@ const allowedOrigins = [
   'https://seahorse-app-92emo.ondigitalocean.app', // DigitalOcean Frontend
   'https://loaninneed.in', // New Production Frontend
   'https://www.loaninneed.in', // New Production Frontend (www)
+  'https://be.loaninneed.in',
+  'https://www.naveenfinance.com',
+  'https://talkapiprod.bumchumfinserve.com'
 ];
 
 app.use(cors({
-  // origin: function (origin, callback) {
-  //   // Allow requests with no origin (like mobile apps or curl requests)
-  //   if (!origin) return callback(null, true);
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
 
-  //   // Check if origin is in allowed list
-  //   if (allowedOrigins.indexOf(origin) !== -1) {
-  //     return callback(null, true);
-  //   }
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
 
-  //   // Allow all Vercel preview deployments (*.vercel.app)
-  //   if (origin.endsWith('.vercel.app')) {
-  //     return callback(null, true);
-  //   }
+    // Allow all Vercel preview deployments (*.vercel.app)
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
 
-  //   // Allow all subdomains of loaninneed.in (*.loaninneed.in)
-  //   if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in') {
-  //     return callback(null, true);
-  //   }
+    // Allow all subdomains of loaninneed.in (*.loaninneed.in)
+    if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in' || origin === 'https://www.naveenfinance.com') {
+      return callback(null, true);
+    }
 
-  //   const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-  //   return callback(new Error(msg), false);
-  // },
-  credentials: false
+    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    return callback(new Error(msg), false);
+  },
+  credentials: true
 }));
 
 // Use morgan with winston for HTTP request logging
@@ -150,7 +153,7 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
   const cpuCount = (cpus && cpus.length) ? cpus.length : 1;
   // Set max workers based on environment variable (or default to 2 to prevent heavy memory usage on DO app platform)
   const maxWorkers = parseInt(process.env.MAX_CLUSTER_WORKERS) || 2;
-  const numCPUs = Math.max(1, Math.min(cpuCount, maxWorkers)); 
+  const numCPUs = Math.max(1, Math.min(cpuCount, maxWorkers));
   logger.info(`Primary ${process.pid} is running. Forking ${numCPUs} workers for Load Balancing...`);
 
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
@@ -162,20 +165,20 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
 
   const handleIpcMessage = (worker, msg) => {
     if (msg.cmd && msg.cmd.startsWith('request') && msg.cmd.endsWith('Slot')) {
-        const action = msg.cmd.replace('request', '').replace('Slot', '');
-        const maxLimit = msg.maxLimit || 10;
-        const current = globalActiveTasks.get(action) || 0;
-        
-        if (current < maxLimit) {
-            globalActiveTasks.set(action, current + 1);
-            worker.send({ cmd: `${action}SlotGranted`, reqId: msg.reqId });
-        } else {
-            worker.send({ cmd: `${action}SlotDenied`, reqId: msg.reqId });
-        }
+      const action = msg.cmd.replace('request', '').replace('Slot', '');
+      const maxLimit = msg.maxLimit || 10;
+      const current = globalActiveTasks.get(action) || 0;
+
+      if (current < maxLimit) {
+        globalActiveTasks.set(action, current + 1);
+        worker.send({ cmd: `${action}SlotGranted`, reqId: msg.reqId });
+      } else {
+        worker.send({ cmd: `${action}SlotDenied`, reqId: msg.reqId });
+      }
     } else if (msg.cmd && msg.cmd.startsWith('release') && msg.cmd.endsWith('Slot')) {
-        const action = msg.cmd.replace('release', '').replace('Slot', '');
-        const current = globalActiveTasks.get(action) || 0;
-        globalActiveTasks.set(action, Math.max(0, current - 1));
+      const action = msg.cmd.replace('release', '').replace('Slot', '');
+      const current = globalActiveTasks.get(action) || 0;
+      globalActiveTasks.set(action, Math.max(0, current - 1));
     }
   };
 
@@ -200,7 +203,7 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
 
   const gracefulShutdown = (signal) => {
     logger.info(`Worker ${process.pid} received ${signal}. Initiating graceful shutdown...`);
-    
+
     // Stop accepting new connections
     server.close(async (err) => {
       if (err) {
@@ -208,7 +211,7 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
       } else {
         logger.info(`Worker ${process.pid} HTTP server closed.`);
       }
-      
+
       try {
         await prisma.$disconnect();
         logger.info(`Worker ${process.pid} Prisma disconnected successfully.`);
