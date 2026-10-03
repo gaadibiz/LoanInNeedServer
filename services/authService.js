@@ -4,6 +4,7 @@ const smsOtpService = require('../utils/smsOtpService');
 const emailOtpService = require('../utils/emailOtpService');
 const logger = require('../utils/logger');
 const { BadRequestError } = require('../GlobalExceptionHandler/exception');
+const { isOfficialEmail } = require('../utils/validator');
 const { sendLoanApplicationToBumchum } = require('../services/loanService');
 const UtmModel = require('../models/utmModel');
 const AddressModel = require('../models/adressModel');
@@ -280,6 +281,11 @@ async function requestEmailOtp(email, userId = null) {
   }
 
   targetEmail = targetEmail.trim().toLowerCase();
+
+  if (!isOfficialEmail(targetEmail)) {
+    throw new BadRequestError('Only official emails are acceptable.');
+  }
+
   logger.info(`[AUTH SERVICE] Request email OTP for: ${targetEmail} (userId=${userId || 'anonymous'})`);
 
   // Check if another user already has this email registered
@@ -323,6 +329,11 @@ async function verifyEmailOtp(email, code, userId = null) {
   }
 
   targetEmail = targetEmail.trim().toLowerCase();
+
+  if (!isOfficialEmail(targetEmail)) {
+    throw new BadRequestError('Only official emails are acceptable.');
+  }
+
   logger.info(`[AUTH SERVICE] Verifying email OTP for: ${targetEmail} (userId=${userId || 'anonymous'})`);
 
   const verificationCheck = await emailOtpService.verifyOtp(targetEmail, code);

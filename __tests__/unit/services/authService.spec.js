@@ -1,5 +1,6 @@
 const AuthService = require('../../../services/authService');
 const smsOtpService = require('../../../utils/smsOtpService');
+const emailOtpService = require('../../../utils/emailOtpService');
 const prisma = require('../../../utils/prismaClient');
 const { generateToken } = require('../../../utils/jwt');
 const { BadRequestError } = require('../../../GlobalExceptionHandler/exception');
@@ -7,6 +8,7 @@ const TestFactories = require('../../test-helpers/test-factories');
 
 // Mock dependencies
 jest.mock('../../../utils/smsOtpService');
+jest.mock('../../../utils/emailOtpService');
 jest.mock('../../../utils/jwt');
 jest.mock('../../../utils/prismaClient', () => ({
   user: {
@@ -78,4 +80,48 @@ describe('🔐 AuthService Unit Tests', () => {
       await expect(AuthService.verifyPhoneOtp(phone, code)).rejects.toThrow(BadRequestError);
     });
   });
+
+  describe('requestEmailOtp', () => {
+    it('❌ should reject personal/public email (e.g. gmail.com)', async () => {
+      await expect(AuthService.requestEmailOtp('user@gmail.com')).rejects.toThrow('Only official emails are acceptable.');
+    });
+
+    it('❌ should reject yahoo and outlook emails', async () => {
+      await expect(AuthService.requestEmailOtp('test@yahoo.com')).rejects.toThrow('Only official emails are acceptable.');
+      await expect(AuthService.requestEmailOtp('test@outlook.com')).rejects.toThrow('Only official emails are acceptable.');
+    });
+
+    it('✅ should accept official corporate email and send OTP', async () => {
+      emailOtpService.sendOtp.mockResolvedValue({ status: 'pending', channel: 'email' });
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await AuthService.requestEmailOtp('employee@company.com');
+
+      expect(emailOtpService.sendOtp).toHaveBeenCalledWith('employee@company.com');
+      expect(result).toEqual({
+        success: true,
+        message: 'OTP sent to email successfully.',
+        email: 'employee@company.com',
+        channel: 'email'
+      });
+    });
+  });
+
+  describe('verifyEmailOtp', () => {
+    it('❌ should reject personal email when verifying', async () => {
+      await expect(AuthService.verifyEmailOtp('user@gmail.com', '123456')).rejects.toThrow('Only official emails are acceptable.');
+    });
+
+    it('✅ should verify official email OTP successfully', async () => {
+      emailOtpService.verifyOtp.mockResolvedValue({ status: 'approved' });
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await AuthService.verifyEmailOtp('employee@company.com', '123456');
+
+      expect(emailOtpService.verifyOtp).toHaveBeenCalledWith('employee@company.com', '123456');
+      expect(result.success).toBe(true);
+      expect(result.emailVerified).toBe(true);
+    });
+  });
 });
+
