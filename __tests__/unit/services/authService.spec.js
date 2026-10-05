@@ -102,6 +102,8 @@ describe('🔐 AuthService Unit Tests', () => {
         success: true,
         message: 'OTP sent to email successfully.',
         email: 'employee@company.com',
+        professionalEmail: 'employee@company.com',
+        professional_email: 'employee@company.com',
         channel: 'email'
       });
     });
@@ -121,6 +123,8 @@ describe('🔐 AuthService Unit Tests', () => {
       expect(emailOtpService.verifyOtp).toHaveBeenCalledWith('employee@company.com', '123456');
       expect(result.success).toBe(true);
       expect(result.emailVerified).toBe(true);
+      expect(result.professionalEmail).toBe('employee@company.com');
+      expect(result.professional_email).toBe('employee@company.com');
     });
   });
 });

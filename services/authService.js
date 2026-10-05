@@ -265,14 +265,14 @@ async function registerPhone(phone, attribution = null, data) {
 async function requestEmailOtp(email, userId = null) {
   let targetEmail = email;
 
-  // If userId provided but no email, fetch user's saved email
+  // If userId provided but no email, fetch user's saved professionalEmail or email
   if (!targetEmail && userId) {
     const user = await prisma.user.findUnique({
       where: { id: Number(userId) },
-      select: { email: true }
+      select: { professionalEmail: true, email: true }
     });
-    if (user && user.email) {
-      targetEmail = user.email;
+    if (user && (user.professionalEmail)) {
+      targetEmail = user.professionalEmail;
     }
   }
 
@@ -289,14 +289,17 @@ async function requestEmailOtp(email, userId = null) {
 
   logger.info(`[AUTH SERVICE] Request email OTP for: ${targetEmail} (userId=${userId || 'anonymous'})`);
 
-  // Check if another user already has this email registered
+  // Check if another user already has this professional email registered
   if (userId) {
-    const existingUserWithEmail = await prisma.user.findUnique({
-      where: { email: targetEmail },
+    const existingUserWithEmail = await prisma.user.findFirst({
+      where: {
+        professionalEmail: targetEmail,
+        id: { not: Number(userId) }
+      },
       select: { id: true }
     });
-    if (existingUserWithEmail && existingUserWithEmail.id !== Number(userId)) {
-      throw new BadRequestError('This email is already registered to another account.');
+    if (existingUserWithEmail) {
+      throw new BadRequestError('This professional email is already registered to another account.');
     }
   }
 
@@ -305,6 +308,8 @@ async function requestEmailOtp(email, userId = null) {
     success: true,
     message: 'OTP sent to email successfully.',
     email: targetEmail,
+    professionalEmail: targetEmail,
+    professional_email: targetEmail,
     channel: result.channel
   };
 }
@@ -318,10 +323,10 @@ async function verifyEmailOtp(email, code, userId = null) {
   if (!targetEmail && userId) {
     const user = await prisma.user.findUnique({
       where: { id: Number(userId) },
-      select: { email: true }
+      select: { professionalEmail: true, email: true }
     });
-    if (user && user.email) {
-      targetEmail = user.email;
+    if (user && (user.professionalEmail || user.email)) {
+      targetEmail = user.professionalEmail || user.email;
     }
   }
 
@@ -347,11 +352,11 @@ async function verifyEmailOtp(email, code, userId = null) {
   let updatedUser = null;
 
   if (userId) {
-    // If logged in, update this user's email and emailVerified status
+    // If logged in, update this user's professionalEmail and emailVerified status
     updatedUser = await prisma.user.update({
       where: { id: Number(userId) },
       data: {
-        email: targetEmail,
+        professionalEmail: targetEmail,
         emailVerified: true,
         emailVerifiedAt: new Date()
       },
@@ -359,15 +364,16 @@ async function verifyEmailOtp(email, code, userId = null) {
         id: true,
         customUserId: true,
         email: true,
+        professionalEmail: true,
         emailVerified: true,
         emailVerifiedAt: true
       }
     });
-    logger.info(`[AUTH SERVICE] User ${userId} email verified: ${targetEmail}`);
+    logger.info(`[AUTH SERVICE] User ${userId} professional email verified: ${targetEmail}`);
   } else {
-    // If not logged in, update user if an account exists with this email
-    const existingUser = await prisma.user.findUnique({
-      where: { email: targetEmail },
+    // If not logged in, update user if an account exists with this professional email
+    const existingUser = await prisma.user.findFirst({
+      where: { professionalEmail: targetEmail },
       select: { id: true }
     });
 
@@ -382,11 +388,12 @@ async function verifyEmailOtp(email, code, userId = null) {
           id: true,
           customUserId: true,
           email: true,
+          professionalEmail: true,
           emailVerified: true,
           emailVerifiedAt: true
         }
       });
-      logger.info(`[AUTH SERVICE] Existing user ${existingUser.id} email verified: ${targetEmail}`);
+      logger.info(`[AUTH SERVICE] Existing user ${existingUser.id} professional email verified: ${targetEmail}`);
     }
   }
 
@@ -394,6 +401,8 @@ async function verifyEmailOtp(email, code, userId = null) {
     success: true,
     message: 'Email verified successfully.',
     email: targetEmail,
+    professionalEmail: targetEmail,
+    professional_email: targetEmail,
     emailVerified: true,
     user: updatedUser
   };
