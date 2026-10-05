@@ -28,11 +28,11 @@ async function registerUser(userId, data) {
     throw new BadRequestError('Phone must be verified before registration.');
   }
 
-  const { name, dob, gender, email, password } = data;
+  const { name, dob, gender, email, password,professionalEmail } = data;
 
   // 2️⃣ Validate required fields
   // Email and Password are now OPTIONAL. Only Name, DOB, Gender required.
-  if (!name || !dob || !gender) {
+  if (!name || !dob || !gender)  {
     logger.error('❌ [USER SERVICE] Missing required fields for registration');
     throw new BadRequestError('name, dob, & gender are required.');
   }
