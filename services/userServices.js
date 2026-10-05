@@ -170,7 +170,8 @@ async function getCompleteProfile(userId) {
       loans: {
         orderBy: { createdAt: 'desc' }
       },
-      status: true
+      status: true,
+      professionalEmail: true
     }
   });
 
