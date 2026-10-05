@@ -222,7 +222,6 @@ async function getCompleteProfile(userId) {
   const completeProfile = {
     ...userWithoutPassword,
     professionalEmail: user.professionalEmail || null,
-    professional_email: user.professionalEmail || null,
     latestLocation,
     kycStatus,
     documentSummary
