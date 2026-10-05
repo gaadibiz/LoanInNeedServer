@@ -51,11 +51,12 @@ async function registerUser(userId, data) {
     dob: new Date(dob),
     gender: gender.toUpperCase(),
     email: email || null,
+    professionalEmail: data.professionalEmail || null,
     password: password ? await hashPassword(password) : null,
   };
 
   // If email changed, reset email verification status
-  if (email && email !== user.email) {
+  if (professionalEmail && professionalEmail !== user.professionalEmail) {
     updateData.emailVerified = false;
     updateData.emailVerifiedAt = null;
   }
