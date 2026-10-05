@@ -85,6 +85,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             gender: true,
             profileType: true,
             panVerification: true,
+            professionalEmail: true,
             digilockerStatus: true,
         }
     });
