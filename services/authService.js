@@ -323,10 +323,10 @@ async function verifyEmailOtp(email, code, userId = null) {
   if (!targetEmail && userId) {
     const user = await prisma.user.findUnique({
       where: { id: Number(userId) },
-      select: { professionalEmail: true, email: true }
+      select: { professionalEmail: true }
     });
-    if (user && (user.professionalEmail || user.email)) {
-      targetEmail = user.professionalEmail || user.email;
+    if (user && user.professionalEmail) {
+      targetEmail = user.professionalEmail;
     }
   }
 
