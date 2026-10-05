@@ -254,39 +254,33 @@ class AadhaarService {
         };
 
         await AddressModel.upsertAddress(user.id, addressData, tx);
-
-        // const { splitAddress = {} } = eAadhaar;
-
-        // const addressLine = String(splitAddress.addressLine)
-        // const district = String(splitAddress?.district?.[0]);
-        // const landmark = String(splitAddress.landMark);
-        // const addressData = {
-        //   city: String(splitAddress.city[0]),
-        //   state: String(splitAddress.state?.[0]?.[0]),
-        //   postalCode: String(splitAddress.pincode),
-        //   permanentAddress: [addressLine, district, landmark].filter(Boolean).join(' ') || null,
-        // };
-        // await AddressModel.upsertAddress(user.id, addressData, tx);
         await UserModel.updateUser(user.id, { digilockerStatus: 'CONSENT_COMPLETED' }, tx);
+      }, {
+        maxWait: 10000,
+        timeout: 30000
+      });
 
-        try {
-          eAadhaar?.photo ? await uploadDigilockerDocument(user.id, tx, {
+      // Upload documents outside the DB transaction so image compression & S3 uploads do not block or timeout the transaction
+      try {
+        if (eAadhaar?.photo) {
+          await uploadDigilockerDocument(user.id, prisma, {
             value: eAadhaar.photo,
             docType: 'DIGILOCKER_PHOTO',
             filename: 'DIGILOCKER_PHOTO.jpg',
             mimetype: 'image/jpeg',
-          }) : null
-          eAadhaar?.rawResponse?.aadhaarJpeg ? await uploadDigilockerDocument(user.id, tx, {
+          });
+        }
+        if (eAadhaar?.rawResponse?.aadhaarJpeg) {
+          await uploadDigilockerDocument(user.id, prisma, {
             value: eAadhaar.rawResponse.aadhaarJpeg,
             docType: 'DIGILOCKER_AADHAAR',
             filename: 'DIGILOCKER_AADHAAR.jpg',
             mimetype: 'image/jpeg',
-          }) : null
-
-        } catch (e) {
-          logger.error("Error uploading Digilocker documents", e)
+          });
         }
-      });
+      } catch (e) {
+        logger.error("Error uploading Digilocker documents", e);
+      }
     } catch (err) {
       if (err.code === 'P2002') {
         throw new BadRequestError("This Aadhaar number is already registered with another account.");
