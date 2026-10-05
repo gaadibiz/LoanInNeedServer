@@ -76,6 +76,7 @@ async function registerUser(userId, data) {
       phone: updatedUser.phone,
       name: updatedUser.name,
       email: updatedUser.email,
+      professionalEmail: updatedUser.professionalEmail || null,
       emailVerified: updatedUser.emailVerified,
       dob: updatedUser.dob,
       gender: updatedUser.gender,
@@ -135,8 +136,13 @@ async function getProfile(userId) {
     throw new NotFoundError('User not found.');
   }
 
+  const { password, ...userWithoutPassword } = user;
   logger.info(`✅ [USER SERVICE] Profile fetched successfully for userId: ${userId}`);
-  return user;
+  return {
+    ...userWithoutPassword,
+    professionalEmail: user.professionalEmail || null,
+    professional_email: user.professionalEmail || null,
+  };
 }
 
 /**
@@ -170,8 +176,7 @@ async function getCompleteProfile(userId) {
       loans: {
         orderBy: { createdAt: 'desc' }
       },
-      status: true,
-      professionalEmail: true
+      status: true
     }
   });
 
@@ -216,6 +221,8 @@ async function getCompleteProfile(userId) {
 
   const completeProfile = {
     ...userWithoutPassword,
+    professionalEmail: user.professionalEmail || null,
+    professional_email: user.professionalEmail || null,
     latestLocation,
     kycStatus,
     documentSummary
