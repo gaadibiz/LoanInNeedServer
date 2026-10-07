@@ -197,7 +197,6 @@ async function getCompleteProfile(userId) {
       email: user.email,
       panNumber: user.panVerification?.panNumber,
     });
-
     if (bumchumBlocked) {
       isBlacklisted = true;
       prisma.loanApplication.updateMany({
