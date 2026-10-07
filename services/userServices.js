@@ -247,8 +247,7 @@ async function getCompleteProfile(userId) {
     ...userWithoutPassword,
     professionalEmail: user.professionalEmail || null,
     latestLocation,
-    blacklisted: isBlacklisted,
-    isBlacklisted: isBlacklisted,
+    internalIssue: internalIssue,
     kycStatus,
     documentSummary
   };
