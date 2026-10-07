@@ -252,7 +252,7 @@ async function getCompleteProfile(userId) {
     documentSummary
   };
 
-  logger.info(`✅ [USER SERVICE] Complete profile fetched successfully for userId: ${userId} (blacklisted=${isBlacklisted})`);
+  logger.info(`✅ [USER SERVICE] Complete profile fetched successfully for userId: ${userId} (blacklisted=${internalIssue})`);
   return completeProfile;
 }
 
