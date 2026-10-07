@@ -5,6 +5,7 @@ const authController = require('../controllers/authController');
 
 const attributionMiddleware = require('../middleware/attributionMiddleware');
 const { protect } = require('../middleware/authMiddleware');
+const { verifyApiKey } = require('../middleware/apiKeyAuth');
 const { withConcurrencyLimit } = require('../middleware/concurrencyManager');
 // Phone OTP routes
 router.post('/phone/request-otp',
@@ -31,6 +32,7 @@ router.post('/email/verify-otp',
 
 router.post('/register/register-phone-without-verification',
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds.'),
+    verifyApiKey,
     authController.registerPhoneWithoutVerification
 );
 
@@ -51,5 +53,6 @@ router.post('/aadhaar/request-otp', protect, authController.requestAadhaarOtp);
 router.post('/aadhaar/verify-otp', protect, authController.verifyAadhaarOtp);
 // Real-time Aadhaar existence check (no DB write, used for inline frontend validation)
 router.post('/aadhaar/validate', protect, authController.validateAadhaarExists);
+router.post('/verify', verifyApiKey, authController.verify)
 
 module.exports = router;

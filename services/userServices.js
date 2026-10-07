@@ -6,6 +6,7 @@ const { BadRequestError, NotFoundError, UnauthorizedError } = require('../Global
 const smsOtpService = require('../utils/smsOtpService');
 const { comparePassword } = require('../utils/hash');
 const jwt = require('jsonwebtoken');
+const { checkBumchumBlockStatus } = require('./loanService');
 
 /**
  * =====================================
@@ -28,11 +29,11 @@ async function registerUser(userId, data) {
     throw new BadRequestError('Phone must be verified before registration.');
   }
 
-  const { name, dob, gender, email, password,professionalEmail } = data;
+  const { name, dob, gender, email, password, professionalEmail } = data;
 
   // 2️⃣ Validate required fields
   // Email and Password are now OPTIONAL. Only Name, DOB, Gender required.
-  if (!name || !dob || !gender)  {
+  if (!name || !dob || !gender) {
     logger.error('❌ [USER SERVICE] Missing required fields for registration');
     throw new BadRequestError('name, dob, & gender are required.');
   }
@@ -177,13 +178,35 @@ async function getCompleteProfile(userId) {
       loans: {
         orderBy: { createdAt: 'desc' }
       },
-      status: true
+      status: true,
+      ipQualityDetail: true
     }
   });
 
   if (!user) {
     logger.error(`❌ [USER SERVICE] User not found for ID: ${userId}`);
     throw new NotFoundError('User not found.');
+  }
+
+  // Check Bumchum blacklist / block status
+  let isBlacklisted = false;
+  try {
+    const bumchumBlocked = await checkBumchumBlockStatus({
+      aadhaarNumber: user.aadhaarVerification?.aadhaarNumber,
+      contactNumber: user.phone,
+      email: user.email,
+      panNumber: user.panVerification?.panNumber,
+    });
+
+    if (bumchumBlocked) {
+      isBlacklisted = true;
+      prisma.loanApplication.updateMany({
+        where: { userId: user.id, blacklist: false },
+        data: { blacklist: true }
+      }).catch(e => logger.error(`[USER SERVICE] Error updating blacklist status for user ${user.id}: ${e.message}`));
+    }
+  } catch (error) {
+    logger.error(`[USER SERVICE] Error checking Bumchum block status for userId ${userId}: ${error.message}`);
   }
 
   // Remove sensitive data
@@ -204,7 +227,9 @@ async function getCompleteProfile(userId) {
     addressAdded: !!user.address,
     documentsUploaded: user.documents?.length > 0 || false,
     selfieUploaded: user.documents?.some(doc => doc.docType === 'PHOTO') || false,
-    locationCaptured: !!latestLocation
+    locationCaptured: !!latestLocation,
+    blacklisted: isBlacklisted,
+    isBlacklisted: isBlacklisted
   };
 
   // Count documents by type
@@ -224,11 +249,13 @@ async function getCompleteProfile(userId) {
     ...userWithoutPassword,
     professionalEmail: user.professionalEmail || null,
     latestLocation,
+    blacklisted: isBlacklisted,
+    isBlacklisted: isBlacklisted,
     kycStatus,
     documentSummary
   };
 
-  logger.info(`✅ [USER SERVICE] Complete profile fetched successfully for userId: ${userId}`);
+  logger.info(`✅ [USER SERVICE] Complete profile fetched successfully for userId: ${userId} (blacklisted=${isBlacklisted})`);
   return completeProfile;
 }
 
