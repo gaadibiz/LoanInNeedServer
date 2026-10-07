@@ -189,7 +189,7 @@ async function getCompleteProfile(userId) {
   }
 
   // Check Bumchum blacklist / block status
-  let isBlacklisted = false;
+  let internalIssue = false;
   try {
     const bumchumBlocked = await checkBumchumBlockStatus({
       aadhaarNumber: user.aadhaarVerification?.aadhaarNumber,
@@ -198,7 +198,7 @@ async function getCompleteProfile(userId) {
       panNumber: user.panVerification?.panNumber,
     });
     if (bumchumBlocked) {
-      isBlacklisted = true;
+      internalIssue = true;
       prisma.loanApplication.updateMany({
         where: { userId: user.id, blacklist: false },
         data: { blacklist: true }
@@ -227,8 +227,7 @@ async function getCompleteProfile(userId) {
     documentsUploaded: user.documents?.length > 0 || false,
     selfieUploaded: user.documents?.some(doc => doc.docType === 'PHOTO') || false,
     locationCaptured: !!latestLocation,
-    blacklisted: isBlacklisted,
-    isBlacklisted: isBlacklisted
+    internalIssue: internalIssue
   };
 
   // Count documents by type
