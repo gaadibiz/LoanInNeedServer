@@ -32,7 +32,7 @@ router.post('/email/verify-otp',
 
 router.post('/register/register-phone-without-verification',
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds.'),
-    verifyApiKey,
+    //verifyApiKey,
     authController.registerPhoneWithoutVerification
 );
 
