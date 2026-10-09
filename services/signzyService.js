@@ -131,8 +131,8 @@ class SignZyService {
           "getBase64Files": false,
           "getEAadhaarPdf": true,
           "getEAadhaarJpeg": true,
-          "purpose": "Loans",
-          "serviceName": "Loan In Need",
+          // "purpose": "Loans",
+          // "serviceName": "Loan In Need",
         }
       );
 
