@@ -67,32 +67,55 @@ const allowedOrigins = [
   'https://talkapiprod.bumchumfinserve.com',
   'https://openai.com'
 ];
-
+// ✅ Fixed implementation
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
     }
 
-    // Allow all Vercel preview deployments (*.vercel.app)
     if (origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
 
-    // Allow all subdomains of loaninneed.in (*.loaninneed.in)
     if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in' || origin === 'https://www.naveenfinance.com') {
       return callback(null, true);
     }
 
-    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-    return callback(new Error(msg), false);
+    // Disallow origin cleanly without throwing an unhandled Express 500 error
+    return callback(null, false);
   },
   credentials: true
 }));
+
+
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     // Allow requests with no origin (like mobile apps or curl requests)
+//     if (!origin) return callback(null, true);
+
+//     // Check if origin is in allowed list
+//     if (allowedOrigins.indexOf(origin) !== -1) {
+//       return callback(null, true);
+//     }
+
+//     // Allow all Vercel preview deployments (*.vercel.app)
+//     if (origin.endsWith('.vercel.app')) {
+//       return callback(null, true);
+//     }
+
+//     // Allow all subdomains of loaninneed.in (*.loaninneed.in)
+//     if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in' || origin === 'https://www.naveenfinance.com') {
+//       return callback(null, true);
+//     }
+
+//     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+//     return callback(new Error(msg), false);
+//   },
+//   credentials: true
+// }));
 
 // Use morgan with winston for HTTP request logging
 app.use(morgan('combined', {
