@@ -65,7 +65,8 @@ const allowedOrigins = [
   'https://be.loaninneed.in',
   'https://www.naveenfinance.com',
   'https://talkapiprod.bumchumfinserve.com',
-  'https://openai.com'
+  'https://openai.com',
+  'https://googleads.digip.campaign.loaninneed.in'
 ];
 // ✅ Fixed implementation
 app.use(cors({
