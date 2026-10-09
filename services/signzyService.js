@@ -129,7 +129,6 @@ class SignZyService {
           "companyName": "Signzy",
           "favIcon": "https://enr-biolerplate-7may26.s3.ap-south-1.amazonaws.com/company_outlet_logo/favicon_2026-09-03_06-30-06.png",
           "getBase64Files": false,
-          "getEAadhaarPdf": true,
           "getEAadhaarJpeg": true,
           // "purpose": "Loans",
           // "serviceName": "Loan In Need",
@@ -186,7 +185,7 @@ class SignZyService {
         address: result.address,
         photo: result.photo,
         splitAddress: result.splitAddress,
-        aadhaarJpeg: response.data.aadhaarJpeg,
+        aadhaarJpeg: result.aadhaarJpeg || response.data.aadhaarJpeg,
         rawResponse: result,
       };
     } catch (error) {
