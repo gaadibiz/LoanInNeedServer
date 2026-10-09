@@ -82,6 +82,7 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
     logger.info(`[AUTH SERVICE] User not found for phone: ${targetPhone}, creating new...`);
   }
 
+  let oldUser = user;
 
 
   if (!user) {
@@ -108,7 +109,7 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
 
     try {
       console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
-      if (user) {
+      if (!oldUser) {
         await sendLoanApplicationToBumchum(user.id, '');
       }
     } catch (error) {
