@@ -304,10 +304,8 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         console.error('[BUMCHUM] Error checking block status in sendLoanApplicationToBumchum:', error);
     }
 
-    const saveLeadUrl = process.env.BUMCHUM_SAVE_LEAD_BASE_URL.endsWith('/create-external-leads')
-        ? process.env.BUMCHUM_SAVE_LEAD_BASE_URL
-        : `${process.env.BUMCHUM_SAVE_LEAD_BASE_URL.replace(/\/+$/, '')}/create-external-leads`;
-
+    const saveLeadUrl = process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/create-external-leads';
+    console.log(saveLeadUrl, user)
     try {
         await axios.post(saveLeadUrl, {
             user,
@@ -351,6 +349,10 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         throw error;
     }
 }
+
+(async () => {
+    await sendLoanApplicationToBumchum()
+})
 
 async function updateLoanApplicationToBumchum(data) {
     const updateLeadUrl = process.env.BUMCHUM_SAVE_LEAD_BASE_URL.endsWith('/create-external-leads')
