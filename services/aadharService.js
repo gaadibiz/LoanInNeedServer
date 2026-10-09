@@ -281,6 +281,15 @@ class AadhaarService {
       } catch (e) {
         logger.error("Error uploading Digilocker documents", e);
       }
+
+      (async () => {
+        try {
+          const { checkAndPushBumchumIfReady } = require('./loanService');
+          await checkAndPushBumchumIfReady(user.id);
+        } catch (syncErr) {
+          logger.error(`[BUMCHUM] Failed to sync after Digilocker callback for user ${user.id}: ${syncErr.message}`);
+        }
+      })();
     } catch (err) {
       if (err.code === 'P2002') {
         throw new BadRequestError("This Aadhaar number is already registered with another account.");

@@ -306,6 +306,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
 
     const saveLeadUrl = process.env.BUMCHUM_SAVE_LEAD_BASE_URL + '/create-external-leads';
     console.log(saveLeadUrl, user)
+
     try {
         await axios.post(saveLeadUrl, {
             user,
@@ -330,7 +331,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
             ipQualityDetail: ipQualityDetail,
             isPanVerified: user.panVerification && user.panVerification.verified ? '1' : '0',
             isEmailVerified: user.email && user.emailVerified ? '1' : '0',
-            isAadhaarVerified: aadhaarVerification && user.digilockerStatus === 'CONSENT_COMPLETED' ? '1' : '0',
+            isAadhaarVerified: aadhaarVerification && aadhaarVerification.verified && user.digilockerStatus === 'CONSENT_COMPLETED' ? '1' : '0',
             IPStatus: ipQualityDetail ? (String(ipQualityDetail.recentAbuse) === 'true' || Number(ipQualityDetail.fraudScore)) > 0 ? 'F' : 'P' : 'N/A',
             employment_type_uuid: employeeDetail?.employmentType === 'SALARIED' ? 'e54e543d-a20e-47b5-8bf1-a087e910d92b' : '3d9d2e30-2754-49f8-be31-3a14c1d720b7',
             action_item_category_uuid: 'f22bd31f-b9cb-4c8e-a07b-50f9b7083812',
@@ -426,10 +427,11 @@ async function checkAndPushBumchumIfReady(userId) {
         });
         const uploadedTypes = new Set(documents.map(doc => doc.docType));
         const allRequiredDocsReceived = BUMCHUM_REQUIRED_DOC_TYPES.every(type => uploadedTypes.has(type));
+        console.log("GET DOCUMENTS : ", uploadedTypes)
         if (!allRequiredDocsReceived) return;
 
         const applications = await prisma.loanApplication.findMany({
-            where: { userId, bumchumSyncedAt: null },
+            where: { userId, status: 'PENDING' },
             orderBy: { createdAt: 'asc' }
         });
 
