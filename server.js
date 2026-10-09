@@ -64,7 +64,8 @@ const allowedOrigins = [
   'https://www.loaninneed.in', // New Production Frontend (www)
   'https://be.loaninneed.in',
   'https://www.naveenfinance.com',
-  'https://talkapiprod.bumchumfinserve.com'
+  'https://talkapiprod.bumchumfinserve.com',
+  'https://openai.com'
 ];
 
 app.use(cors({
