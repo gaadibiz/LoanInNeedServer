@@ -342,7 +342,7 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
                 'auth-Key': process.env.BUMCHUM_AUTH_KEY,
                 'Content-Type': 'application/json'
             },
-            timeout: 120000
+            timeout: 15000
         });
         return true;
     } catch (error) {
@@ -350,10 +350,6 @@ async function sendLoanApplicationToBumchum(userId, applicationId = '',) {
         throw error;
     }
 }
-
-(async () => {
-    await sendLoanApplicationToBumchum()
-})
 
 async function updateLoanApplicationToBumchum(data) {
     const updateLeadUrl = process.env.BUMCHUM_SAVE_LEAD_BASE_URL.endsWith('/create-external-leads')
