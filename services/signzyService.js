@@ -83,11 +83,7 @@ class SignZyService {
     );
 
     this.panExtensiveBreaker = createCircuitBreaker(
-      (data) => this.client.post(SERVICE_URLS.panExtensive, data, {
-        headers: {
-          'x-client-unique-id': process.env.SIGNZY_CLIENT_UNIQUE_ID || 'monika@edgenroots.net'
-        }
-      }),
+      (data) => this.client.post(SERVICE_URLS.panExtensive, data),
       'SignZy PAN Extensive'
     );
   }
@@ -130,8 +126,8 @@ class SignZyService {
           "favIcon": "https://enr-biolerplate-7may26.s3.ap-south-1.amazonaws.com/company_outlet_logo/favicon_2026-09-03_06-30-06.png",
           "getBase64Files": false,
           "getEAadhaarJpeg": true,
-          // "purpose": "Loans",
-          // "serviceName": "Loan In Need",
+          "purpose": "Loans",
+          "serviceName": "Loan In Need",
         }
       );
 
