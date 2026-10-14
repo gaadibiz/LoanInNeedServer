@@ -120,8 +120,6 @@ async function sendOtp(phone) {
         //     },
         //     timeout: parseInt(process.env.SMS_GATEWAY_TIMEOUT_MS) || 10000 // Configurable SMS timeout
         // });
-
-        console.log(SMS_API_URL, JSON.stringify(requestBody), SMS_API_KEY)
         // Send SMS via API
         const response = (await smsBreaker.fire(SMS_API_URL, requestBody, {
             headers: {
