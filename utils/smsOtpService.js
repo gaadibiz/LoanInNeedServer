@@ -75,21 +75,6 @@ async function sendOtp(phone) {
             };
         }
 
-        // Prepare SMS content using {#var#} DLT placeholder.
-        // The Speqtra gateway uses DLT template substitution — the registered template
-        // has {#var#} where the dynamic OTP goes. We must pass the OTP as {#var#} so
-        // the gateway fills it in correctly. If we embed a plain number, the gateway
-        // ignores it and substitutes its own random value into {#var#} instead.
-        const smsContent = `Dear Customer,  ${otpCode} is your OTP to verify your mobile number for registration/login. This OTP is valid for 10 minutes. Please do not share it with anyone. - NFPLNA`
-        //`Dear Customer, your OTP for LOANINNEED is ${otpCode}. It is valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this OTP with anyone. -SASHIM`;
-
-        // ⚠️  NOTE: Some DLT gateways require the message body to contain the literal
-        // {#var#} token mapped to the variable.  If the OTP mismatch persists after
-        // this deploy, the registered template likely auto-generates its own OTP.
-        // In that case the full Speqtra API response will be logged below so you can
-        // inspect what OTP the gateway generated, and we must switch to their OTP API.
-
-        // Prepare API request
         let number = phone.replace('+91', '')
         const requestBody =
         {
@@ -100,27 +85,6 @@ async function sendOtp(phone) {
                 "var1": otpCode
             }
         };
-        // {
-        //     listsms: [
-        //         {
-        //             sms: smsContent,
-        //             mobiles: phone,
-        //             senderid: SMS_SENDER_ID,
-        //             entityid: SMS_ENTITY_ID,
-        //             tempid: SMS_TEMPLATE_ID
-        //         }
-        //     ]
-        // };
-
-        // Send SMS via API
-        // const response = await smsBreaker.fire(SMS_API_URL, requestBody, {
-        //     headers: {
-        //         'key': SMS_API_KEY,
-        //         'content-type': 'application/json'
-        //     },
-        //     timeout: parseInt(process.env.SMS_GATEWAY_TIMEOUT_MS) || 10000 // Configurable SMS timeout
-        // });
-        // Send SMS via API
         const response = (await smsBreaker.fire(SMS_API_URL, requestBody, {
             headers: {
                 'Authorization': SMS_API_KEY,
