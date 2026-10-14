@@ -9,8 +9,8 @@ const smsBreaker = createCircuitBreaker(
 );
 
 // SMS API Configuration
-const SMS_API_URL = process.env.SMS_API_URL || 'https://omc.speqtrainnov.in/api/json/sendsms/';
-const SMS_API_KEY = process.env.SMS_API_KEY || "Bearer " + process.env.SUREPASS_TOKEN;
+const SMS_API_URL = process.env.SMS_API_URL
+const SMS_API_KEY = "Bearer " + process.env.SUREPASS_TOKEN;
 const SMS_SENDER_ID = process.env.SMS_SENDER_ID;
 const SMS_ENTITY_ID = process.env.SMS_ENTITY_ID;
 const SMS_TEMPLATE_ID = process.env.SMS_TEMPLATE_ID;
@@ -121,6 +121,7 @@ async function sendOtp(phone) {
         //     timeout: parseInt(process.env.SMS_GATEWAY_TIMEOUT_MS) || 10000 // Configurable SMS timeout
         // });
 
+        console.log(SMS_API_URL, JSON.stringify(requestBody), SMS_API_KEY)
         // Send SMS via API
         const response = (await smsBreaker.fire(SMS_API_URL, requestBody, {
             headers: {
@@ -129,7 +130,6 @@ async function sendOtp(phone) {
             },
             timeout: parseInt(process.env.SMS_GATEWAY_TIMEOUT_MS) || 10000 // Configurable SMS timeout
         }));
-        console.log(response)
         // 🔍 Log full raw response so we can detect if gateway generates its own OTP
         logger.info(`[SMS GATEWAY] Full response for ${phone}: ${JSON.stringify(response.data)}`);
         logger.info(`OTP sent successfully to ${phone}. Message ID: ${response.data?.smslist?.sms?.messageid || response?.data?.client_id}`);
