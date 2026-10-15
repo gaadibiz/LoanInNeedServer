@@ -65,7 +65,8 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
 
   let user = await prisma.user.findUnique({
     where: {
-      phone: phone
+      phone: phone,
+      ...(req.body.email ? { email: req.body.email } : {})
     },
     select: {
       id: true,
