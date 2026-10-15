@@ -55,11 +55,13 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
 //Register phone number without verification
 const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   console.log(req.body, "---->");
-  const { phone } = req.body;
+  let { phone } = req.body;
 
   if (!phone) {
     throw new BadRequestError("Phone number is required");
   }
+
+  phone = phone.startsWith('+91') ? phone : `+91${phone}`
 
   let user = await prisma.user.findUnique({
     where: {
@@ -285,6 +287,7 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   }
 
   // 8. Loan Applications
+  let application = {}
   if (Array.isArray(req.body.loanApplications) && req.body.loanApplications.length > 0) {
     const empRecord = await prisma.employmentDetail.findUnique({ where: { userId } });
     for (const app of req.body.loanApplications) {
@@ -294,7 +297,7 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
         loanType = 'OTHER';
       }
 
-      await prisma.loanApplication.create({
+      application = await prisma.loanApplication.create({
         data: {
           userId,
           employmentDetailId: empRecord ? empRecord.id : null,
@@ -311,7 +314,7 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   // 9. Bumchum Sync (asynchronous)
   (async () => {
     try {
-      await checkAndPushBumchumIfReady(userId);
+      Object.keys(application).length ? (await checkAndPushBumchumIfReady(userId)) : (await sendLoanApplicationToBumchum(userId, ''));
     } catch (error) {
       logger.error(`[BUMCHUM] Failed to sync after registerPhoneWithoutVerification for User ${userId}: ${error.message}`);
     }
