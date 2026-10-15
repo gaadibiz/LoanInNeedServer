@@ -55,18 +55,32 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
 //Register phone number without verification
 const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   console.log(req.body, "---->");
+
+  if (typeof req.body === 'string') {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (_) {
+      req.body = {};
+    }
+  } else if (!req.body) {
+    req.body = {};
+  }
+
   let { phone } = req.body;
 
   if (!phone) {
     throw new BadRequestError("Phone number is required");
   }
 
-  phone = phone.startsWith('+91') ? phone : `+91${phone}`
+  phone = String(phone).trim();
+  phone = phone.startsWith('+91') ? phone : `+91${phone}`;
 
-  let user = await prisma.user.findUnique({
+  let user = await prisma.user.findFirst({
     where: {
-      phone: phone,
-      ...(req.body.email ? { email: req.body.email } : {})
+      OR: [
+        { phone: phone },
+        ...(req.body.email ? [{ email: req.body.email }] : [])
+      ]
     },
     select: {
       id: true,
