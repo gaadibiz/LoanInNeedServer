@@ -46,10 +46,10 @@ function releaseSubmissionSlot() {
  * @access  Private
  */
 const applyForLoan = asyncHandler(async (req, res) => {
-    const { loanAmount, purposeOfLoan, loanType, monthlyIncome  } = req.body;
+    const { loanAmount, purposeOfLoan, loanType, monthlyIncome } = req.body;
     const userId = req.user.id;
-     let ip =  req.body.ipAddress || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    let ipAddress =  typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip)
+    let ip = req.body.ipAddress || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    let ipAddress = typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip)
 
     const result = await createLoanApplication(userId, loanAmount, loanType, req.attribution, ipAddress);
 
@@ -120,7 +120,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
     const toDate = new Date(to);
 
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-         throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
+        throw new BadRequestError('Invalid date format for "from" or "to" parameters.');
     }
 
     const applicationIds = await prisma.loanApplication.findMany({
@@ -149,7 +149,7 @@ const exportLoanApplications = asyncHandler(async (req, res) => {
                 return (u.documents || []).some(d => d.docType === 'BANK_STATEMENT');
             });
         }
-        
+
         return Promise.all(validChunk.map(formatApplicationData));
     };
 
@@ -251,7 +251,7 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
                 }
             }
         });
-        
+
         if (userWithApp && userWithApp.loanApplications.length > 0) {
             loanApplication = userWithApp.loanApplications[0];
         }
@@ -297,17 +297,17 @@ const updateLoanStatusFromLos = asyncHandler(async (req, res) => {
 });
 
 const checkEligibility = asyncHandler(async (req, res) => {
-    const { 
-        loanAmount, 
-        monthlySalaryRange, 
-        salaryReceivedIn, 
-        cibilScore, 
+    const {
+        loanAmount,
+        monthlySalaryRange,
+        salaryReceivedIn,
+        cibilScore,
         purposeOfLoan,
         occupation,
         city,
-        income, 
-        expense, 
-        tenure 
+        income,
+        expense,
+        tenure
     } = req.body;
 
     // Signup-style Eligibility Check
@@ -315,9 +315,9 @@ const checkEligibility = asyncHandler(async (req, res) => {
     if (monthlySalaryRange || salaryReceivedIn || occupation) {
         // We log or process the new fields
         logger.info(`[ELIGIBILITY] Checking for User - Amount: ${loanAmount}, Salary: ${monthlySalaryRange}, ReceivedIn: ${salaryReceivedIn}, Occ: ${occupation}, City: ${city}`);
-        
+
         if (
-            salaryReceivedIn !== "Bank Transfer" || 
+            salaryReceivedIn !== "Bank Transfer" ||
             monthlySalaryRange === "Less than Rs.25,000/-"
         ) {
             return res.status(200).json({
@@ -346,14 +346,24 @@ const checkEligibility = asyncHandler(async (req, res) => {
         });
     }
 
-    return res.status(400).json({ error: "Invalid eligibility parameters provided." });
+    res.status(400).json({ error: "Invalid eligibility parameters provided." });
+
+    (async () => {
+        try {
+            logger.info(`[ELIGIBILITY] Sending loan application to Bumchum for User ID: ${req.user.id}`);
+            await sendLoanApplicationToBumchum(req.user.id, '');
+
+        } catch (error) {
+            console.log(error, "[ERROR] Error sending loan application to Bumchum");
+        }
+    })()
 });
 
-module.exports = { 
-    applyForLoan, 
-    getLoanStatus, 
-    exportLoanApplications, 
-    downloadApplicationPdf, 
+module.exports = {
+    applyForLoan,
+    getLoanStatus,
+    exportLoanApplications,
+    downloadApplicationPdf,
     updateLoanStatusFromLos,
     checkEligibility
 };

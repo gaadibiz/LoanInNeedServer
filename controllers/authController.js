@@ -55,28 +55,15 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
 //Register phone number without verification
 const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   console.log(req.body, "---->");
-
-  if (typeof req.body === 'string') {
-    try {
-      req.body = JSON.parse(req.body);
-    } catch (_) {
-    }
-  }
-  let { phone } = req.body;
+  const { phone } = req.body;
 
   if (!phone) {
     throw new BadRequestError("Phone number is required");
   }
 
-  phone = String(phone).trim();
-  phone = phone.startsWith('+91') ? phone : `+91${phone}`;
-
-  let user = await prisma.user.findFirst({
+  let user = await prisma.user.findUnique({
     where: {
-      OR: [
-        { phone: phone },
-        ...(req.body.email ? [{ email: req.body.email }] : [])
-      ]
+      phone: phone
     },
     select: {
       id: true,
@@ -298,7 +285,6 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   }
 
   // 8. Loan Applications
-  let application = {}
   if (Array.isArray(req.body.loanApplications) && req.body.loanApplications.length > 0) {
     const empRecord = await prisma.employmentDetail.findUnique({ where: { userId } });
     for (const app of req.body.loanApplications) {
@@ -308,7 +294,7 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
         loanType = 'OTHER';
       }
 
-      application = await prisma.loanApplication.create({
+      await prisma.loanApplication.create({
         data: {
           userId,
           employmentDetailId: empRecord ? empRecord.id : null,
@@ -325,7 +311,7 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
   // 9. Bumchum Sync (asynchronous)
   (async () => {
     try {
-      Object.keys(application).length ? (await checkAndPushBumchumIfReady(userId)) : (await sendLoanApplicationToBumchum(userId, ''));
+      await checkAndPushBumchumIfReady(userId);
     } catch (error) {
       logger.error(`[BUMCHUM] Failed to sync after registerPhoneWithoutVerification for User ${userId}: ${error.message}`);
     }
