@@ -60,12 +60,8 @@ const registerPhoneWithoutVerification = asyncHandler(async (req, res) => {
     try {
       req.body = JSON.parse(req.body);
     } catch (_) {
-      req.body = {};
     }
-  } else if (!req.body) {
-    req.body = {};
   }
-
   let { phone } = req.body;
 
   if (!phone) {
