@@ -133,7 +133,7 @@ async function sendOtp(phone) {
             }
         });
 
-        throw new Error(`Failed to send OTP: ${error}`);
+        throw new Error(`Failed to send OTP`);
     }
 }
 
