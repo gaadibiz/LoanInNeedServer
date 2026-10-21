@@ -64,6 +64,7 @@ describe('🛡️ botProtection Middleware Unit Tests', () => {
       const bots = [
         'python-requests/2.31.0',
         'PostmanRuntime/7.36.0',
+        'Postman/10.24.0',
         'Go-http-client/1.1',
         'Wget/1.21.3',
         'axios/1.6.0'

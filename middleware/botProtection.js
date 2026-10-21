@@ -3,15 +3,17 @@ const logger = require('../utils/logger');
 
 // Signatures for known CLI tools, scrapers, and scripted HTTP clients
 const SCRIPTED_USER_AGENTS = [
-  /curl\//i,
+  /curl/i,
   /wget/i,
   /python/i,          // python-requests, urllib, aiohttp, httpx
-  /postmanruntime/i,
+  /postman/i,         // matches Postman, PostmanRuntime, PostmanDesktop
   /insomnia/i,
+  /httpie/i,
+  /thunder\s*client/i,
   /go-http-client/i,
   /node-fetch/i,
   /undici/i,
-  /axios\//i,
+  /axios/i,
   /libwww-perl/i,
   /httpclient/i,
   /scrapy/i,
