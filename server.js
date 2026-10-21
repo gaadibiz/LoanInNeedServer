@@ -54,7 +54,17 @@ const globalLimiter = rateLimit({
 app.use('/api', globalLimiter); // Apply to all API routes
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// Enable CORS with specific options
+// Health check endpoint (Mounted before CORS so container/load balancer health checks never fail)
+app.get('/', (req, res) => {
+  logger.info('Health check endpoint called');
+  res.status(200).json({
+    status: 'healthy',
+    message: 'LoanInNeed Backend is up and running!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Enable CORS with strict Origin enforcement
 const allowedOrigins = [
   'http://localhost:3000', // Local Frontend (Next.js default)
   'http://localhost:5173', // Local Frontend (Vite default)
@@ -68,26 +78,48 @@ const allowedOrigins = [
   'https://openai.com',
   'https://googleads.digip.campaign.loaninneed.in'
 ];
-// ✅ Fixed implementation
+
 app.use(cors({
   origin: function (origin, callback) {
-    console.log(origin, "ORIGIN --- >")
-    if (!origin || String(origin).toLowerCase() === '' || origin.includes('be-prod.bumchumfinserve.com')) return callback(null, false);
+    console.log(origin, "ORIGIN --- >");
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Handle missing origin (direct curl/Postman/bots)
+    if (!origin || String(origin).trim() === '') {
+      if (process.env.NODE_ENV === 'test') {
+        return callback(null, true);
+      }
+      const err = new Error('Access Denied: Missing Origin header. Automated and unauthorized requests are not allowed.');
+      err.statusCode = 403;
+      err.isOperational = true;
+      return callback(err);
+    }
+
+    // Blacklist check
+    if (origin.includes('be-prod.bumchumfinserve.com')) {
+      const err = new Error('Access Denied: Origin is not permitted by CORS policy.');
+      err.statusCode = 403;
+      err.isOperational = true;
+      return callback(err);
+    }
+
+    // Allowed origins check
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.loaninneed.in') ||
+      origin === 'https://loaninneed.in' ||
+      origin === 'https://www.naveenfinance.com' ||
+      origin.endsWith('.naveenfinance.com') ||
+      origin.endsWith('.ondigitalocean.app')
+    ) {
       return callback(null, true);
     }
 
-    if (origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
-
-    if (origin.endsWith('.loaninneed.in') || origin === 'https://loaninneed.in' || origin === 'https://www.naveenfinance.com') {
-      return callback(null, true);
-    }
-
-    // Disallow origin cleanly without throwing an unhandled Express 500 error
-    return callback(null, false);
+    // Disallow any other origin with 403 Forbidden
+    const err = new Error('Access Denied: Origin is not permitted by CORS policy.');
+    err.statusCode = 403;
+    err.isOperational = true;
+    return callback(err);
   },
   credentials: true
 }));
@@ -132,15 +164,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
-app.get('/', (req, res) => {
-  logger.info('Health check endpoint called');
-  res.status(200).json({
-    status: 'healthy',
-    message: 'LoanInNeed Backend is up and running!',
-    timestamp: new Date().toISOString()
-  });
-});
 
 // ✅ Idempotency Middleware (Interprets Idempotency-Key headers before routing)
 app.use(require('./middleware/idempotencyMiddleware'));

@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const { authenticate } = require('../middleware/authMiddleware');
+const { botProtection } = require('../middleware/botProtection');
 
 // Registration now requires JWT authentication
 router.post('/register', authenticate, userController.registerUser);
 router.put('/profile', authenticate, userController.registerUser); // Alias for update
 
-// Login (OTP-based)
-router.post('/login', userController.loginUser);
+// Login (OTP-based) - Protected against bot calls
+router.post('/login', botProtection, userController.loginUser);
 router.post('/admin-login', userController.loginAdmin); // ✅ New Admin Login
 
 // Protected route
