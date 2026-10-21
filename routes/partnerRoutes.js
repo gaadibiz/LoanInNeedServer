@@ -3,6 +3,8 @@ const router = express.Router();
 const partnerController = require('../controllers/partnerController');
 const { protectPartner } = require('../middleware/partnerAuthMiddleware');
 const { authenticate, superAdmin } = require('../middleware/authMiddleware');
+const { botProtection } = require('../middleware/botProtection');
+const { phoneOtpRateLimiter } = require('../middleware/phoneOtpRateLimiter');
 
 // Restricted Partner Registration (Super Admin Only)
 router.post('/register', authenticate, superAdmin, partnerController.registerPartner);
@@ -11,8 +13,8 @@ router.post('/register', authenticate, superAdmin, partnerController.registerPar
 router.post('/login', partnerController.loginPartner);
 
 // Partner Login (OTP Flow)
-router.post('/login/request-otp', partnerController.requestLoginOtp);
-router.post('/login/verify-otp', partnerController.verifyLoginOtp);
+router.post('/login/request-otp', botProtection, partnerController.requestLoginOtp);
+router.post('/login/verify-otp', botProtection, partnerController.verifyLoginOtp);
 
 // Partner Password Reset Flow
 router.post('/forgot-password', partnerController.forgotPassword);

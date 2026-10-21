@@ -7,12 +7,18 @@ const attributionMiddleware = require('../middleware/attributionMiddleware');
 const { protect } = require('../middleware/authMiddleware');
 const { verifyApiKey } = require('../middleware/apiKeyAuth');
 const { withConcurrencyLimit } = require('../middleware/concurrencyManager');
+const { botProtection } = require('../middleware/botProtection');
+const { phoneOtpRateLimiter } = require('../middleware/phoneOtpRateLimiter');
+
 // Phone OTP routes
 router.post('/phone/request-otp',
+    botProtection,
+    phoneOtpRateLimiter,
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before requesting an OTP.'),
     authController.requestPhoneOtp
 );
 router.post('/phone/verify-otp',
+    botProtection,
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before verifying your OTP.'),
     attributionMiddleware,
     authController.verifyPhoneOtp
@@ -20,11 +26,13 @@ router.post('/phone/verify-otp',
 
 // Email OTP routes
 router.post('/email/request-otp',
+    botProtection,
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before requesting an OTP.'),
     protect,
     authController.requestEmailOtp
 );
 router.post('/email/verify-otp',
+    botProtection,
     withConcurrencyLimit('OTP', 25, 'High traffic volume. Please wait 10 seconds before verifying your OTP.'),
     protect,
     authController.verifyEmailOtp
@@ -49,8 +57,8 @@ router.post('/aadhaar/save-verified-adhaar-details',
 );
 
 // Aadhaar OTP routes
-router.post('/aadhaar/request-otp', protect, authController.requestAadhaarOtp);
-router.post('/aadhaar/verify-otp', protect, authController.verifyAadhaarOtp);
+router.post('/aadhaar/request-otp', protect, botProtection, authController.requestAadhaarOtp);
+router.post('/aadhaar/verify-otp', protect, botProtection, authController.verifyAadhaarOtp);
 // Real-time Aadhaar existence check (no DB write, used for inline frontend validation)
 router.post('/aadhaar/validate', protect, authController.validateAadhaarExists);
 router.post('/verify', verifyApiKey, authController.verify)
