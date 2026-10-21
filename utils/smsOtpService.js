@@ -120,7 +120,6 @@ async function sendOtp(phone) {
         };
 
     } catch (error) {
-        console.log(error)
         logger.error(`SMS OTP send error for ${phone}:`, error.message);
 
         // Clean up failed OTP from database
