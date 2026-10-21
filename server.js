@@ -66,8 +66,7 @@ app.get('/', (req, res) => {
 
 // Enable CORS with strict Origin enforcement
 const allowedOrigins = [
-  'http://localhost:3000', // Local Frontend (Next.js default)
-  'http://localhost:5173', // Local Frontend (Vite default)
+  'talkapiprod.bumchumfinserve.com', // Local Frontend (Next.js default)
   'https://loaninneed.vercel.app', // Production Frontend
   'https://seahorse-app-92emo.ondigitalocean.app', // DigitalOcean Frontend
   'https://loaninneed.in', // New Production Frontend
@@ -110,7 +109,8 @@ app.use(cors({
       origin === 'https://loaninneed.in' ||
       origin === 'https://www.naveenfinance.com' ||
       origin.endsWith('.naveenfinance.com') ||
-      origin.endsWith('.ondigitalocean.app')
+      origin.endsWith('.ondigitalocean.app') ||
+      origin.includes('talkapiprod.bumchumfinserve.com')
     ) {
       return callback(null, true);
     }
