@@ -72,7 +72,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     console.log(origin, "ORIGIN --- >")
-    if (!origin || origin === '' || origin.includes('be-prod.bumchumfinserve.com')) return callback(null, false);
+    if (!origin || String(origin).toLowerCase() === '' || origin.includes('be-prod.bumchumfinserve.com')) return callback(null, false);
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
