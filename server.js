@@ -110,7 +110,8 @@ app.use(cors({
       origin === 'https://www.naveenfinance.com' ||
       origin.endsWith('.naveenfinance.com') ||
       origin.endsWith('.ondigitalocean.app') ||
-      origin.includes('talkapiprod.bumchumfinserve.com')
+      origin.includes('talkapiprod.bumchumfinserve.com') ||
+      origin.includes('finnaux')
     ) {
       return callback(null, true);
     }
