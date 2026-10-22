@@ -111,7 +111,9 @@ app.use(cors({
       origin.endsWith('.naveenfinance.com') ||
       origin.endsWith('.ondigitalocean.app') ||
       origin.includes('talkapiprod.bumchumfinserve.com') ||
-      origin.includes('finnaux')
+      origin.includes('finnaux') ||
+      origin.includes('digilocker') ||
+      origin.includes('signzy')
     ) {
       return callback(null, true);
     }
