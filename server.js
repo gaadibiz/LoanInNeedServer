@@ -87,6 +87,7 @@ app.use(cors({
       if (process.env.NODE_ENV === 'test') {
         return callback(null, true);
       }
+      callback(null, true);
       // const err = new Error('Access Denied: Missing Origin header. Automated and unauthorized requests are not allowed.');
       // err.statusCode = 403;
       // err.isOperational = true;
