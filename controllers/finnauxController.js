@@ -344,7 +344,7 @@ const toFinnauxDateRangePayload = (user) => {
 const getFinnauxRawPayloads = asyncHandler(async (req, res) => {
     const id = req.params.id;
     const { from, to } = req.query;
-    console.log("FETCHING FINNUAX DATA FOR : ", req.query, req.params)
+    // console.log("FETCHING FINNUAX DATA FOR : ", req.query, req.params)
 
     const hasId = !!id;
     const hasDateRange = !!from && !!to;
