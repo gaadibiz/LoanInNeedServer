@@ -427,7 +427,7 @@ async function checkAndPushBumchumIfReady(userId) {
         if (!allRequiredDocsReceived) return;
 
         const applications = await prisma.loanApplication.findMany({
-            where: { userId, status: 'PENDING', bumchumSyncedAt: null },
+            where: { userId, bumchumSyncedAt: null },
             orderBy: { createdAt: 'asc' }
         });
 

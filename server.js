@@ -23,8 +23,9 @@ const documentVerificationRoutes = require('./routes/documentVerificationRoutes'
 const selfieRoutes = require('./routes/selfieRoutes'); // ✅ Added Selfie routes
 const logger = require('./utils/logger'); // Winston logger
 const errorHandler = require('./GlobalExceptionHandler/errorHandler'); // Central error handler
-const { startLosWorker } = require('./scripts/losWorker'); // ✅ LOS Integration Worker
+//const { startLosWorker } = require('./scripts/losWorker'); // ✅ LOS Integration Worker
 const { startFinnauxWorker } = require('./scripts/finnauxWorker'); // ✅ Finnaux Integration Worker
+const { startBumchumWorker } = require('./scripts/bumchumWorker'); // ✅ Bumchum Integration Worker
 
 // Load environment variables from .env file
 dotenv.config();
@@ -210,8 +211,9 @@ if (cluster.isPrimary && process.env.NODE_ENV !== 'test') {
   logger.info(`Primary ${process.pid} is running. Forking ${numCPUs} workers for Load Balancing...`);
 
   // Start Background Workers ONLY on Primary to avoid duplicating Cron/LOS jobs
-  startLosWorker();
+  //startLosWorker();
   startFinnauxWorker();
+  startBumchumWorker();
 
   // --- Dynamic IPC Global Traffic Controller ---
   const globalActiveTasks = new Map();
