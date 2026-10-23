@@ -52,6 +52,10 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+app.use((req, res, next) => {
+  if (/\.php|\/vendor\/|\/wp-|\/\.env/i.test(req.path)) return res.status(502).end();
+  next();
+});
 app.use('/api', globalLimiter); // Apply to all API routes
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
