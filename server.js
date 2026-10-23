@@ -33,6 +33,14 @@ dotenv.config();
 // Create Express app
 const app = express();
 
+// Early blocker for malicious bot probes & vulnerability scanners (before body parsing & rate limiting)
+app.use((req, res, next) => {
+  if (/\.php|\/vendor\/|\/wp-|\/\.env/i.test(req.path)) {
+    return res.status(404).end();
+  }
+  next();
+});
+
 // Middleware
 app.use(compression());
 app.use(express.urlencoded({ extended: true }));
@@ -51,10 +59,6 @@ const globalLimiter = rateLimit({
   message: { error: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-});
-app.use((req, res, next) => {
-  if (/\.php|\/vendor\/|\/wp-|\/\.env/i.test(req.path)) return res.status(502).end();
-  next();
 });
 app.use('/api', globalLimiter); // Apply to all API routes
 
