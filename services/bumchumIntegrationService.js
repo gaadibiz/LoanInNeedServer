@@ -1,18 +1,17 @@
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
-const { sendLoanApplicationToBumchum, updateLoanApplicationToBumchum, checkAndPushBumchumIfReady } = require('./loanService');
+const { checkAndPushBumchumIfReady } = require('./loanService');
 
 let isProcessing = false;
 
 /**
- * Sweeps for loan applications where `bumchumSyncedAt` is null and pushes them
- * to Bumchum with a 20-second pacing interval between individual requests.
- * If the application's status is non-PENDING, it immediately follows up with
- * `updateLoanApplicationToBumchum` to mirror the actual status on Bumchum.
+ * Sweeps for loan applications where `bumchumSyncedAt` is null and all 4 mandatory
+ * documents (Aadhaar, PAN, Pay Slip, Bank Statement) exist, then pushes them to
+ * Bumchum via checkAndPushBumchumIfReady with a 20-second pacing interval.
  */
 const processPendingBumchumSync = async (options = {}) => {
     const intervalMs = options.intervalMs || 20000; // 20 seconds default
-    const batchSize = options.batchSize || undefined; // Process all pending if batchSize not specified
+    const batchSize = options.batchSize || undefined; // Process all ready if batchSize not specified
 
     if (isProcessing) {
         logger.debug('[BUMCHUM WORKER] Previous sync run is still in progress. Skipping cycle.');
@@ -24,7 +23,15 @@ const processPendingBumchumSync = async (options = {}) => {
     try {
         const applications = await prisma.loanApplication.findMany({
             where: {
-                bumchumSyncedAt: null
+                bumchumSyncedAt: null,
+                user: {
+                    AND: [
+                        { documents: { some: { docType: 'AADHAAR' } } },
+                        { documents: { some: { docType: 'PAN' } } },
+                        { documents: { some: { docType: 'PAY_SLIP' } } },
+                        { documents: { some: { docType: 'BANK_STATEMENT' } } }
+                    ]
+                }
             },
             orderBy: { createdAt: 'asc' },
             take: batchSize,
@@ -35,23 +42,22 @@ const processPendingBumchumSync = async (options = {}) => {
         });
 
         if (!applications || applications.length === 0) {
-            logger.info('[BUMCHUM WORKER] No pending unsynced applications found.');
+            logger.info('[BUMCHUM WORKER] No pending unsynced applications ready with all 4 documents.');
             return;
         }
 
-        logger.info(`[BUMCHUM WORKER] Found ${applications.length} unsynced application(s). Processing with ${intervalMs / 1000}s pacing...`);
+        logger.info(`[BUMCHUM WORKER] Found ${applications.length} user(s) ready for sync (all 4 documents present). Processing with ${intervalMs / 1000}s pacing...`);
 
         for (let i = 0; i < applications.length; i++) {
             const app = applications[i];
             const currentIndex = i + 1;
 
             try {
-                logger.info(`[BUMCHUM WORKER] Syncing for user : `, app.userId);
-                // 1. Send application to Bumchum
+                logger.info(`[BUMCHUM WORKER] [${currentIndex}/${applications.length}] Syncing for user: ${app.userId}...`);
+                // Send application to Bumchum if ready
                 await checkAndPushBumchumIfReady(app.userId);
-
             } catch (err) {
-                logger.error(`[BUMCHUM WORKER] failed syncing for user : `, app.userId, err);
+                logger.error(`[BUMCHUM WORKER] Failed syncing for user ${app.userId}: ${err?.message || err}`);
             }
 
             // Pacing interval: wait 20 seconds between individual applications (skip after last item)
