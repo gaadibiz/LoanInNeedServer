@@ -50,26 +50,26 @@ class DocumentVerificationService {
     let compressedBuffer = fileBuffer;
     let base64Data;
 
-    if (file.mimetype.startsWith('image/')) {
-      try {
-        compressedBuffer = await sharp(fileBuffer)
-          .resize({
-            width: 1600,
-            withoutEnlargement: true,
-          })
-          .jpeg({
-            quality: 70,
-            mozjpeg: true,
-          })
-          .toBuffer();
-        base64Data = compressedBuffer.toString('base64');
-      } catch (_) {
-        console.log("ERROR IN UPLOAD DOCUMET COMPRESSOR")
-        base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
-      }
-    } else {
+    // if (file.mimetype.startsWith('image/')) {
+    //   try {
+    //     compressedBuffer = await sharp(fileBuffer)
+    //       .resize({
+    //         width: 1600,
+    //         withoutEnlargement: true,
+    //       })
+    //       .jpeg({
+    //         quality: 70,
+    //         mozjpeg: true,
+    //       })
+    //       .toBuffer();
+    //     base64Data = compressedBuffer.toString('base64');
+    //   } catch (_) {
+    //     console.log("ERROR IN UPLOAD DOCUMET COMPRESSOR")
+    //     base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
+    //   }
+    // } else {
       base64Data = encodeBufferToBase64(fileBuffer, file.mimetype, false);
-    }
+   // }
 
     // 4 & 5. Save and Public URL
     let relativeFilePath, publicUrl;
@@ -137,7 +137,7 @@ class DocumentVerificationService {
     // Only fire when this write is already committed (standalone call, not part of an
     // outer transaction started by submitDocuments below) — that caller checks once
     // after its own transaction commits instead.
-    if (tx === prisma) {
+   // if (tx === prisma) {
       (async () => {
         try {
           await checkAndPushBumchumIfReady(userId);
@@ -145,7 +145,7 @@ class DocumentVerificationService {
           logger.error(`[BUMCHUM] Failed to sync after document upload for User ${userId}: ${error.message}`);
         }
       })();
-    }
+    //}
 
     return document;
   }
