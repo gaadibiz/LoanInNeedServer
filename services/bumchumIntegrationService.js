@@ -1,6 +1,6 @@
 const prisma = require('../utils/prismaClient');
 const logger = require('../utils/logger');
-const { checkAndPushBumchumIfReady } = require('./loanService');
+const { checkAndPushBumchumIfReady, sendLoanApplicationToBumchum } = require('./loanService');
 
 let isProcessing = false;
 
@@ -10,7 +10,7 @@ let isProcessing = false;
  * Bumchum via checkAndPushBumchumIfReady with a 20-second pacing interval.
  */
 const processPendingBumchumSync = async (options = {}) => {
-    const intervalMs = options.intervalMs || 20000; // 20 seconds default
+    const intervalMs = options.intervalMs || 20000; // 20 seconds
     const batchSize = options.batchSize || undefined; // Process all ready if batchSize not specified
 
     if (isProcessing) {
@@ -24,20 +24,13 @@ const processPendingBumchumSync = async (options = {}) => {
         const applications = await prisma.loanApplication.findMany({
             where: {
                 bumchumSyncedAt: null,
-                user: {
-                    AND: [
-                        { documents: { some: { docType: 'AADHAAR' } } },
-                        { documents: { some: { docType: 'PAN' } } },
-                        { documents: { some: { docType: 'PAY_SLIP' } } },
-                        { documents: { some: { docType: 'BANK_STATEMENT' } } }
-                    ]
-                }
             },
-            orderBy: { createdAt: 'asc' },
+            orderBy: { createdAt: 'desc' },
             take: batchSize,
             distinct: ['userId'],
             select: {
-                userId: true
+                userId: true,
+                id:true
             }
         });
 
@@ -55,7 +48,9 @@ const processPendingBumchumSync = async (options = {}) => {
             try {
                 logger.info(`[BUMCHUM WORKER] [${currentIndex}/${applications.length}] Syncing for user: ${app.userId}...`);
                 // Send application to Bumchum if ready
-                await checkAndPushBumchumIfReady(app.userId);
+                await sendLoanApplicationToBumchum(app.userId, app.id);
+                await prisma.loanApplication.update({ where: { id: app.id }, data: { bumchumSyncedAt: new Date() } });
+                logger.info(`[BUMCHUM WORKER] Synced application for userId=${app.userId} appId=${app.id}`);
             } catch (err) {
                 logger.error(`[BUMCHUM WORKER] Failed syncing for user ${app.userId}: ${err?.message || err}`);
             }
