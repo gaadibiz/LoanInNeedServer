@@ -10,12 +10,14 @@ const { processPendingBumchumSync } = require('../services/bumchumIntegrationSer
 const startBumchumWorker = () => {
     logger.info('[BUMCHUM WORKER] Initializing Cron Job (runs every 1 hour with 20s pacing interval)...');
 
-    cron.schedule('0 * * * *', async () => {
+    cron.schedule('0 23 * * *', async () => {
         try {
             await processPendingBumchumSync({ intervalMs: 20000 });
         } catch (error) {
             logger.error(`[BUMCHUM WORKER] Fatal error in cron cycle: ${error.message}`);
         }
+    }, {
+        timezone: 'Asia/Kolkata'
     });
 };
 
