@@ -11,7 +11,7 @@ let isProcessing = false;
  */
 const processPendingBumchumSync = async (options = {}) => {
     const intervalMs = options.intervalMs || 20000; // 20 seconds
-    const batchSize = options.batchSize || undefined; // Process all ready if batchSize not specified
+    const batchSize = 20; // Process all ready if batchSize not specified
 
     if (isProcessing) {
         logger.debug('[BUMCHUM WORKER] Previous sync run is still in progress. Skipping cycle.');
@@ -30,7 +30,7 @@ const processPendingBumchumSync = async (options = {}) => {
             distinct: ['userId'],
             select: {
                 userId: true,
-                id:true
+                id: true
             }
         });
 
