@@ -10,7 +10,7 @@ let isProcessing = false;
  * Bumchum via checkAndPushBumchumIfReady with a 20-second pacing interval.
  */
 const processPendingBumchumSync = async (options = {}) => {
-    const intervalMs = options.intervalMs || 20000; // 20 seconds
+    const intervalMs = options.intervalMs || 30000; // 20 seconds
     const batchSize = 20; // Process all ready if batchSize not specified
 
     if (isProcessing) {

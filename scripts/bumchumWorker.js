@@ -10,7 +10,7 @@ const { processPendingBumchumSync } = require('../services/bumchumIntegrationSer
 const startBumchumWorker = () => {
     logger.info('[BUMCHUM WORKER] Initializing Cron Job (runs every 1 hour with 20s pacing interval)...');
 
-    cron.schedule('0 * * * *', async () => {
+    cron.schedule('* * * * *', async () => {
         try {
             await processPendingBumchumSync({ intervalMs: 20000 });
         } catch (error) {
