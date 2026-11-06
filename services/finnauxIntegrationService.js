@@ -414,9 +414,9 @@ const getBase64Documents = async (id, preloadedDocuments = null) => {
     const applicationId = Number(id);
 
     const documentsInfo =
-        await prisma.finnauxIntegrationJob.findUnique({
+        await prisma.loanApplication.findUnique({
             where: {
-                applicationId,
+                id:applicationId,
             },
             select: {
                 userId: true
