@@ -197,6 +197,7 @@ app.use('/api/los', require('./routes/losRoutes')); // ✅ Mounted LOS routes
 
 // ✅ Finnaux Bridge Routes
 app.use('/api/finnaux', require('./routes/finnauxRoutes')); // ✅ Mounted Finnaux routes
+app.use('/api/webhook/finnaux', require('./routes/finnauxRoutes')); // ✅ Mounted Finnaux webhook alias
 
 // ✅ Application Audit Routes
 

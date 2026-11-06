@@ -3,6 +3,7 @@ const logger = require('../utils/logger');
 const { buildFinnauxPayload } = require('../config/finnauxMapping');
 const { sendApplicationToFinnaux } = require('./finnauxApiClient');
 const { default: axios } = require('axios');
+const { NotFoundError } = require('../GlobalExceptionHandler/exception');
 
 // Maximum times a job will be attempted before marking as permanently FAILED
 const MAX_FAILURES = 2;

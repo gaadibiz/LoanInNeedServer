@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const finnauxController = require('../controllers/finnauxController');
-const { verifyApiKey } = require('../middleware/apiKeyAuth');
+const { verifyApiKey, verifyWebhookAuth } = require('../middleware/apiKeyAuth');
+
+// Real-time Webhook endpoint for Finnaux events (loan.create, loan.update, payment.update)
+router.post(['/webhook', '/'], verifyWebhookAuth, finnauxController.handleFinnauxWebhook);
 
 // Manually trigger Finnaux push
 router.post('/applications/:applicationId/trigger', verifyApiKey, finnauxController.triggerFinnauxIntegration);
