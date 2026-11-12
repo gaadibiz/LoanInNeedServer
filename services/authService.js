@@ -138,6 +138,16 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
   const hasPan = !!(await prisma.panVerification.findUnique({ where: { userId: user.id } }));
   const hasAadhaar = !!(await prisma.aadhaarVerification.findUnique({ where: { userId: user.id } }));
   const isProfileComplete = hasName && hasPan && hasAadhaar;
+  (async () => {
+    if (!oldUser) {
+      try {
+        console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
+        await sendLoanApplicationToBumchum(user.userId, '');
+      } catch (error) {
+        console.log(error, "[ERROR] Error sending loan application to Bumchum");
+      }
+    }
+  })();
 
   return {
     message: 'Phone verified successfully.',

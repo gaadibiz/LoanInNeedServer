@@ -40,14 +40,6 @@ const verifyPhoneOtp = asyncHandler(async (req, res) => {
     } catch (error) {
       console.log(error, "[ERROR] Error saving UTM params");
     }
-    // try {
-    //   console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
-    //   if (user) {
-    //     await sendLoanApplicationToBumchum(user.userId, '');
-    //   }
-    // } catch (error) {
-    //   console.log(error, "[ERROR] Error sending loan application to Bumchum");
-    // }
 
   })();
 });
