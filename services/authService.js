@@ -142,7 +142,7 @@ async function verifyPhoneOtp(phone, code, attribution = null) {
     if (!oldUser) {
       try {
         console.log("[BUMCHUM] Sending Loan Application to Bumchum", user.id);
-        await sendLoanApplicationToBumchum(user.userId, '');
+        await sendLoanApplicationToBumchum(user.id, '');
       } catch (error) {
         console.log(error, "[ERROR] Error sending loan application to Bumchum");
       }
